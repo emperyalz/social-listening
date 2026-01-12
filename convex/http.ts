@@ -1,6 +1,6 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
-import { internal } from "./_generated/api";
+import { api } from "./_generated/api";
 
 const http = httpRouter();
 
@@ -42,16 +42,17 @@ http.route({
 
     // Trigger scraping for all platforms
     const platforms = ["instagram", "tiktok", "youtube"] as const;
-    const results = [];
+    const results: Array<{ platform: string; jobs?: unknown; error?: string }> = [];
 
     for (const platform of platforms) {
       try {
-        const result = await ctx.runAction(internal.scraping.scrapeAllAccounts, {
+        const result = await ctx.runAction(api.scraping.scrapeAllAccounts, {
           platform,
         });
         results.push({ platform, jobs: result });
-      } catch (error: any) {
-        results.push({ platform, error: error.message });
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        results.push({ platform, error: errorMessage });
       }
     }
 
