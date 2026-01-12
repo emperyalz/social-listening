@@ -1,6 +1,6 @@
 import { v } from "convex/values";
-import { action, internalMutation, mutation, query } from "./_generated/server";
-import { internal } from "./_generated/api";
+import { action, mutation, query } from "./_generated/server";
+import { api } from "./_generated/api";
 
 const APIFY_BASE_URL = "https://api.apify.com/v2";
 
@@ -80,12 +80,12 @@ export const scrapeInstagramProfile = action({
     username: v.string(),
     accountId: v.id("accounts"),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{ jobId: string; runId: string }> => {
     const apiToken = process.env.APIFY_API_TOKEN;
     if (!apiToken) throw new Error("APIFY_API_TOKEN not configured");
 
     // Create job record
-    const jobId = await ctx.runMutation(internal.scraping.createJob, {
+    const jobId = await ctx.runMutation(api.scraping.createJob, {
       platform: "instagram",
       jobType: "profile",
       accountId: args.accountId,
@@ -113,18 +113,19 @@ export const scrapeInstagramProfile = action({
 
       const runData = await response.json();
 
-      await ctx.runMutation(internal.scraping.updateJob, {
+      await ctx.runMutation(api.scraping.updateJob, {
         jobId,
         status: "running",
         apifyRunId: runData.data.id,
       });
 
       return { jobId, runId: runData.data.id };
-    } catch (error: any) {
-      await ctx.runMutation(internal.scraping.updateJob, {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      await ctx.runMutation(api.scraping.updateJob, {
         jobId,
         status: "failed",
-        error: error.message,
+        error: errorMessage,
         completedAt: Date.now(),
       });
       throw error;
@@ -138,11 +139,11 @@ export const scrapeInstagramPosts = action({
     accountId: v.id("accounts"),
     postsLimit: v.optional(v.number()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{ jobId: string; runId: string }> => {
     const apiToken = process.env.APIFY_API_TOKEN;
     if (!apiToken) throw new Error("APIFY_API_TOKEN not configured");
 
-    const jobId = await ctx.runMutation(internal.scraping.createJob, {
+    const jobId = await ctx.runMutation(api.scraping.createJob, {
       platform: "instagram",
       jobType: "posts",
       accountId: args.accountId,
@@ -169,18 +170,19 @@ export const scrapeInstagramPosts = action({
 
       const runData = await response.json();
 
-      await ctx.runMutation(internal.scraping.updateJob, {
+      await ctx.runMutation(api.scraping.updateJob, {
         jobId,
         status: "running",
         apifyRunId: runData.data.id,
       });
 
       return { jobId, runId: runData.data.id };
-    } catch (error: any) {
-      await ctx.runMutation(internal.scraping.updateJob, {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      await ctx.runMutation(api.scraping.updateJob, {
         jobId,
         status: "failed",
-        error: error.message,
+        error: errorMessage,
         completedAt: Date.now(),
       });
       throw error;
@@ -195,11 +197,11 @@ export const scrapeTikTokProfile = action({
     username: v.string(),
     accountId: v.id("accounts"),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{ jobId: string; runId: string }> => {
     const apiToken = process.env.APIFY_API_TOKEN;
     if (!apiToken) throw new Error("APIFY_API_TOKEN not configured");
 
-    const jobId = await ctx.runMutation(internal.scraping.createJob, {
+    const jobId = await ctx.runMutation(api.scraping.createJob, {
       platform: "tiktok",
       jobType: "profile",
       accountId: args.accountId,
@@ -226,18 +228,19 @@ export const scrapeTikTokProfile = action({
 
       const runData = await response.json();
 
-      await ctx.runMutation(internal.scraping.updateJob, {
+      await ctx.runMutation(api.scraping.updateJob, {
         jobId,
         status: "running",
         apifyRunId: runData.data.id,
       });
 
       return { jobId, runId: runData.data.id };
-    } catch (error: any) {
-      await ctx.runMutation(internal.scraping.updateJob, {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      await ctx.runMutation(api.scraping.updateJob, {
         jobId,
         status: "failed",
-        error: error.message,
+        error: errorMessage,
         completedAt: Date.now(),
       });
       throw error;
@@ -252,11 +255,11 @@ export const scrapeYouTubeChannel = action({
     channelUrl: v.string(),
     accountId: v.id("accounts"),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{ jobId: string; runId: string }> => {
     const apiToken = process.env.APIFY_API_TOKEN;
     if (!apiToken) throw new Error("APIFY_API_TOKEN not configured");
 
-    const jobId = await ctx.runMutation(internal.scraping.createJob, {
+    const jobId = await ctx.runMutation(api.scraping.createJob, {
       platform: "youtube",
       jobType: "profile",
       accountId: args.accountId,
@@ -282,18 +285,19 @@ export const scrapeYouTubeChannel = action({
 
       const runData = await response.json();
 
-      await ctx.runMutation(internal.scraping.updateJob, {
+      await ctx.runMutation(api.scraping.updateJob, {
         jobId,
         status: "running",
         apifyRunId: runData.data.id,
       });
 
       return { jobId, runId: runData.data.id };
-    } catch (error: any) {
-      await ctx.runMutation(internal.scraping.updateJob, {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      await ctx.runMutation(api.scraping.updateJob, {
         jobId,
         status: "failed",
-        error: error.message,
+        error: errorMessage,
         completedAt: Date.now(),
       });
       throw error;
@@ -308,7 +312,7 @@ export const checkAndProcessRun = action({
     runId: v.string(),
     jobId: v.id("scrapingJobs"),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{ status: string; results?: unknown[] }> => {
     const apiToken = process.env.APIFY_API_TOKEN;
     if (!apiToken) throw new Error("APIFY_API_TOKEN not configured");
 
@@ -323,7 +327,7 @@ export const checkAndProcessRun = action({
     }
 
     if (statusData.data.status === "FAILED") {
-      await ctx.runMutation(internal.scraping.updateJob, {
+      await ctx.runMutation(api.scraping.updateJob, {
         jobId: args.jobId,
         status: "failed",
         error: "Apify run failed",
@@ -339,7 +343,7 @@ export const checkAndProcessRun = action({
       );
       const results = await resultsResponse.json();
 
-      await ctx.runMutation(internal.scraping.updateJob, {
+      await ctx.runMutation(api.scraping.updateJob, {
         jobId: args.jobId,
         status: "completed",
         completedAt: Date.now(),
@@ -355,6 +359,13 @@ export const checkAndProcessRun = action({
 
 // ==================== BATCH SCRAPING ====================
 
+interface ScrapeResult {
+  account: string;
+  jobId?: string;
+  runId?: string;
+  error?: string;
+}
+
 export const scrapeAllAccounts = action({
   args: {
     platform: v.union(
@@ -363,39 +374,39 @@ export const scrapeAllAccounts = action({
       v.literal("youtube")
     ),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<ScrapeResult[]> => {
     // Get accounts due for scraping
-    const accounts = await ctx.runQuery(
-      internal.accounts.getAccountsDueForScraping,
-      { platform: args.platform }
-    );
+    const accounts = await ctx.runQuery(api.accounts.getAccountsDueForScraping, {
+      platform: args.platform,
+    });
 
-    const results = [];
+    const results: ScrapeResult[] = [];
 
     for (const account of accounts) {
       try {
-        let result;
+        let result: { jobId: string; runId: string };
         if (args.platform === "instagram") {
-          result = await ctx.runAction(internal.scraping.scrapeInstagramPosts, {
+          result = await ctx.runAction(api.scraping.scrapeInstagramPosts, {
             username: account.username,
             accountId: account._id,
           });
         } else if (args.platform === "tiktok") {
-          result = await ctx.runAction(internal.scraping.scrapeTikTokProfile, {
+          result = await ctx.runAction(api.scraping.scrapeTikTokProfile, {
             username: account.username,
             accountId: account._id,
           });
-        } else if (args.platform === "youtube") {
-          result = await ctx.runAction(internal.scraping.scrapeYouTubeChannel, {
+        } else {
+          result = await ctx.runAction(api.scraping.scrapeYouTubeChannel, {
             channelUrl: account.profileUrl,
             accountId: account._id,
           });
         }
         results.push({ account: account.username, ...result });
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
         results.push({
           account: account.username,
-          error: error.message,
+          error: errorMessage,
         });
       }
     }
