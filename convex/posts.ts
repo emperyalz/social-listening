@@ -278,9 +278,10 @@ export const getTopPosts = query({
     }
 
     if (args.marketId) {
+      const marketId = args.marketId;
       const accountsInMarket = await ctx.db
         .query("accounts")
-        .withIndex("by_market", (q) => q.eq("marketId", args.marketId))
+        .withIndex("by_market", (q) => q.eq("marketId", marketId))
         .collect();
       const accountIds = new Set(accountsInMarket.map((a) => a._id));
       posts = posts.filter((p) => accountIds.has(p.accountId));
