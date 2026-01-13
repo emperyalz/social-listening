@@ -1,6 +1,5 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { Id } from "./_generated/dataModel";
 
 export const list = query({
   args: {
@@ -8,20 +7,20 @@ export const list = query({
       v.union(v.literal("instagram"), v.literal("tiktok"), v.literal("youtube"))
     ),
     marketId: v.optional(v.id("markets")),
+    isActive: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    let q = ctx.db.query("accounts");
+    let accounts = await ctx.db.query("accounts").collect();
 
     if (args.platform) {
-      q = q.filter((q2) => q2.eq(q2.field("platform"), args.platform));
+      accounts = accounts.filter((a) => a.platform === args.platform);
     }
     if (args.marketId) {
-      q = q.filter((q2) => q2.eq(q2.field("marketId"), args.marketId));
+      accounts = accounts.filter((a) => a.marketId === args.marketId);
     }
-
-    const accounts = await q
-      .filter((q2) => q2.eq(q2.field("isActive"), true))
-      .collect();
+    if (args.isActive !== undefined) {
+      accounts = accounts.filter((a) => a.isActive === args.isActive);
+    }
 
     // Get market info for each account
     const accountsWithMarket = await Promise.all(
@@ -38,11 +37,7 @@ export const list = query({
 export const getById = query({
   args: { id: v.id("accounts") },
   handler: async (ctx, args) => {
-    const account = await ctx.db.get(args.id);
-    if (!account) return null;
-
-    const market = await ctx.db.get(account.marketId);
-    return { ...account, market };
+    return await ctx.db.get(args.id);
   },
 });
 
@@ -73,10 +68,7 @@ export const create = mutation({
       v.literal("youtube")
     ),
     username: v.string(),
-    displayName: v.optional(v.string()),
     profileUrl: v.string(),
-    avatarUrl: v.optional(v.string()),
-    bio: v.optional(v.string()),
     marketId: v.id("markets"),
     companyName: v.optional(v.string()),
     accountType: v.union(
@@ -96,9 +88,7 @@ export const create = mutation({
       .first();
 
     if (existing) {
-      throw new Error(
-        `Account ${args.username} on ${args.platform} already exists`
-      );
+      throw new Error(`Account @${args.username} already exists`);
     }
 
     return await ctx.db.insert("accounts", {
@@ -113,8 +103,7 @@ export const update = mutation({
   args: {
     id: v.id("accounts"),
     displayName: v.optional(v.string()),
-    avatarUrl: v.optional(v.string()),
-    bio: v.optional(v.string()),
+    marketId: v.optional(v.id("markets")),
     companyName: v.optional(v.string()),
     accountType: v.optional(
       v.union(
@@ -124,16 +113,22 @@ export const update = mutation({
         v.literal("other")
       )
     ),
-    marketId: v.optional(v.id("markets")),
+    bio: v.optional(v.string()),
+    avatarUrl: v.optional(v.string()),
     isActive: v.optional(v.boolean()),
-    lastScrapedAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const { id, ...updates } = args;
-    const filtered = Object.fromEntries(
+    
+    // Filter out undefined values
+    const filteredUpdates = Object.fromEntries(
       Object.entries(updates).filter(([_, v]) => v !== undefined)
     );
-    await ctx.db.patch(id, filtered);
+
+    if (Object.keys(filteredUpdates).length > 0) {
+      await ctx.db.patch(id, filteredUpdates);
+    }
+    
     return await ctx.db.get(id);
   },
 });
@@ -141,10 +136,73 @@ export const update = mutation({
 export const remove = mutation({
   args: { id: v.id("accounts") },
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.id, { isActive: false });
+    await ctx.db.delete(args.id);
   },
 });
 
+export const updateLastScraped = mutation({
+  args: { id: v.id("accounts") },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id, { lastScrapedAt: Date.now() });
+  },
+});
+
+export const getStats = query({
+  args: {},
+  handler: async (ctx) => {
+    const accounts = await ctx.db.query("accounts").collect();
+
+    const byPlatform = accounts.reduce(
+      (acc, a) => {
+        acc[a.platform] = (acc[a.platform] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
+
+    const byMarket = accounts.reduce(
+      (acc, a) => {
+        const key = a.marketId;
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
+
+    return {
+      total: accounts.length,
+      active: accounts.filter((a) => a.isActive).length,
+      byPlatform,
+      byMarket,
+    };
+  },
+});
+
+export const getAccountsDueForScraping = query({
+  args: {
+    platform: v.union(
+      v.literal("instagram"),
+      v.literal("tiktok"),
+      v.literal("youtube")
+    ),
+    hoursThreshold: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const threshold = (args.hoursThreshold || 24) * 60 * 60 * 1000;
+    const cutoff = Date.now() - threshold;
+
+    const accounts = await ctx.db
+      .query("accounts")
+      .withIndex("by_platform", (q) => q.eq("platform", args.platform))
+      .collect();
+
+    return accounts.filter(
+      (a) => a.isActive && (!a.lastScrapedAt || a.lastScrapedAt < cutoff)
+    );
+  },
+});
+
+// Bulk operations
 export const bulkCreate = mutation({
   args: {
     accounts: v.array(
@@ -168,12 +226,9 @@ export const bulkCreate = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    const results = {
-      created: [] as string[],
-      skipped: [] as string[],
-    };
-
+    const results = [];
     for (const account of args.accounts) {
+      // Check if exists
       const existing = await ctx.db
         .query("accounts")
         .withIndex("by_platform_username", (q) =>
@@ -181,76 +236,21 @@ export const bulkCreate = mutation({
         )
         .first();
 
-      if (existing) {
-        results.skipped.push(`${account.platform}:${account.username}`);
-        continue;
+      if (!existing) {
+        const id = await ctx.db.insert("accounts", {
+          ...account,
+          isActive: true,
+          createdAt: Date.now(),
+        });
+        results.push({ username: account.username, id, status: "created" });
+      } else {
+        results.push({
+          username: account.username,
+          id: existing._id,
+          status: "exists",
+        });
       }
-
-      await ctx.db.insert("accounts", {
-        ...account,
-        isActive: true,
-        createdAt: Date.now(),
-      });
-      results.created.push(`${account.platform}:${account.username}`);
     }
-
     return results;
-  },
-});
-
-// Get accounts due for scraping (not scraped in last 20 hours)
-export const getAccountsDueForScraping = query({
-  args: {
-    platform: v.optional(
-      v.union(v.literal("instagram"), v.literal("tiktok"), v.literal("youtube"))
-    ),
-  },
-  handler: async (ctx, args) => {
-    const twentyHoursAgo = Date.now() - 20 * 60 * 60 * 1000;
-
-    let accounts = await ctx.db
-      .query("accounts")
-      .filter((q) => q.eq(q.field("isActive"), true))
-      .collect();
-
-    if (args.platform) {
-      accounts = accounts.filter((a) => a.platform === args.platform);
-    }
-
-    // Filter to accounts that haven't been scraped recently
-    return accounts.filter(
-      (a) => !a.lastScrapedAt || a.lastScrapedAt < twentyHoursAgo
-    );
-  },
-});
-
-// Get account stats summary
-export const getStats = query({
-  args: {},
-  handler: async (ctx) => {
-    const accounts = await ctx.db
-      .query("accounts")
-      .filter((q) => q.eq(q.field("isActive"), true))
-      .collect();
-
-    const byPlatform = {
-      instagram: accounts.filter((a) => a.platform === "instagram").length,
-      tiktok: accounts.filter((a) => a.platform === "tiktok").length,
-      youtube: accounts.filter((a) => a.platform === "youtube").length,
-    };
-
-    const markets = await ctx.db.query("markets").collect();
-    const byMarket: Record<string, number> = {};
-    for (const market of markets) {
-      byMarket[market.name] = accounts.filter(
-        (a) => a.marketId === market._id
-      ).length;
-    }
-
-    return {
-      total: accounts.length,
-      byPlatform,
-      byMarket,
-    };
   },
 });

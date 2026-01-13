@@ -12,36 +12,41 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { formatNumber, formatRelativeTime, getPlatformIcon } from "@/lib/utils";
-import { Plus, Trash2, RefreshCw } from "lucide-react";
+import { formatRelativeTime, getPlatformIcon } from "@/lib/utils";
+import { Plus, Trash2, ChevronDown, ChevronUp, X, ExternalLink } from "lucide-react";
 import { Id } from "../../../convex/_generated/dataModel";
+
+type Platform = "instagram" | "tiktok" | "youtube";
+type AccountType = "brokerage" | "individual_broker" | "developer" | "other";
 
 export default function CompetitorsPage() {
   const [selectedPlatform, setSelectedPlatform] = useState<string>("all");
   const [selectedMarket, setSelectedMarket] = useState<string>("all");
-  const [showAddForm, setShowAddForm] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [showAddCard, setShowAddCard] = useState(false);
 
   const markets = useQuery(api.markets.list);
   const accounts = useQuery(api.accounts.list, {
     platform:
       selectedPlatform !== "all"
-        ? (selectedPlatform as "instagram" | "tiktok" | "youtube")
+        ? (selectedPlatform as Platform)
         : undefined,
-    marketId: selectedMarket !== "all" ? (selectedMarket as any) : undefined,
+    marketId: selectedMarket !== "all" ? (selectedMarket as Id<"markets">) : undefined,
   });
   const stats = useQuery(api.accounts.getStats);
 
-  const removeAccount = useMutation(api.accounts.remove);
+  const toggleExpand = (id: string) => {
+    setExpandedId(expandedId === id ? null : id);
+    setShowAddCard(false);
+  };
 
-  const handleRemove = async (id: Id<"accounts">) => {
-    if (confirm("Are you sure you want to remove this account?")) {
-      await removeAccount({ id });
-    }
+  const handleAddClick = () => {
+    setShowAddCard(!showAddCard);
+    setExpandedId(null);
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -50,49 +55,43 @@ export default function CompetitorsPage() {
             Manage and track competitor accounts
           </p>
         </div>
-        <Button onClick={() => setShowAddForm(true)}>
-          <Plus className="mr-2 h-4 w-4" /> Add Account
+        <Button onClick={handleAddClick} variant={showAddCard ? "outline" : "default"}>
+          {showAddCard ? (
+            <>
+              <X className="mr-2 h-4 w-4" /> Cancel
+            </>
+          ) : (
+            <>
+              <Plus className="mr-2 h-4 w-4" /> Add Account
+            </>
+          )}
         </Button>
       </div>
 
-      {/* Stats */}
+      {/* Stats Row */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Accounts</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <Card className="bg-slate-50">
+          <CardContent className="pt-4">
+            <div className="text-sm text-muted-foreground">Total Accounts</div>
             <div className="text-2xl font-bold">{stats?.total || 0}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">📸 Instagram</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {stats?.byPlatform?.instagram || 0}
-            </div>
+        <Card className="bg-pink-50">
+          <CardContent className="pt-4">
+            <div className="text-sm text-muted-foreground">📸 Instagram</div>
+            <div className="text-2xl font-bold">{stats?.byPlatform?.instagram || 0}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">🎵 TikTok</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {stats?.byPlatform?.tiktok || 0}
-            </div>
+        <Card className="bg-slate-900 text-white">
+          <CardContent className="pt-4">
+            <div className="text-sm text-slate-300">🎵 TikTok</div>
+            <div className="text-2xl font-bold">{stats?.byPlatform?.tiktok || 0}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">▶️ YouTube</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {stats?.byPlatform?.youtube || 0}
-            </div>
+        <Card className="bg-red-50">
+          <CardContent className="pt-4">
+            <div className="text-sm text-muted-foreground">▶️ YouTube</div>
+            <div className="text-2xl font-bold">{stats?.byPlatform?.youtube || 0}</div>
           </CardContent>
         </Card>
       </div>
@@ -125,179 +124,187 @@ export default function CompetitorsPage() {
         </Select>
       </div>
 
-      {/* Accounts List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Tracked Accounts ({accounts?.length || 0})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {accounts?.map((account) => (
-              <div
-                key={account._id}
-                className="flex items-center justify-between rounded-lg border p-4"
-              >
-                <div className="flex items-center gap-4">
-                  {account.avatarUrl ? (
-                    <img
-                      src={account.avatarUrl}
-                      alt={account.username}
-                      className="h-12 w-12 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-lg">
-                      {account.username[0]?.toUpperCase()}
-                    </div>
-                  )}
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">
-                        {getPlatformIcon(account.platform)}
-                      </span>
-                      <span className="font-medium">@{account.username}</span>
-                      {account.companyName && (
-                        <span className="text-sm text-muted-foreground">
-                          • {account.companyName}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span>{account.market?.name}</span>
-                      <span className="capitalize">{account.accountType.replace("_", " ")}</span>
-                      {account.lastScrapedAt && (
-                        <span>
-                          Last scraped: {formatRelativeTime(account.lastScrapedAt)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <a
-                    href={account.profileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-primary hover:underline"
-                  >
-                    View Profile
-                  </a>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleRemove(account._id)}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-            {accounts?.length === 0 && (
-              <div className="py-8 text-center text-muted-foreground">
-                No accounts found. Add competitor accounts to start tracking.
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Add Account Modal */}
-      {showAddForm && (
-        <AddAccountModal
+      {/* Add New Card (Inline) */}
+      {showAddCard && (
+        <AddAccountCard
           markets={markets || []}
-          onClose={() => setShowAddForm(false)}
+          onClose={() => setShowAddCard(false)}
         />
       )}
+
+      {/* Accounts List */}
+      <div className="space-y-3">
+        {accounts?.map((account) => (
+          <AccountCard
+            key={account._id}
+            account={account}
+            markets={markets || []}
+            isExpanded={expandedId === account._id}
+            onToggle={() => toggleExpand(account._id)}
+          />
+        ))}
+        {accounts?.length === 0 && !showAddCard && (
+          <Card>
+            <CardContent className="py-12 text-center text-muted-foreground">
+              No accounts found. Click "Add Account" to start tracking competitors.
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }
 
-function AddAccountModal({
+interface Market {
+  _id: Id<"markets">;
+  name: string;
+  country: string;
+  city: string;
+  timezone: string;
+  isActive: boolean;
+}
+
+function AccountCard({
+  account,
   markets,
-  onClose,
+  isExpanded,
+  onToggle,
 }: {
-  markets: any[];
-  onClose: () => void;
+  account: any;
+  markets: Market[];
+  isExpanded: boolean;
+  onToggle: () => void;
 }) {
-  const [platform, setPlatform] = useState<"instagram" | "tiktok" | "youtube">(
-    "instagram"
-  );
-  const [username, setUsername] = useState("");
-  const [marketId, setMarketId] = useState("");
-  const [companyName, setCompanyName] = useState("");
-  const [accountType, setAccountType] = useState<
-    "brokerage" | "individual_broker" | "developer" | "other"
-  >("brokerage");
+  const [displayName, setDisplayName] = useState(account.displayName || "");
+  const [marketId, setMarketId] = useState(account.marketId);
+  const [companyName, setCompanyName] = useState(account.companyName || "");
+  const [accountType, setAccountType] = useState<AccountType>(account.accountType);
+  const [bio, setBio] = useState(account.bio || "");
+  const [isSaving, setIsSaving] = useState(false);
 
-  const createAccount = useMutation(api.accounts.create);
+  const updateAccount = useMutation(api.accounts.update);
+  const removeAccount = useMutation(api.accounts.remove);
 
-  const getProfileUrl = () => {
-    switch (platform) {
-      case "instagram":
-        return `https://www.instagram.com/${username}`;
-      case "tiktok":
-        return `https://www.tiktok.com/@${username}`;
-      case "youtube":
-        return `https://www.youtube.com/@${username}`;
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await updateAccount({
+        id: account._id,
+        displayName: displayName || undefined,
+        marketId,
+        companyName: companyName || undefined,
+        accountType,
+        bio: bio || undefined,
+      });
+      onToggle();
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!username || !marketId) return;
-
-    await createAccount({
-      platform,
-      username: username.replace("@", ""),
-      profileUrl: getProfileUrl(),
-      marketId: marketId as any,
-      companyName: companyName || undefined,
-      accountType,
-    });
-
-    onClose();
+  const handleDelete = async () => {
+    if (confirm(`Delete @${account.username}? This cannot be undone.`)) {
+      await removeAccount({ id: account._id });
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Add Competitor Account</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="text-sm font-medium">Platform</label>
-              <Select
-                value={platform}
-                onValueChange={(v) => setPlatform(v as any)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="instagram">📸 Instagram</SelectItem>
-                  <SelectItem value="tiktok">🎵 TikTok</SelectItem>
-                  <SelectItem value="youtube">▶️ YouTube</SelectItem>
-                </SelectContent>
-              </Select>
+    <Card className={`transition-all ${isExpanded ? "ring-2 ring-primary shadow-lg" : "hover:shadow-md"}`}>
+      {/* Collapsed View - Always Visible */}
+      <div
+        className="flex items-center justify-between p-4 cursor-pointer"
+        onClick={onToggle}
+      >
+        <div className="flex items-center gap-4">
+          {/* Avatar */}
+          {account.avatarUrl ? (
+            <img
+              src={account.avatarUrl}
+              alt={account.username}
+              className="h-14 w-14 rounded-full object-cover border-2 border-white shadow"
+            />
+          ) : (
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-slate-200 to-slate-300 text-xl font-bold text-slate-600 shadow">
+              {account.username[0]?.toUpperCase()}
             </div>
+          )}
+          
+          {/* Info */}
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xl">{getPlatformIcon(account.platform)}</span>
+              <span className="font-semibold text-lg">@{account.username}</span>
+              {account.companyName && (
+                <span className="text-sm text-muted-foreground">• {account.companyName}</span>
+              )}
+            </div>
+            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+              <span className="bg-slate-100 px-2 py-0.5 rounded">{account.market?.name}</span>
+              <span className="capitalize">{account.accountType?.replace("_", " ")}</span>
+              {account.lastScrapedAt && (
+                <span>Scraped {formatRelativeTime(account.lastScrapedAt)}</span>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <a
+            href={account.profileUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-2 hover:bg-slate-100 rounded-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ExternalLink className="h-4 w-4 text-muted-foreground" />
+          </a>
+          {isExpanded ? (
+            <ChevronUp className="h-5 w-5 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="h-5 w-5 text-muted-foreground" />
+          )}
+        </div>
+      </div>
 
+      {/* Expanded Edit Form */}
+      {isExpanded && (
+        <div className="border-t bg-slate-50 p-6">
+          <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label className="text-sm font-medium">Username</label>
+              <label className="text-sm font-medium text-slate-700">Platform</label>
               <input
                 type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="@username"
-                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                required
+                value={`${getPlatformIcon(account.platform)} ${account.platform}`}
+                disabled
+                className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm capitalize text-slate-500"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium">Market</label>
-              <Select value={marketId} onValueChange={setMarketId}>
-                <SelectTrigger>
+              <label className="text-sm font-medium text-slate-700">Username</label>
+              <input
+                type="text"
+                value={`@${account.username}`}
+                disabled
+                className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm text-slate-500"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-slate-700">Display Name</label>
+              <input
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="Display name"
+                className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-slate-700">Market</label>
+              <Select value={marketId} onValueChange={(v) => setMarketId(v as Id<"markets">)}>
+                <SelectTrigger className="mt-1 bg-white">
                   <SelectValue placeholder="Select market" />
                 </SelectTrigger>
                 <SelectContent>
@@ -311,23 +318,20 @@ function AddAccountModal({
             </div>
 
             <div>
-              <label className="text-sm font-medium">Company Name (optional)</label>
+              <label className="text-sm font-medium text-slate-700">Company Name</label>
               <input
                 type="text"
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
-                placeholder="Company or Brokerage name"
-                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                placeholder="Brokerage or company"
+                className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium">Account Type</label>
-              <Select
-                value={accountType}
-                onValueChange={(v) => setAccountType(v as any)}
-              >
-                <SelectTrigger>
+              <label className="text-sm font-medium text-slate-700">Account Type</label>
+              <Select value={accountType} onValueChange={(v) => setAccountType(v as AccountType)}>
+                <SelectTrigger className="mt-1 bg-white">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -339,15 +343,188 @@ function AddAccountModal({
               </Select>
             </div>
 
-            <div className="flex justify-end gap-2 pt-4">
-              <Button type="button" variant="outline" onClick={onClose}>
+            <div className="md:col-span-2">
+              <label className="text-sm font-medium text-slate-700">Notes</label>
+              <textarea
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                placeholder="Additional notes..."
+                rows={2}
+                className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
+              />
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex justify-between mt-6 pt-4 border-t border-slate-200">
+            <Button
+              variant="ghost"
+              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              onClick={handleDelete}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Account
+            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={onToggle}>
                 Cancel
               </Button>
-              <Button type="submit">Add Account</Button>
+              <Button onClick={handleSave} disabled={isSaving}>
+                {isSaving ? "Saving..." : "Save Changes"}
+              </Button>
             </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function AddAccountCard({
+  markets,
+  onClose,
+}: {
+  markets: Market[];
+  onClose: () => void;
+}) {
+  const [platform, setPlatform] = useState<Platform>("instagram");
+  const [username, setUsername] = useState("");
+  const [marketId, setMarketId] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [accountType, setAccountType] = useState<AccountType>("brokerage");
+  const [isSaving, setIsSaving] = useState(false);
+
+  const createAccount = useMutation(api.accounts.create);
+
+  const getProfileUrl = () => {
+    const cleanUsername = username.replace("@", "");
+    switch (platform) {
+      case "instagram":
+        return `https://www.instagram.com/${cleanUsername}`;
+      case "tiktok":
+        return `https://www.tiktok.com/@${cleanUsername}`;
+      case "youtube":
+        return `https://www.youtube.com/@${cleanUsername}`;
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!username || !marketId) return;
+
+    setIsSaving(true);
+    try {
+      await createAccount({
+        platform,
+        username: username.replace("@", ""),
+        profileUrl: getProfileUrl(),
+        marketId: marketId as Id<"markets">,
+        companyName: companyName || undefined,
+        accountType,
+      });
+      onClose();
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <Card className="ring-2 ring-green-500 shadow-lg">
+      <div className="flex items-center justify-between p-4 bg-green-50 border-b">
+        <div className="flex items-center gap-3">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-500 text-white text-xl">
+            <Plus className="h-6 w-6" />
+          </div>
+          <div>
+            <div className="font-semibold text-lg">Add New Competitor</div>
+            <div className="text-sm text-muted-foreground">Enter account details below</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-6 bg-slate-50">
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label className="text-sm font-medium text-slate-700">Platform *</label>
+            <Select value={platform} onValueChange={(v) => setPlatform(v as Platform)}>
+              <SelectTrigger className="mt-1 bg-white">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="instagram">📸 Instagram</SelectItem>
+                <SelectItem value="tiktok">🎵 TikTok</SelectItem>
+                <SelectItem value="youtube">▶️ YouTube</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-slate-700">Username *</label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="@username"
+              className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-slate-700">Market *</label>
+            <Select value={marketId} onValueChange={setMarketId}>
+              <SelectTrigger className="mt-1 bg-white">
+                <SelectValue placeholder="Select market" />
+              </SelectTrigger>
+              <SelectContent>
+                {markets.map((market) => (
+                  <SelectItem key={market._id} value={market._id}>
+                    {market.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-slate-700">Account Type</label>
+            <Select value={accountType} onValueChange={(v) => setAccountType(v as AccountType)}>
+              <SelectTrigger className="mt-1 bg-white">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="brokerage">Brokerage</SelectItem>
+                <SelectItem value="individual_broker">Individual Broker</SelectItem>
+                <SelectItem value="developer">Developer</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="text-sm font-medium text-slate-700">Company Name</label>
+            <input
+              type="text"
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+              placeholder="Brokerage or company name"
+              className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
+            />
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-slate-200">
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSubmit} 
+            disabled={isSaving || !username || !marketId}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            {isSaving ? "Adding..." : "Add Account"}
+          </Button>
+        </div>
+      </div>
+    </Card>
   );
 }

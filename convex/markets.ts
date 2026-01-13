@@ -6,7 +6,7 @@ export const list = query({
   handler: async (ctx) => {
     return await ctx.db
       .query("markets")
-      .filter((q) => q.eq(q.field("isActive"), true))
+      .withIndex("by_active", (q) => q.eq("isActive", true))
       .collect();
   },
 });
@@ -55,19 +55,16 @@ export const update = mutation({
       Object.entries(updates).filter(([_, v]) => v !== undefined)
     );
     await ctx.db.patch(id, filtered);
-    return await ctx.db.get(id);
   },
 });
 
 export const remove = mutation({
   args: { id: v.id("markets") },
   handler: async (ctx, args) => {
-    // Soft delete - just mark as inactive
-    await ctx.db.patch(args.id, { isActive: false });
+    await ctx.db.delete(args.id);
   },
 });
 
-// Seed initial markets
 export const seedMarkets = mutation({
   args: {},
   handler: async (ctx) => {
@@ -76,7 +73,7 @@ export const seedMarkets = mutation({
       return { message: "Markets already seeded", count: existingMarkets.length };
     }
 
-    const markets = [
+    const defaultMarkets = [
       { name: "Panama City", country: "Panama", city: "Panama City", timezone: "America/Panama" },
       { name: "CDMX", country: "Mexico", city: "Mexico City", timezone: "America/Mexico_City" },
       { name: "Bogota", country: "Colombia", city: "Bogota", timezone: "America/Bogota" },
@@ -86,10 +83,10 @@ export const seedMarkets = mutation({
       { name: "Miami", country: "USA", city: "Miami", timezone: "America/New_York" },
     ];
 
-    for (const market of markets) {
+    for (const market of defaultMarkets) {
       await ctx.db.insert("markets", { ...market, isActive: true });
     }
 
-    return { message: "Markets seeded successfully", count: markets.length };
+    return { message: "Markets seeded successfully", count: defaultMarkets.length };
   },
 });
