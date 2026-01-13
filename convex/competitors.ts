@@ -404,3 +404,132 @@ export const migrateFromAccounts = mutation({
     };
   },
 });
+
+// Cleanup helper: Extract clean usernames from URLs in social handles and accounts
+export const cleanupSocialHandles = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const competitors = await ctx.db.query("competitors").collect();
+    const accounts = await ctx.db.query("accounts").collect();
+    let competitorsUpdated = 0;
+    let accountsUpdated = 0;
+
+    // Helper to extract username from URL
+    const extractHandle = (platform: string, input: string): string => {
+      if (!input) return "";
+      let cleaned = input.trim().replace(/^@/, "");
+      
+      // If it doesn't look like a URL, return as-is
+      if (!cleaned.includes("/") && !cleaned.includes(".")) {
+        return cleaned;
+      }
+      
+      // Try to parse as URL
+      try {
+        let urlString = cleaned;
+        if (!urlString.startsWith("http")) {
+          urlString = "https://" + urlString;
+        }
+        const url = new URL(urlString);
+        const pathname = url.pathname.replace(/\/$/, "");
+        
+        switch (platform) {
+          case "instagram":
+            const igParts = pathname.split("/").filter(Boolean);
+            if (igParts.length > 0) return igParts[0];
+            break;
+          case "tiktok":
+            const ttParts = pathname.split("/").filter(Boolean);
+            if (ttParts.length > 0) return ttParts[0].replace(/^@/, "");
+            break;
+          case "youtube":
+            if (pathname.startsWith("/@")) return pathname.slice(2);
+            if (pathname.startsWith("/c/")) return pathname.slice(3);
+            if (pathname.startsWith("/channel/")) return pathname.slice(9);
+            const ytParts = pathname.split("/").filter(Boolean);
+            if (ytParts.length > 0) return ytParts[0].replace(/^@/, "");
+            break;
+          case "facebook":
+            const fbParts = pathname.split("/").filter(Boolean);
+            if (fbParts.length > 0) return fbParts[0];
+            break;
+          case "linkedin":
+            if (pathname.startsWith("/in/")) return "in/" + pathname.slice(4).split("/")[0];
+            if (pathname.startsWith("/company/")) return "company/" + pathname.slice(9).split("/")[0];
+            break;
+          case "twitter":
+            const xParts = pathname.split("/").filter(Boolean);
+            if (xParts.length > 0) return xParts[0];
+            break;
+        }
+      } catch (e) {}
+      
+      return cleaned;
+    };
+
+    // Clean competitor social handles
+    for (const competitor of competitors) {
+      if (!competitor.socialHandles) continue;
+      
+      const cleaned: Record<string, string | undefined> = {};
+      let needsUpdate = false;
+      
+      for (const [platform, handle] of Object.entries(competitor.socialHandles)) {
+        if (handle) {
+          const cleanedHandle = extractHandle(platform, handle as string);
+          cleaned[platform] = cleanedHandle;
+          if (cleanedHandle !== handle) {
+            needsUpdate = true;
+          }
+        }
+      }
+      
+      if (needsUpdate) {
+        await ctx.db.patch(competitor._id, { 
+          socialHandles: cleaned as any,
+          updatedAt: Date.now()
+        });
+        competitorsUpdated++;
+      }
+    }
+
+    // Clean account usernames and profile URLs
+    for (const account of accounts) {
+      const cleanedUsername = extractHandle(account.platform, account.username);
+      if (cleanedUsername !== account.username) {
+        let profileUrl = "";
+        switch (account.platform) {
+          case "instagram":
+            profileUrl = `https://www.instagram.com/${cleanedUsername}`;
+            break;
+          case "tiktok":
+            profileUrl = `https://www.tiktok.com/@${cleanedUsername}`;
+            break;
+          case "youtube":
+            if (cleanedUsername.startsWith("UC") && cleanedUsername.length > 20) {
+              profileUrl = `https://www.youtube.com/channel/${cleanedUsername}`;
+            } else {
+              profileUrl = `https://www.youtube.com/@${cleanedUsername}`;
+            }
+            break;
+        }
+        
+        await ctx.db.patch(account._id, { 
+          username: cleanedUsername,
+          profileUrl: profileUrl || account.profileUrl,
+        });
+        accountsUpdated++;
+      }
+      
+      // Also ensure isPaused is set
+      if (account.isPaused === undefined) {
+        await ctx.db.patch(account._id, { isPaused: false });
+      }
+    }
+
+    return {
+      competitorsUpdated,
+      accountsUpdated,
+    };
+  },
+});
