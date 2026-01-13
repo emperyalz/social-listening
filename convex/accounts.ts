@@ -7,6 +7,7 @@ export const list = query({
       v.union(v.literal("instagram"), v.literal("tiktok"), v.literal("youtube"))
     ),
     marketId: v.optional(v.id("markets")),
+    competitorId: v.optional(v.id("competitors")),
     isActive: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
@@ -18,19 +19,25 @@ export const list = query({
     if (args.marketId) {
       accounts = accounts.filter((a) => a.marketId === args.marketId);
     }
+    if (args.competitorId) {
+      accounts = accounts.filter((a) => a.competitorId === args.competitorId);
+    }
     if (args.isActive !== undefined) {
       accounts = accounts.filter((a) => a.isActive === args.isActive);
     }
 
-    // Get market info for each account
-    const accountsWithMarket = await Promise.all(
+    // Get market and competitor info for each account
+    const accountsWithData = await Promise.all(
       accounts.map(async (account) => {
         const market = await ctx.db.get(account.marketId);
-        return { ...account, market };
+        const competitor = account.competitorId 
+          ? await ctx.db.get(account.competitorId) 
+          : null;
+        return { ...account, market, competitor };
       })
     );
 
-    return accountsWithMarket;
+    return accountsWithData;
   },
 });
 

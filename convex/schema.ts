@@ -6,13 +6,56 @@ export default defineSchema({
   markets: defineTable({
     name: v.string(),
     country: v.string(),
+    state: v.optional(v.string()),
     city: v.string(),
     timezone: v.string(),
     isActive: v.boolean(),
   }).index("by_active", ["isActive"]),
 
-  // Competitor accounts to track
+  // Competitors (the business/person entity)
+  competitors: defineTable({
+    name: v.string(),
+    type: v.union(
+      v.literal("brokerage"),
+      v.literal("individual_broker"),
+      v.literal("developer"),
+      v.literal("property_manager"),
+      v.literal("investor"),
+      v.literal("other")
+    ),
+    marketId: v.id("markets"),
+    // Contact info
+    website: v.optional(v.string()),
+    email: v.optional(v.string()),
+    phones: v.optional(v.array(v.string())),
+    // Location
+    address: v.optional(v.string()),
+    city: v.optional(v.string()),
+    state: v.optional(v.string()),
+    country: v.optional(v.string()),
+    // Social handles (including non-monitored platforms)
+    socialHandles: v.optional(v.object({
+      instagram: v.optional(v.string()),
+      tiktok: v.optional(v.string()),
+      youtube: v.optional(v.string()),
+      facebook: v.optional(v.string()),
+      linkedin: v.optional(v.string()),
+      twitter: v.optional(v.string()),
+    })),
+    // Metadata
+    notes: v.optional(v.string()),
+    logoUrl: v.optional(v.string()),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index("by_market", ["marketId"])
+    .index("by_type", ["type"])
+    .index("by_active", ["isActive"]),
+
+  // Social accounts to track (linked to competitors)
   accounts: defineTable({
+    competitorId: v.optional(v.id("competitors")), // New: link to parent competitor
     platform: v.union(
       v.literal("instagram"),
       v.literal("tiktok"),
@@ -23,7 +66,7 @@ export default defineSchema({
     profileUrl: v.string(),
     avatarUrl: v.optional(v.string()),
     bio: v.optional(v.string()),
-    marketId: v.id("markets"),
+    marketId: v.id("markets"), // Keep for backwards compatibility
     // Metadata
     companyName: v.optional(v.string()),
     accountType: v.union(
@@ -38,6 +81,7 @@ export default defineSchema({
   })
     .index("by_platform", ["platform"])
     .index("by_market", ["marketId"])
+    .index("by_competitor", ["competitorId"])
     .index("by_platform_username", ["platform", "username"]),
 
   // Follower/Following snapshots (tracked daily)

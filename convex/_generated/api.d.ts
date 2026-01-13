@@ -9,6 +9,7 @@
  */
 
 import type * as accounts from "../accounts.js";
+import type * as competitors from "../competitors.js";
 import type * as http from "../http.js";
 import type * as ingestion from "../ingestion.js";
 import type * as insights from "../insights.js";
@@ -24,6 +25,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   accounts: typeof accounts;
+  competitors: typeof competitors;
   http: typeof http;
   ingestion: typeof ingestion;
   insights: typeof insights;

@@ -29,6 +29,7 @@ export const create = mutation({
   args: {
     name: v.string(),
     country: v.string(),
+    state: v.optional(v.string()),
     city: v.string(),
     timezone: v.string(),
   },
@@ -45,6 +46,7 @@ export const update = mutation({
     id: v.id("markets"),
     name: v.optional(v.string()),
     country: v.optional(v.string()),
+    state: v.optional(v.string()),
     city: v.optional(v.string()),
     timezone: v.optional(v.string()),
     isActive: v.optional(v.boolean()),
