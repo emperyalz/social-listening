@@ -222,11 +222,12 @@ function MultiSelect({ options, selected, onChange, placeholder, icon }: MultiSe
         </span>
         <div className="flex items-center gap-1">
           {selected.length > 0 && (
-            <X 
-              className="h-4 w-4 text-slate-400 hover:text-red-500 cursor-pointer" 
-              onClick={clearThis}
-              title="Clear this filter"
-            />
+            <span title="Clear this filter">
+              <X 
+                className="h-4 w-4 text-slate-400 hover:text-red-500 cursor-pointer" 
+                onClick={clearThis}
+              />
+            </span>
           )}
           <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
         </div>
