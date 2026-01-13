@@ -102,6 +102,8 @@ export const create = mutation({
 export const update = mutation({
   args: {
     id: v.id("accounts"),
+    username: v.optional(v.string()),
+    profileUrl: v.optional(v.string()),
     displayName: v.optional(v.string()),
     marketId: v.optional(v.id("markets")),
     companyName: v.optional(v.string()),

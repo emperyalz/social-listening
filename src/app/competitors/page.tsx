@@ -164,6 +164,22 @@ interface Market {
   isActive: boolean;
 }
 
+// Helper to clean username (remove @ and trim)
+const cleanUsername = (username: string) => username.replace(/^@/, "").trim();
+
+// Helper to generate profile URL
+const getProfileUrl = (platform: Platform, username: string) => {
+  const clean = cleanUsername(username);
+  switch (platform) {
+    case "instagram":
+      return `https://www.instagram.com/${clean}`;
+    case "tiktok":
+      return `https://www.tiktok.com/@${clean}`;
+    case "youtube":
+      return `https://www.youtube.com/@${clean}`;
+  }
+};
+
 function AccountCard({
   account,
   markets,
@@ -175,6 +191,7 @@ function AccountCard({
   isExpanded: boolean;
   onToggle: () => void;
 }) {
+  const [username, setUsername] = useState(account.username);
   const [displayName, setDisplayName] = useState(account.displayName || "");
   const [marketId, setMarketId] = useState(account.marketId);
   const [companyName, setCompanyName] = useState(account.companyName || "");
@@ -187,9 +204,12 @@ function AccountCard({
 
   const handleSave = async () => {
     setIsSaving(true);
+    const cleanedUsername = cleanUsername(username);
     try {
       await updateAccount({
         id: account._id,
+        username: cleanedUsername,
+        profileUrl: getProfileUrl(account.platform, cleanedUsername),
         displayName: displayName || undefined,
         marketId,
         companyName: companyName || undefined,
@@ -284,9 +304,10 @@ function AccountCard({
               <label className="text-sm font-medium text-slate-700">Username</label>
               <input
                 type="text"
-                value={`@${account.username}`}
-                disabled
-                className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm text-slate-500"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="username"
+                className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
               />
             </div>
 
@@ -396,27 +417,16 @@ function AddAccountCard({
 
   const createAccount = useMutation(api.accounts.create);
 
-  const getProfileUrl = () => {
-    const cleanUsername = username.replace("@", "");
-    switch (platform) {
-      case "instagram":
-        return `https://www.instagram.com/${cleanUsername}`;
-      case "tiktok":
-        return `https://www.tiktok.com/@${cleanUsername}`;
-      case "youtube":
-        return `https://www.youtube.com/@${cleanUsername}`;
-    }
-  };
-
   const handleSubmit = async () => {
     if (!username || !marketId) return;
 
     setIsSaving(true);
+    const cleanedUsername = cleanUsername(username);
     try {
       await createAccount({
         platform,
-        username: username.replace("@", ""),
-        profileUrl: getProfileUrl(),
+        username: cleanedUsername,
+        profileUrl: getProfileUrl(platform, cleanedUsername),
         marketId: marketId as Id<"markets">,
         companyName: companyName || undefined,
         accountType,
