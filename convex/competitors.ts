@@ -343,20 +343,21 @@ export const migrateFromAccounts = mutation({
     const linked: string[] = [];
 
     // Group accounts by companyName and marketId
-    const grouped = new Map<string, typeof accounts>();
+    const grouped: Record<string, typeof accounts> = {};
     
     for (const account of accounts) {
       if (account.competitorId) continue; // Already linked
       
       const key = `${account.companyName || account.username}-${account.marketId}`;
-      if (!grouped.has(key)) {
-        grouped.set(key, []);
+      if (!grouped[key]) {
+        grouped[key] = [];
       }
-      grouped.get(key)!.push(account);
+      grouped[key].push(account);
     }
 
     // Create competitors for each group
-    for (const [key, groupAccounts] of grouped) {
+    for (const key of Object.keys(grouped)) {
+      const groupAccounts = grouped[key];
       const firstAccount = groupAccounts[0];
       
       // Build social handles from accounts
