@@ -149,6 +149,18 @@ export const remove = mutation({
   },
 });
 
+export const togglePause = mutation({
+  args: { id: v.id("accounts") },
+  handler: async (ctx, args) => {
+    const account = await ctx.db.get(args.id);
+    if (!account) return null;
+    
+    const isPaused = !account.isPaused;
+    await ctx.db.patch(args.id, { isPaused });
+    return { isPaused };
+  },
+});
+
 export const updateLastScraped = mutation({
   args: { id: v.id("accounts") },
   handler: async (ctx, args) => {

@@ -76,8 +76,13 @@ export const create = mutation({
     marketId: v.id("markets"),
     website: v.optional(v.string()),
     email: v.optional(v.string()),
-    phones: v.optional(v.array(v.string())),
+    phones: v.optional(v.array(v.object({
+      label: v.string(),
+      number: v.string(),
+      isWhatsApp: v.optional(v.boolean()),
+    }))),
     address: v.optional(v.string()),
+    address2: v.optional(v.string()),
     city: v.optional(v.string()),
     state: v.optional(v.string()),
     country: v.optional(v.string()),
@@ -143,6 +148,7 @@ export const create = mutation({
                   : args.type === "brokerage" ? "brokerage" 
                   : "other",
                 isActive: true,
+                isPaused: false,
                 createdAt: Date.now(),
               });
             } else {
@@ -175,8 +181,13 @@ export const update = mutation({
     marketId: v.optional(v.id("markets")),
     website: v.optional(v.string()),
     email: v.optional(v.string()),
-    phones: v.optional(v.array(v.string())),
+    phones: v.optional(v.array(v.object({
+      label: v.string(),
+      number: v.string(),
+      isWhatsApp: v.optional(v.boolean()),
+    }))),
     address: v.optional(v.string()),
+    address2: v.optional(v.string()),
     city: v.optional(v.string()),
     state: v.optional(v.string()),
     country: v.optional(v.string()),

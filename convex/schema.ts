@@ -27,13 +27,19 @@ export default defineSchema({
     // Contact info
     website: v.optional(v.string()),
     email: v.optional(v.string()),
-    phones: v.optional(v.array(v.string())),
-    // Location
+    // Multiple phones with labels
+    phones: v.optional(v.array(v.object({
+      label: v.string(), // "Mobile", "Office", "WhatsApp", etc.
+      number: v.string(),
+      isWhatsApp: v.optional(v.boolean()),
+    }))),
+    // Location with address line 2
     address: v.optional(v.string()),
+    address2: v.optional(v.string()),
     city: v.optional(v.string()),
     state: v.optional(v.string()),
     country: v.optional(v.string()),
-    // Social handles (including non-monitored platforms)
+    // Social handles (including non-monitored platforms) - just the username/handle
     socialHandles: v.optional(v.object({
       instagram: v.optional(v.string()),
       tiktok: v.optional(v.string()),
@@ -45,7 +51,7 @@ export default defineSchema({
     // Metadata
     notes: v.optional(v.string()),
     logoUrl: v.optional(v.string()),
-    isActive: v.boolean(),
+    isActive: v.boolean(), // Master switch for competitor
     createdAt: v.number(),
     updatedAt: v.optional(v.number()),
   })
@@ -55,7 +61,7 @@ export default defineSchema({
 
   // Social accounts to track (linked to competitors)
   accounts: defineTable({
-    competitorId: v.optional(v.id("competitors")), // New: link to parent competitor
+    competitorId: v.optional(v.id("competitors")), // Link to parent competitor
     platform: v.union(
       v.literal("instagram"),
       v.literal("tiktok"),
@@ -75,7 +81,8 @@ export default defineSchema({
       v.literal("developer"),
       v.literal("other")
     ),
-    isActive: v.boolean(),
+    isActive: v.boolean(), // Individual account can be paused
+    isPaused: v.optional(v.boolean()), // Explicit pause flag (separate from isActive)
     createdAt: v.number(),
     lastScrapedAt: v.optional(v.number()),
   })
