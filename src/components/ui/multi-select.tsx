@@ -1,130 +1,134 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { ChevronDown, X, Check } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Check, ChevronDown, X } from "lucide-react";
+import { Button } from "./button";
 
-interface MultiSelectProps {
-  options: { value: string; label: string }[];
-  selected: string[];
-  onChange: (selected: string[]) => void;
-  placeholder: string;
-  icon?: React.ReactNode;
-  className?: string;
+interface MultiSelectOption {
+  value: string;
+  label: string;
 }
 
-export function MultiSelect({ 
-  options, 
-  selected, 
-  onChange, 
-  placeholder, 
-  icon,
-  className = "w-[200px]"
+interface MultiSelectProps {
+  options: MultiSelectOption[];
+  selected: string[];
+  onChange: (selected: string[]) => void;
+  placeholder?: string;
+}
+
+export function MultiSelect({
+  options,
+  selected,
+  onChange,
+  placeholder = "Select...",
 }: MultiSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Close dropdown when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (ref.current && !ref.current.contains(event.target as Node)) {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
-    };
+    }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const toggleOption = (value: string) => {
     if (selected.includes(value)) {
-      onChange(selected.filter(v => v !== value));
+      onChange(selected.filter((v) => v !== value));
     } else {
       onChange([...selected, value]);
     }
   };
 
-  const clearThis = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const clearSelection = () => {
     onChange([]);
+    setIsOpen(false);
   };
 
-  const displayText = selected.length === 0 
-    ? placeholder 
-    : selected.length === 1 
-      ? options.find(o => o.value === selected[0])?.label || selected[0]
-      : `${selected.length} selected`;
+  const clearIndividual = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    clearSelection();
+  };
+
+  const getDisplayText = () => {
+    if (selected.length === 0) return placeholder;
+    if (selected.length === 1) {
+      return options.find((opt) => opt.value === selected[0])?.label || placeholder;
+    }
+    return `${selected.length} selected`;
+  };
 
   return (
-    <div ref={ref} className={`relative ${className}`}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between w-full h-10 px-3 py-2 text-sm bg-white border rounded-md hover:bg-slate-50"
-      >
-        <span className="flex items-center gap-2 truncate">
-          {icon}
-          {displayText}
-        </span>
-        <div className="flex items-center gap-1">
-          {selected.length > 0 && (
-            <span title="Clear this filter">
-              <X 
-                className="h-4 w-4 text-slate-400 hover:text-red-500 cursor-pointer" 
-                onClick={clearThis}
-              />
-            </span>
-          )}
-          <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
-        </div>
-      </button>
-      
+    <div className="relative" ref={dropdownRef}>
+      {/* Trigger Button */}
+      <div className="flex gap-1">
+        <Button
+          variant="outline"
+          onClick={() => setIsOpen(!isOpen)}
+          className="justify-between min-w-[180px]"
+        >
+          <span className="truncate">{getDisplayText()}</span>
+          <ChevronDown className="ml-2 h-4 w-4 shrink-0" />
+        </Button>
+        {selected.length > 0 && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={clearIndividual}
+            className="h-10 w-10 text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+
+      {/* Dropdown */}
       {isOpen && (
-        <div className="absolute z-50 mt-1 w-full bg-white border rounded-md shadow-lg max-h-60 overflow-auto">
-          {selected.length > 0 && (
-            <div
-              onClick={clearThis}
-              className="flex items-center gap-2 px-3 py-2 hover:bg-red-50 cursor-pointer border-b text-red-600 text-sm"
-            >
-              <X className="h-4 w-4" />
-              Clear selection ({selected.length})
-            </div>
-          )}
-          {options.map(option => (
-            <div
-              key={option.value}
-              onClick={() => toggleOption(option.value)}
-              className="flex items-center gap-2 px-3 py-2 hover:bg-slate-100 cursor-pointer"
-            >
-              <div className={`w-4 h-4 border rounded flex items-center justify-center ${
-                selected.includes(option.value) ? "bg-primary border-primary" : "border-slate-300"
-              }`}>
-                {selected.includes(option.value) && (
-                  <Check className="h-3 w-3 text-white" />
-                )}
-              </div>
-              <span className="text-sm">{option.label}</span>
-            </div>
-          ))}
+        <div className="absolute z-50 mt-2 w-full min-w-[240px] rounded-md border bg-popover shadow-lg">
+          <div className="max-h-[300px] overflow-y-auto p-1">
+            {/* Clear Selection Option */}
+            {selected.length > 0 && (
+              <>
+                <button
+                  onClick={clearSelection}
+                  className="w-full flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                  Clear selection ({selected.length})
+                </button>
+                <div className="my-1 border-t" />
+              </>
+            )}
+
+            {/* Options */}
+            {options.map((option) => {
+              const isSelected = selected.includes(option.value);
+              return (
+                <button
+                  key={option.value}
+                  onClick={() => toggleOption(option.value)}
+                  className="w-full flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+                >
+                  <div
+                    className={`flex h-4 w-4 items-center justify-center rounded border ${
+                      isSelected
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-input"
+                    }`}
+                  >
+                    {isSelected && <Check className="h-3 w-3" />}
+                  </div>
+                  <span>{option.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
-  );
-}
-
-// Helper component to show "Clear All Filters" button when any filter is active
-export function ClearAllFilters({ 
-  onClear, 
-  show 
-}: { 
-  onClear: () => void; 
-  show: boolean;
-}) {
-  if (!show) return null;
-  
-  return (
-    <button
-      onClick={onClear}
-      className="flex items-center gap-1 px-3 py-2 text-sm text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
-    >
-      <X className="h-4 w-4" />
-      Clear All Filters
-    </button>
   );
 }
