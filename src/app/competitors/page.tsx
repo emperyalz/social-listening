@@ -351,6 +351,7 @@ function SocialHandleInput({
   isPaused,
   onPauseToggle,
   showPauseControl,
+  competitorPaused,
 }: {
   platform: keyof typeof PLATFORMS;
   value: string;
@@ -359,6 +360,7 @@ function SocialHandleInput({
   isPaused?: boolean;
   onPauseToggle?: () => void;
   showPauseControl?: boolean;
+  competitorPaused?: boolean;
 }) {
   const config = PLATFORMS[platform];
   const Icon = config.icon;
@@ -372,6 +374,9 @@ function SocialHandleInput({
 
   const cleanedHandle = extractSocialHandle(platform, value);
   const profileUrl = getProfileUrl(platform, cleanedHandle);
+  
+  // Effective pause state - paused if competitor is paused OR this specific account is paused
+  const effectivelyPaused = competitorPaused || isPaused;
 
   return (
     <div>
@@ -383,34 +388,41 @@ function SocialHandleInput({
         ) : (
           <span className="text-xs bg-slate-100 text-slate-500 px-1.5 rounded">Reference</span>
         )}
-        {/* PAUSE TOGGLE BUTTON - Only show for monitored platforms with existing accounts */}
-        {showPauseControl && isMonitored && cleanedHandle && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              console.log("Pause toggle clicked for:", platform, "current isPaused:", isPaused);
-              if (onPauseToggle) {
-                onPauseToggle();
-              }
-            }}
-            className={`ml-auto text-xs px-2 py-1 rounded flex items-center gap-1 transition-colors ${
-              isPaused 
-                ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border border-yellow-300" 
-                : "bg-green-100 text-green-700 hover:bg-green-200 border border-green-300"
-            }`}
-          >
-            {isPaused ? (
-              <>
-                <Pause className="h-3 w-3" /> Paused
-              </>
-            ) : (
-              <>
-                <CheckCircle className="h-3 w-3" /> Active
-              </>
-            )}
-          </button>
+        {/* PAUSE TOGGLE BUTTON - Only show for monitored platforms with existing accounts when competitor is active */}
+        {isMonitored && cleanedHandle && (
+          competitorPaused ? (
+            // When competitor is paused, show disabled "Paused" indicator
+            <span className="ml-auto text-xs px-2 py-1 rounded flex items-center gap-1 bg-yellow-100 text-yellow-700 border border-yellow-300 opacity-60">
+              <Pause className="h-3 w-3" /> Paused
+            </span>
+          ) : showPauseControl ? (
+            // When competitor is active and account exists, show clickable toggle
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (onPauseToggle) {
+                  onPauseToggle();
+                }
+              }}
+              className={`ml-auto text-xs px-2 py-1 rounded flex items-center gap-1 transition-colors ${
+                isPaused 
+                  ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border border-yellow-300" 
+                  : "bg-green-100 text-green-700 hover:bg-green-200 border border-green-300"
+              }`}
+            >
+              {isPaused ? (
+                <>
+                  <Pause className="h-3 w-3" /> Paused
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-3 w-3" /> Active
+                </>
+              )}
+            </button>
+          ) : null
         )}
       </div>
       <input
@@ -419,7 +431,7 @@ function SocialHandleInput({
         onChange={(e) => onChange(e.target.value)}
         onBlur={handleBlur}
         placeholder={isMonitored ? "username or paste URL" : "username or URL"}
-        className={`w-full rounded-lg border bg-white px-3 py-2 text-sm ${isPaused ? "opacity-50" : ""}`}
+        className={`w-full rounded-lg border bg-white px-3 py-2 text-sm ${effectivelyPaused ? "opacity-50" : ""}`}
       />
       {cleanedHandle && (
         <a
@@ -639,7 +651,6 @@ function CompetitorCard({
   const [state, setState] = useState(competitor.state || "");
   const [country, setCountry] = useState(competitor.country || "");
   const [notes, setNotes] = useState(competitor.notes || "");
-  const [isActive, setIsActive] = useState(competitor.isActive);
   
   const [instagram, setInstagram] = useState(cleanHandle("instagram", competitor.socialHandles?.instagram));
   const [tiktok, setTiktok] = useState(cleanHandle("tiktok", competitor.socialHandles?.tiktok));
@@ -658,12 +669,26 @@ function CompetitorCard({
   });
   
   const [isSaving, setIsSaving] = useState(false);
+  const [isTogglingStatus, setIsTogglingStatus] = useState(false);
 
   const updateCompetitor = useMutation(api.competitors.update);
   const removeCompetitor = useMutation(api.competitors.remove);
   const toggleAccountPause = useMutation(api.accounts.togglePause);
 
-  // Handle saving competitor - including isActive status
+  // Toggle competitor active status - saves immediately
+  const handleToggleCompetitorStatus = async () => {
+    setIsTogglingStatus(true);
+    try {
+      await updateCompetitor({
+        id: competitor._id,
+        isActive: !competitor.isActive,
+      });
+    } finally {
+      setIsTogglingStatus(false);
+    }
+  };
+
+  // Handle saving other competitor details
   const handleSave = async () => {
     setIsSaving(true);
     try {
@@ -690,7 +715,6 @@ function CompetitorCard({
         state: state || undefined,
         country: country || undefined,
         notes: notes || undefined,
-        isActive,
         socialHandles: cleanedHandles,
       });
       
@@ -715,14 +739,16 @@ function CompetitorCard({
 
   // Toggle pause for individual platform account
   const handleToggleAccountPause = async (platform: string) => {
-    console.log("handleToggleAccountPause called for platform:", platform);
-    const account = competitor.accounts?.find((a: any) => a.platform === platform);
-    console.log("Found account:", account);
+    // Don't allow toggling individual accounts if competitor is paused
+    if (!competitor.isActive) {
+      alert("Enable competitor monitoring first before toggling individual platforms.");
+      return;
+    }
     
+    const account = competitor.accounts?.find((a: any) => a.platform === platform);
     if (account) {
       try {
         const result = await toggleAccountPause({ id: account._id });
-        console.log("Toggle result:", result);
         if (result) {
           setAccountPauseStates(prev => ({
             ...prev,
@@ -732,8 +758,6 @@ function CompetitorCard({
       } catch (error) {
         console.error("Error toggling pause:", error);
       }
-    } else {
-      console.log("No account found for platform:", platform);
     }
   };
 
@@ -746,13 +770,14 @@ function CompetitorCard({
   
   const monitoredCount = [cleanedIg, cleanedTt, cleanedYt].filter(Boolean).length;
   const totalHandles = [cleanedIg, cleanedTt, cleanedYt, cleanedFb, cleanedLi, cleanedTw].filter(Boolean).length;
-  const pausedCount = Object.values(accountPauseStates).filter(Boolean).length;
-
-  // For header badge - show local state when expanded, DB state when collapsed
-  const displayIsActive = isExpanded ? isActive : competitor.isActive;
+  
+  // Count paused - if competitor is paused, all are effectively paused
+  const pausedCount = competitor.isActive 
+    ? Object.values(accountPauseStates).filter(Boolean).length 
+    : monitoredCount;
 
   return (
-    <Card className={`transition-all ${isExpanded ? "ring-2 ring-primary shadow-lg" : "hover:shadow-md"} ${!displayIsActive ? "opacity-60" : ""}`}>
+    <Card className={`transition-all ${isExpanded ? "ring-2 ring-primary shadow-lg" : "hover:shadow-md"} ${!competitor.isActive ? "opacity-60" : ""}`}>
       {/* Collapsed View */}
       <div className="flex items-center justify-between p-4 cursor-pointer" onClick={onToggle}>
         <div className="flex items-center gap-4">
@@ -767,12 +792,9 @@ function CompetitorCard({
           <div>
             <div className="flex items-center gap-2">
               <span className="font-semibold text-lg">{competitor.name}</span>
-              <span className={`rounded-full px-2 py-0.5 text-xs ${displayIsActive ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
-                {displayIsActive ? "Active" : "Paused"}
+              <span className={`rounded-full px-2 py-0.5 text-xs ${competitor.isActive ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
+                {competitor.isActive ? "Active" : "Paused"}
               </span>
-              {isExpanded && isActive !== competitor.isActive && (
-                <span className="text-xs text-orange-500">(unsaved)</span>
-              )}
             </div>
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
               <span className="capitalize">{competitor.type.replace(/_/g, " ")}</span>
@@ -783,7 +805,9 @@ function CompetitorCard({
               {pausedCount > 0 && (
                 <>
                   <span>•</span>
-                  <span className="text-yellow-600">{pausedCount} paused</span>
+                  <span className="text-yellow-600">
+                    {competitor.isActive ? `${pausedCount} paused` : "All paused"}
+                  </span>
                 </>
               )}
             </div>
@@ -793,7 +817,8 @@ function CompetitorCard({
                 const platform = PLATFORMS[account.platform as keyof typeof PLATFORMS];
                 if (!platform) return null;
                 const Icon = platform.icon;
-                const isPaused = accountPauseStates[account.platform] ?? account.isPaused;
+                // If competitor is paused, all accounts are effectively paused
+                const isPaused = !competitor.isActive || accountPauseStates[account.platform] || account.isPaused;
                 const cleanedUsername = extractSocialHandle(account.platform, account.username);
                 return (
                   <div
@@ -828,19 +853,30 @@ function CompetitorCard({
           {/* Status Toggle - SAVES IMMEDIATELY */}
           <div className="mb-6 flex items-center justify-between p-3 bg-white rounded-lg border">
             <div>
-              <span className="font-medium">Competitor Status</span>
-              <p className="text-xs text-muted-foreground">Toggle to pause/resume all monitoring (saves on Save Changes)</p>
+              <span className="font-medium">Competitor Monitoring</span>
+              <p className="text-xs text-muted-foreground">
+                {competitor.isActive 
+                  ? "Monitoring active. Click to pause all platform monitoring." 
+                  : "Monitoring paused. Click to resume."}
+              </p>
             </div>
             <button
               type="button"
-              onClick={() => setIsActive(!isActive)}
-              className={`px-4 py-2 rounded-lg flex items-center gap-2 cursor-pointer transition-colors ${
-                isActive 
+              disabled={isTogglingStatus}
+              onClick={handleToggleCompetitorStatus}
+              className={`px-4 py-2 rounded-lg flex items-center gap-2 cursor-pointer transition-colors disabled:opacity-50 ${
+                competitor.isActive 
                   ? "bg-green-100 text-green-700 hover:bg-green-200 border border-green-300" 
                   : "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border border-yellow-300"
               }`}
             >
-              {isActive ? <><CheckCircle className="h-4 w-4" /> Active</> : <><Pause className="h-4 w-4" /> Paused</>}
+              {isTogglingStatus ? (
+                "Saving..."
+              ) : competitor.isActive ? (
+                <><CheckCircle className="h-4 w-4" /> Active</>
+              ) : (
+                <><Pause className="h-4 w-4" /> Paused</>
+              )}
             </button>
           </div>
 
@@ -927,35 +963,40 @@ function CompetitorCard({
           <div className="mb-6">
             <h3 className="text-sm font-semibold text-slate-700 mb-3">📱 Social Media Handles</h3>
             <p className="text-xs text-muted-foreground mb-3">
-              Paste URLs or usernames. Click Active/Paused to control individual platform monitoring (saves immediately).
+              {competitor.isActive 
+                ? "Click Active/Paused to control individual platform monitoring."
+                : "⚠️ Competitor monitoring is paused. Enable it above to control individual platforms."}
             </p>
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className={`grid gap-4 md:grid-cols-3 ${!competitor.isActive ? "opacity-50" : ""}`}>
               <SocialHandleInput
                 platform="instagram"
                 value={instagram}
                 onChange={setInstagram}
                 isMonitored={true}
-                isPaused={accountPauseStates.instagram}
+                isPaused={!competitor.isActive || accountPauseStates.instagram}
                 onPauseToggle={() => handleToggleAccountPause("instagram")}
-                showPauseControl={!!competitor.accounts?.find((a: any) => a.platform === "instagram")}
+                showPauseControl={competitor.isActive && !!competitor.accounts?.find((a: any) => a.platform === "instagram")}
+                competitorPaused={!competitor.isActive}
               />
               <SocialHandleInput
                 platform="tiktok"
                 value={tiktok}
                 onChange={setTiktok}
                 isMonitored={true}
-                isPaused={accountPauseStates.tiktok}
+                isPaused={!competitor.isActive || accountPauseStates.tiktok}
                 onPauseToggle={() => handleToggleAccountPause("tiktok")}
-                showPauseControl={!!competitor.accounts?.find((a: any) => a.platform === "tiktok")}
+                showPauseControl={competitor.isActive && !!competitor.accounts?.find((a: any) => a.platform === "tiktok")}
+                competitorPaused={!competitor.isActive}
               />
               <SocialHandleInput
                 platform="youtube"
                 value={youtube}
                 onChange={setYoutube}
                 isMonitored={true}
-                isPaused={accountPauseStates.youtube}
+                isPaused={!competitor.isActive || accountPauseStates.youtube}
                 onPauseToggle={() => handleToggleAccountPause("youtube")}
-                showPauseControl={!!competitor.accounts?.find((a: any) => a.platform === "youtube")}
+                showPauseControl={competitor.isActive && !!competitor.accounts?.find((a: any) => a.platform === "youtube")}
+                competitorPaused={!competitor.isActive}
               />
               <SocialHandleInput platform="facebook" value={facebook} onChange={setFacebook} isMonitored={false} />
               <SocialHandleInput platform="linkedin" value={linkedin} onChange={setLinkedin} isMonitored={false} />
