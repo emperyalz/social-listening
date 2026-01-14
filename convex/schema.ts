@@ -27,12 +27,17 @@ export default defineSchema({
     // Contact info
     website: v.optional(v.string()),
     email: v.optional(v.string()),
-    // Multiple phones with labels
-    phones: v.optional(v.array(v.object({
-      label: v.string(), // "Mobile", "Office", "WhatsApp", etc.
-      number: v.string(),
-      isWhatsApp: v.optional(v.boolean()),
-    }))),
+    // Multiple phones - accepts both old format (string[]) and new format (object[])
+    phones: v.optional(v.array(
+      v.union(
+        v.string(), // Old format: just the number
+        v.object({
+          label: v.string(), // "Mobile", "Office", "WhatsApp", etc.
+          number: v.string(),
+          isWhatsApp: v.optional(v.boolean()),
+        })
+      )
+    )),
     // Location with address line 2
     address: v.optional(v.string()),
     address2: v.optional(v.string()),
