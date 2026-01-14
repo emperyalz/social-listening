@@ -378,6 +378,14 @@ function SocialHandleInput({
   // Effective pause state - paused if competitor is paused OR this specific account is paused
   const effectivelyPaused = competitorPaused || isPaused;
 
+  const handlePauseClick = () => {
+    console.log("🔵 Button clicked for platform:", platform);
+    console.log("🔵 onPauseToggle exists:", !!onPauseToggle);
+    if (onPauseToggle) {
+      onPauseToggle();
+    }
+  };
+
   return (
     <div>
       <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -388,41 +396,29 @@ function SocialHandleInput({
         ) : (
           <span className="text-xs bg-slate-100 text-slate-500 px-1.5 rounded">Reference</span>
         )}
-        {/* PAUSE TOGGLE BUTTON - Only show for monitored platforms with existing accounts when competitor is active */}
-        {isMonitored && cleanedHandle && (
-          competitorPaused ? (
-            // When competitor is paused, show disabled "Paused" indicator
-            <span className="ml-auto text-xs px-2 py-1 rounded flex items-center gap-1 bg-yellow-100 text-yellow-700 border border-yellow-300 opacity-60">
-              <Pause className="h-3 w-3" /> Paused
-            </span>
-          ) : showPauseControl ? (
-            // When competitor is active and account exists, show clickable toggle
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (onPauseToggle) {
-                  onPauseToggle();
-                }
-              }}
-              className={`ml-auto text-xs px-2 py-1 rounded flex items-center gap-1 transition-colors ${
-                isPaused 
-                  ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border border-yellow-300" 
-                  : "bg-green-100 text-green-700 hover:bg-green-200 border border-green-300"
-              }`}
-            >
-              {isPaused ? (
-                <>
-                  <Pause className="h-3 w-3" /> Paused
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="h-3 w-3" /> Active
-                </>
-              )}
-            </button>
-          ) : null
+        {/* PAUSE TOGGLE BUTTON */}
+        {isMonitored && cleanedHandle && !competitorPaused && showPauseControl && (
+          <button
+            type="button"
+            onClick={handlePauseClick}
+            className={`ml-auto text-xs px-2 py-1 rounded flex items-center gap-1 cursor-pointer transition-colors ${
+              isPaused 
+                ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border border-yellow-300" 
+                : "bg-green-100 text-green-700 hover:bg-green-200 border border-green-300"
+            }`}
+          >
+            {isPaused ? (
+              <><Pause className="h-3 w-3" /> Paused</>
+            ) : (
+              <><CheckCircle className="h-3 w-3" /> Active</>
+            )}
+          </button>
+        )}
+        {/* Show disabled paused indicator when competitor is paused */}
+        {isMonitored && cleanedHandle && competitorPaused && (
+          <span className="ml-auto text-xs px-2 py-1 rounded flex items-center gap-1 bg-yellow-100 text-yellow-700 border border-yellow-300 opacity-60">
+            <Pause className="h-3 w-3" /> Paused
+          </span>
         )}
       </div>
       <input
@@ -739,6 +735,9 @@ function CompetitorCard({
 
   // Toggle pause for individual platform account
   const handleToggleAccountPause = async (platform: string) => {
+    console.log("🟢 handleToggleAccountPause called for platform:", platform);
+    console.log("🟢 competitor.isActive:", competitor.isActive);
+    
     // Don't allow toggling individual accounts if competitor is paused
     if (!competitor.isActive) {
       alert("Enable competitor monitoring first before toggling individual platforms.");
@@ -746,9 +745,13 @@ function CompetitorCard({
     }
     
     const account = competitor.accounts?.find((a: any) => a.platform === platform);
+    console.log("🟢 Found account:", account);
+    
     if (account) {
       try {
+        console.log("🟢 Calling toggleAccountPause with id:", account._id);
         const result = await toggleAccountPause({ id: account._id });
+        console.log("🟢 Toggle result:", result);
         if (result) {
           setAccountPauseStates(prev => ({
             ...prev,
@@ -756,8 +759,10 @@ function CompetitorCard({
           }));
         }
       } catch (error) {
-        console.error("Error toggling pause:", error);
+        console.error("🔴 Error toggling pause:", error);
       }
+    } else {
+      console.log("🟡 No account found for platform:", platform);
     }
   };
 
