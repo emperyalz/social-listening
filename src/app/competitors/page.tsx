@@ -379,8 +379,6 @@ function SocialHandleInput({
   const effectivelyPaused = competitorPaused || isPaused;
 
   const handlePauseClick = () => {
-    console.log("🔵 Button clicked for platform:", platform);
-    console.log("🔵 onPauseToggle exists:", !!onPauseToggle);
     if (onPauseToggle) {
       onPauseToggle();
     }
@@ -735,9 +733,6 @@ function CompetitorCard({
 
   // Toggle pause for individual platform account
   const handleToggleAccountPause = async (platform: string) => {
-    console.log("🟢 handleToggleAccountPause called for platform:", platform);
-    console.log("🟢 competitor.isActive:", competitor.isActive);
-    
     // Don't allow toggling individual accounts if competitor is paused
     if (!competitor.isActive) {
       alert("Enable competitor monitoring first before toggling individual platforms.");
@@ -745,13 +740,10 @@ function CompetitorCard({
     }
     
     const account = competitor.accounts?.find((a: any) => a.platform === platform);
-    console.log("🟢 Found account:", account);
     
     if (account) {
       try {
-        console.log("🟢 Calling toggleAccountPause with id:", account._id);
         const result = await toggleAccountPause({ id: account._id });
-        console.log("🟢 Toggle result:", result);
         if (result) {
           setAccountPauseStates(prev => ({
             ...prev,
@@ -759,10 +751,11 @@ function CompetitorCard({
           }));
         }
       } catch (error) {
-        console.error("🔴 Error toggling pause:", error);
+        console.error("Error toggling pause:", error);
+        alert("Failed to toggle pause. Check console for details.");
       }
     } else {
-      console.log("🟡 No account found for platform:", platform);
+      alert(`No account found for ${platform}. Save the competitor first to create accounts.`);
     }
   };
 
