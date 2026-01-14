@@ -4,225 +4,278 @@ import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { MultiSelect } from "@/components/ui/multi-select";
-import { TrendingUp, Users, Target } from "lucide-react";
-import { Id } from "../../../convex/_generated/dataModel";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function InsightsPage() {
-  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
-  const [selectedMarkets, setSelectedMarkets] = useState<string[]>([]);
-  const [timeRange, setTimeRange] = useState<string[]>(["30d"]);
+  const [selectedMarket, setSelectedMarket] = useState<string>("all");
+  const [selectedPlatform, setSelectedPlatform] = useState<string>("all");
+  const [days, setDays] = useState<string>("30");
 
-  const accounts = useQuery(api.accounts.list, {});
-  const markets = useQuery(api.markets.getAll);
-  const competitors = useQuery(api.competitors.list, {});
-
-  // Filter accounts
-  const filteredAccounts = accounts?.filter((acc) => {
-    const platformMatch = selectedPlatforms.length === 0 || selectedPlatforms.includes(acc.platform);
-    const marketMatch = selectedMarkets.length === 0 || selectedMarkets.some(m => acc.marketId === m as Id<"markets">);
-    return platformMatch && marketMatch;
-  }) || [];
-
-  // Platform options
-  const platformOptions = [
-    { value: "instagram", label: "Instagram" },
-    { value: "tiktok", label: "TikTok" },
-    { value: "youtube", label: "YouTube" },
-  ];
-
-  // Market options
-  const marketOptions = markets?.map(m => ({
-    value: m._id,
-    label: m.name,
-  })) || [];
-
-  // Time range options
-  const timeRangeOptions = [
-    { value: "7d", label: "Last 7 days" },
-    { value: "30d", label: "Last 30 days" },
-    { value: "90d", label: "Last 90 days" },
-  ];
-
-  const hasAnyFilter = selectedPlatforms.length > 0 || selectedMarkets.length > 0 || timeRange.length > 0;
-
-  const clearAllFilters = () => {
-    setSelectedPlatforms([]);
-    setSelectedMarkets([]);
-    setTimeRange([]);
-  };
-
-  // Group accounts by platform
-  const accountsByPlatform = filteredAccounts.reduce((acc, account) => {
-    if (!acc[account.platform]) {
-      acc[account.platform] = [];
-    }
-    acc[account.platform].push(account);
-    return acc;
-  }, {} as Record<string, typeof filteredAccounts>);
+  const markets = useQuery(api.markets.list);
+  const patterns = useQuery(api.insights.getContentPatterns, {
+    marketId: selectedMarket !== "all" ? (selectedMarket as any) : undefined,
+    platform:
+      selectedPlatform !== "all"
+        ? (selectedPlatform as "instagram" | "tiktok" | "youtube")
+        : undefined,
+    days: parseInt(days),
+  });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">Insights</h1>
-        <p className="text-muted-foreground">
-          Analytics and trends across your competitors
-        </p>
-      </div>
-
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Filters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap items-center gap-3">
-            <MultiSelect
-              options={platformOptions}
-              selected={selectedPlatforms}
-              onChange={setSelectedPlatforms}
-              placeholder="Platform"
-            />
-            <MultiSelect
-              options={marketOptions}
-              selected={selectedMarkets}
-              onChange={setSelectedMarkets}
-              placeholder="Market"
-            />
-            <MultiSelect
-              options={timeRangeOptions}
-              selected={timeRange}
-              onChange={setTimeRange}
-              placeholder="Time Range"
-            />
-            {hasAnyFilter && (
-              <Button variant="ghost" onClick={clearAllFilters}>
-                Clear All Filters
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Overview Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Accounts</p>
-                <p className="text-3xl font-bold">{filteredAccounts.length}</p>
-              </div>
-              <Users className="h-10 w-10 text-blue-600 opacity-50" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-green-50 to-green-100">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Platforms</p>
-                <p className="text-3xl font-bold">{Object.keys(accountsByPlatform).length}</p>
-              </div>
-              <Target className="h-10 w-10 text-green-600 opacity-50" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Competitors</p>
-                <p className="text-3xl font-bold">{competitors?.length || 0}</p>
-              </div>
-              <TrendingUp className="h-10 w-10 text-purple-600 opacity-50" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Platform Distribution */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Platform Distribution</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {Object.keys(accountsByPlatform).length > 0 ? (
-            <div className="space-y-4">
-              {Object.entries(accountsByPlatform).map(([platform, accounts]) => (
-                <div key={platform}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium capitalize">{platform}</span>
-                    <span className="text-sm text-muted-foreground">{accounts.length} accounts</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full ${
-                        platform === 'instagram' ? 'bg-pink-500' :
-                        platform === 'tiktok' ? 'bg-black' :
-                        'bg-red-600'
-                      }`}
-                      style={{ width: `${(accounts.length / filteredAccounts.length) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground text-center py-8">
-              No accounts match the current filters
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Top Accounts by Platform */}
-      {Object.entries(accountsByPlatform).map(([platform, accounts]) => (
-        <Card key={platform}>
-          <CardHeader>
-            <CardTitle className="capitalize">{platform} Accounts</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {accounts.slice(0, 5).map((account) => {
-                const competitor = competitors?.find(c => c._id === account.competitorId);
-                return (
-                  <div key={account._id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <p className="font-medium">{competitor?.name || "Unknown"}</p>
-                      <p className="text-sm text-muted-foreground">@{account.username}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm text-muted-foreground capitalize">{account.accountType}</p>
-                    </div>
-                  </div>
-                );
-              })}
-              {accounts.length > 5 && (
-                <p className="text-sm text-muted-foreground text-center pt-2">
-                  + {accounts.length - 5} more accounts
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-
-      {/* Coming Soon */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Advanced Analytics</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground text-center py-8">
-            Engagement metrics, growth trends, and competitive analysis coming soon...
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Insights</h1>
+          <p className="text-muted-foreground">
+            Content patterns and performance analysis
           </p>
-        </CardContent>
-      </Card>
+        </div>
+        <div className="flex gap-4">
+          <Select value={selectedMarket} onValueChange={setSelectedMarket}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="All Markets" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Markets</SelectItem>
+              {markets?.map((market) => (
+                <SelectItem key={market._id} value={market._id}>
+                  {market.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="All Platforms" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Platforms</SelectItem>
+              <SelectItem value="instagram">📸 Instagram</SelectItem>
+              <SelectItem value="tiktok">🎵 TikTok</SelectItem>
+              <SelectItem value="youtube">▶️ YouTube</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={days} onValueChange={setDays}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7">Last 7 days</SelectItem>
+              <SelectItem value="14">Last 14 days</SelectItem>
+              <SelectItem value="30">Last 30 days</SelectItem>
+              <SelectItem value="90">Last 90 days</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <Tabs defaultValue="hashtags">
+        <TabsList>
+          <TabsTrigger value="hashtags">Top Hashtags</TabsTrigger>
+          <TabsTrigger value="timing">Best Posting Times</TabsTrigger>
+          <TabsTrigger value="content">Content Types</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="hashtags" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                Top Performing Hashtags ({patterns?.totalPosts || 0} posts analyzed)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {patterns?.topHashtags.map((tag, index) => (
+                  <div
+                    key={tag.hashtag}
+                    className="flex items-center justify-between rounded-lg border p-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium">
+                        {index + 1}
+                      </span>
+                      <span className="font-medium">#{tag.hashtag}</span>
+                    </div>
+                    <div className="flex items-center gap-6 text-sm">
+                      <div className="text-muted-foreground">
+                        Used {tag.count}x
+                      </div>
+                      <div className="font-medium">
+                        {tag.avgEngagement.toLocaleString()} avg engagement
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {(!patterns?.topHashtags || patterns.topHashtags.length === 0) && (
+                  <div className="py-8 text-center text-muted-foreground">
+                    No hashtag data available yet.
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="timing" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Best Days to Post</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {patterns?.bestDays.map((day, index) => (
+                    <div
+                      key={day.day}
+                      className="flex items-center justify-between rounded-lg border p-3"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
+                            index < 3
+                              ? "bg-green-100 text-green-700"
+                              : "bg-muted"
+                          }`}
+                        >
+                          {index + 1}
+                        </span>
+                        <span className="font-medium">{day.day}</span>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm">
+                        <span className="text-muted-foreground">
+                          {day.count} posts
+                        </span>
+                        <span className="font-medium">
+                          {day.avgEngagement.toLocaleString()} avg
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Best Hours to Post</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {patterns?.bestHours.slice(0, 7).map((hour, index) => (
+                    <div
+                      key={hour.hour}
+                      className="flex items-center justify-between rounded-lg border p-3"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
+                            index < 3
+                              ? "bg-green-100 text-green-700"
+                              : "bg-muted"
+                          }`}
+                        >
+                          {index + 1}
+                        </span>
+                        <span className="font-medium">
+                          {hour.hour === 0
+                            ? "12 AM"
+                            : hour.hour < 12
+                              ? `${hour.hour} AM`
+                              : hour.hour === 12
+                                ? "12 PM"
+                                : `${hour.hour - 12} PM`}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm">
+                        <span className="text-muted-foreground">
+                          {hour.count} posts
+                        </span>
+                        <span className="font-medium">
+                          {hour.avgEngagement.toLocaleString()} avg
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="content" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Content Type Performance</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {patterns?.typePerformance.map((type) => (
+                  <div
+                    key={type.type}
+                    className="flex items-center justify-between rounded-lg border p-4"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">
+                        {type.type === "video"
+                          ? "🎬"
+                          : type.type === "image"
+                            ? "🖼️"
+                            : type.type === "carousel"
+                              ? "📑"
+                              : type.type === "reel"
+                                ? "📱"
+                                : type.type === "short"
+                                  ? "⚡"
+                                  : "📄"}
+                      </span>
+                      <span className="font-medium capitalize">{type.type}</span>
+                    </div>
+                    <div className="flex items-center gap-6 text-sm">
+                      <div className="text-muted-foreground">
+                        {type.count} posts
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Avg likes:</span>{" "}
+                        <span className="font-medium">
+                          {type.avgLikes.toLocaleString()}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Avg comments:</span>{" "}
+                        <span className="font-medium">
+                          {type.avgComments.toLocaleString()}
+                        </span>
+                      </div>
+                      {type.avgViews > 0 && (
+                        <div>
+                          <span className="text-muted-foreground">Avg views:</span>{" "}
+                          <span className="font-medium">
+                            {type.avgViews.toLocaleString()}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {(!patterns?.typePerformance ||
+                  patterns.typePerformance.length === 0) && (
+                  <div className="py-8 text-center text-muted-foreground">
+                    No content type data available yet.
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
