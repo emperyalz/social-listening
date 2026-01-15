@@ -275,3 +275,19 @@ export const bulkCreate = mutation({
     return results;
   },
 });
+// Add this to convex/accounts.ts if not already present
+
+export const get = query({
+  args: { id: v.id("accounts") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.id);
+  },
+});
+// Add this to convex/accounts.ts if not already present
+
+export const get = query({
+  args: { id: v.id("accounts") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.id);
+  },
+});

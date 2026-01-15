@@ -5,38 +5,38 @@ import { useQuery, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { formatRelativeTime, getPlatformIcon } from "@/lib/utils";
 import { Play, RefreshCw, CheckCircle, XCircle, Clock, Loader2 } from "lucide-react";
 
 export default function JobsPage() {
   const [isRunning, setIsRunning] = useState<string | null>(null);
+  const [isPolling, setIsPolling] = useState(false);
   const jobs = useQuery(api.scraping.getRecentJobs, { limit: 50 });
+  const runningJobs = useQuery(api.scraping.getRunningJobs, {});
   
-  const scrapeInstagram = useAction(api.scraping.scrapeAllAccounts);
-  const scrapeTikTok = useAction(api.scraping.scrapeAllAccounts);
-  const scrapeYouTube = useAction(api.scraping.scrapeAllAccounts);
+  const scrapeAllAccounts = useAction(api.scraping.scrapeAllAccounts);
+  const pollAllRunningJobs = useAction(api.scrapingProcessor.pollAllRunningJobs);
 
   const handleScrape = async (platform: "instagram" | "tiktok" | "youtube") => {
     setIsRunning(platform);
     try {
-      if (platform === "instagram") {
-        await scrapeInstagram({ platform: "instagram" });
-      } else if (platform === "tiktok") {
-        await scrapeTikTok({ platform: "tiktok" });
-      } else {
-        await scrapeYouTube({ platform: "youtube" });
-      }
+      await scrapeAllAccounts({ platform });
     } catch (error) {
       console.error("Scrape error:", error);
     } finally {
       setIsRunning(null);
+    }
+  };
+
+  const handlePollJobs = async () => {
+    setIsPolling(true);
+    try {
+      const results = await pollAllRunningJobs({});
+      console.log("Poll results:", results);
+    } catch (error) {
+      console.error("Poll error:", error);
+    } finally {
+      setIsPolling(false);
     }
   };
 
@@ -53,6 +53,8 @@ export default function JobsPage() {
     }
   };
 
+  const runningCount = runningJobs?.length || 0;
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -63,6 +65,25 @@ export default function JobsPage() {
             Manage and monitor data collection jobs
           </p>
         </div>
+        {runningCount > 0 && (
+          <Button
+            onClick={handlePollJobs}
+            disabled={isPolling}
+            variant="outline"
+          >
+            {isPolling ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Checking...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Check {runningCount} Running Job{runningCount > 1 ? "s" : ""}
+              </>
+            )}
+          </Button>
+        )}
       </div>
 
       {/* Quick Actions */}
@@ -161,7 +182,14 @@ export default function JobsPage() {
       {/* Jobs History */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Jobs</CardTitle>
+          <CardTitle className="flex items-center justify-between">
+            <span>Recent Jobs</span>
+            {runningCount > 0 && (
+              <span className="text-sm font-normal text-blue-600">
+                {runningCount} job{runningCount > 1 ? "s" : ""} running
+              </span>
+            )}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
@@ -183,6 +211,9 @@ export default function JobsPage() {
                     </div>
                     <div className="text-sm text-muted-foreground">
                       Started {formatRelativeTime(job.startedAt)}
+                      {job.completedAt && (
+                        <> • Completed {formatRelativeTime(job.completedAt)}</>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -190,6 +221,11 @@ export default function JobsPage() {
                   {job.itemsScraped !== undefined && (
                     <span className="text-sm">
                       {job.itemsScraped} items scraped
+                    </span>
+                  )}
+                  {job.error && (
+                    <span className="text-sm text-red-500 max-w-[200px] truncate" title={job.error}>
+                      {job.error}
                     </span>
                   )}
                   <span

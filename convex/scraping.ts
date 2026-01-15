@@ -414,3 +414,23 @@ export const scrapeAllAccounts = action({
     return results;
   },
 });
+// Add these to the end of your existing convex/scraping.ts file
+
+// Get a single job by ID
+export const getJob = query({
+  args: { jobId: v.id("scrapingJobs") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.jobId);
+  },
+});
+
+// Get all running jobs
+export const getRunningJobs = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db
+      .query("scrapingJobs")
+      .withIndex("by_status", (q) => q.eq("status", "running"))
+      .collect();
+  },
+});

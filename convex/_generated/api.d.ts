@@ -16,6 +16,7 @@ import type * as insights from "../insights.js";
 import type * as markets from "../markets.js";
 import type * as posts from "../posts.js";
 import type * as scraping from "../scraping.js";
+import type * as scrapingProcessor from "../scrapingProcessor.js";
 
 import type {
   ApiFromModules,
@@ -32,6 +33,7 @@ declare const fullApi: ApiFromModules<{
   markets: typeof markets;
   posts: typeof posts;
   scraping: typeof scraping;
+  scrapingProcessor: typeof scrapingProcessor;
 }>;
 
 /**
