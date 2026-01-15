@@ -12,21 +12,36 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MultiSelect } from "@/components/ui/multi-select";
 
 export default function InsightsPage() {
-  const [selectedMarket, setSelectedMarket] = useState<string>("all");
-  const [selectedPlatform, setSelectedPlatform] = useState<string>("all");
+  const [selectedMarkets, setSelectedMarkets] = useState<string[]>([]);
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [days, setDays] = useState<string>("30");
 
   const markets = useQuery(api.markets.list);
+  
+  // Use first selected for API query
+  const firstMarketId = selectedMarkets.length > 0 ? selectedMarkets[0] : undefined;
+  const firstPlatform = selectedPlatforms.length > 0 ? selectedPlatforms[0] : undefined;
+  
   const patterns = useQuery(api.insights.getContentPatterns, {
-    marketId: selectedMarket !== "all" ? (selectedMarket as any) : undefined,
-    platform:
-      selectedPlatform !== "all"
-        ? (selectedPlatform as "instagram" | "tiktok" | "youtube")
-        : undefined,
+    marketId: firstMarketId as any,
+    platform: firstPlatform as "instagram" | "tiktok" | "youtube" | undefined,
     days: parseInt(days),
   });
+
+  // Build options for MultiSelect
+  const marketOptions = markets?.map((m) => ({
+    value: m._id,
+    label: m.name,
+  })) || [];
+
+  const platformOptions = [
+    { value: "instagram", label: "📸 Instagram" },
+    { value: "tiktok", label: "🎵 TikTok" },
+    { value: "youtube", label: "▶️ YouTube" },
+  ];
 
   return (
     <div className="space-y-8">
@@ -39,30 +54,18 @@ export default function InsightsPage() {
           </p>
         </div>
         <div className="flex gap-4">
-          <Select value={selectedMarket} onValueChange={setSelectedMarket}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="All Markets" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Markets</SelectItem>
-              {markets?.map((market) => (
-                <SelectItem key={market._id} value={market._id}>
-                  {market.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="All Platforms" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Platforms</SelectItem>
-              <SelectItem value="instagram">📸 Instagram</SelectItem>
-              <SelectItem value="tiktok">🎵 TikTok</SelectItem>
-              <SelectItem value="youtube">▶️ YouTube</SelectItem>
-            </SelectContent>
-          </Select>
+          <MultiSelect
+            options={marketOptions}
+            selected={selectedMarkets}
+            onChange={setSelectedMarkets}
+            placeholder="All Markets"
+          />
+          <MultiSelect
+            options={platformOptions}
+            selected={selectedPlatforms}
+            onChange={setSelectedPlatforms}
+            placeholder="All Platforms"
+          />
           <Select value={days} onValueChange={setDays}>
             <SelectTrigger className="w-[140px]">
               <SelectValue />

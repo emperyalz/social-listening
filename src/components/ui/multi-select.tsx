@@ -69,7 +69,7 @@ export function MultiSelect({
         <Button
           variant="outline"
           onClick={() => setIsOpen(!isOpen)}
-          className="justify-between min-w-[180px]"
+          className="justify-between min-w-[180px] bg-white"
         >
           <span className="truncate">{getDisplayText()}</span>
           <ChevronDown className="ml-2 h-4 w-4 shrink-0" />
@@ -86,21 +86,21 @@ export function MultiSelect({
         )}
       </div>
 
-      {/* Dropdown */}
+      {/* Dropdown - SOLID WHITE BACKGROUND */}
       {isOpen && (
-        <div className="absolute z-50 mt-2 w-full min-w-[240px] rounded-md border bg-popover shadow-lg">
-          <div className="max-h-[300px] overflow-y-auto p-1">
+        <div className="absolute z-50 mt-2 w-full min-w-[240px] rounded-md border border-gray-200 bg-white shadow-lg">
+          <div className="max-h-[300px] overflow-y-auto p-1 bg-white">
             {/* Clear Selection Option */}
             {selected.length > 0 && (
               <>
                 <button
                   onClick={clearSelection}
-                  className="w-full flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent text-muted-foreground hover:text-foreground"
+                  className="w-full flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm bg-white hover:bg-gray-100 text-muted-foreground hover:text-foreground"
                 >
                   <X className="h-4 w-4" />
                   Clear selection ({selected.length})
                 </button>
-                <div className="my-1 border-t" />
+                <div className="my-1 border-t border-gray-200" />
               </>
             )}
 
@@ -111,13 +111,13 @@ export function MultiSelect({
                 <button
                   key={option.value}
                   onClick={() => toggleOption(option.value)}
-                  className="w-full flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+                  className="w-full flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm bg-white hover:bg-gray-100"
                 >
                   <div
                     className={`flex h-4 w-4 items-center justify-center rounded border ${
                       isSelected
                         ? "border-primary bg-primary text-primary-foreground"
-                        : "border-input"
+                        : "border-gray-300 bg-white"
                     }`}
                   >
                     {isSelected && <Check className="h-3 w-3" />}

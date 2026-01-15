@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { StatCard } from "@/components/charts/StatCard";
@@ -12,31 +13,38 @@ import {
   Eye,
   FileText,
 } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { useState } from "react";
+import { MultiSelect } from "@/components/ui/multi-select";
 
 export default function DashboardPage() {
-  const [selectedMarket, setSelectedMarket] = useState<string>("all");
-  const [selectedPlatform, setSelectedPlatform] = useState<string>("all");
+  const [selectedMarkets, setSelectedMarkets] = useState<string[]>([]);
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
 
   const markets = useQuery(api.markets.list);
+  
+  // Use first selected market for API query, or undefined for all
+  const firstMarketId = selectedMarkets.length > 0 ? selectedMarkets[0] : undefined;
+  const firstPlatform = selectedPlatforms.length > 0 ? selectedPlatforms[0] : undefined;
+  
   const stats = useQuery(api.insights.getDashboardStats, {
-    marketId: selectedMarket !== "all" ? (selectedMarket as any) : undefined,
+    marketId: firstMarketId as any,
   });
   const competitors = useQuery(api.insights.getCompetitorComparison, {
-    marketId: selectedMarket !== "all" ? (selectedMarket as any) : undefined,
-    platform:
-      selectedPlatform !== "all"
-        ? (selectedPlatform as "instagram" | "tiktok" | "youtube")
-        : undefined,
+    marketId: firstMarketId as any,
+    platform: firstPlatform as "instagram" | "tiktok" | "youtube" | undefined,
     days: 30,
   });
+
+  // Build options for MultiSelect
+  const marketOptions = markets?.map((m) => ({
+    value: m._id,
+    label: m.name,
+  })) || [];
+
+  const platformOptions = [
+    { value: "instagram", label: "📸 Instagram" },
+    { value: "tiktok", label: "🎵 TikTok" },
+    { value: "youtube", label: "▶️ YouTube" },
+  ];
 
   return (
     <div className="space-y-8">
@@ -49,30 +57,18 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex gap-4">
-          <Select value={selectedMarket} onValueChange={setSelectedMarket}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="All Markets" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Markets</SelectItem>
-              {markets?.map((market) => (
-                <SelectItem key={market._id} value={market._id}>
-                  {market.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="All Platforms" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Platforms</SelectItem>
-              <SelectItem value="instagram">📸 Instagram</SelectItem>
-              <SelectItem value="tiktok">🎵 TikTok</SelectItem>
-              <SelectItem value="youtube">▶️ YouTube</SelectItem>
-            </SelectContent>
-          </Select>
+          <MultiSelect
+            options={marketOptions}
+            selected={selectedMarkets}
+            onChange={setSelectedMarkets}
+            placeholder="All Markets"
+          />
+          <MultiSelect
+            options={platformOptions}
+            selected={selectedPlatforms}
+            onChange={setSelectedPlatforms}
+            placeholder="All Platforms"
+          />
         </div>
       </div>
 
