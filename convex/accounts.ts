@@ -283,11 +283,4 @@ export const get = query({
     return await ctx.db.get(args.id);
   },
 });
-// Add this to convex/accounts.ts if not already present
 
-export const get = query({
-  args: { id: v.id("accounts") },
-  handler: async (ctx, args) => {
-    return await ctx.db.get(args.id);
-  },
-});

@@ -99,10 +99,9 @@ export const scrapeInstagramProfile = action({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            usernames: [args.username],
+            directUrls: [`https://www.instagram.com/${args.username}/`],
             resultsType: "details",
             resultsLimit: 50,
-            searchType: "user",
           }),
         }
       );
@@ -156,10 +155,8 @@ export const scrapeInstagramPosts = action({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            usernames: [args.username],
-            resultsType: "posts",
+            directUrls: [`https://www.instagram.com/${args.username}/`],
             resultsLimit: args.postsLimit || 30,
-            searchType: "user",
           }),
         }
       );

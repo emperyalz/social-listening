@@ -3,6 +3,19 @@ import { action, mutation, internalMutation } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 
+function parseDuration(duration: string | number | undefined): number | undefined {
+  if (duration === undefined || duration === null) return undefined;
+  if (typeof duration === "number") return duration;
+  if (typeof duration === "string") {
+    const parts = duration.split(":").map(Number);
+    if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    if (parts.length === 2) return parts[0] * 60 + parts[1];
+    const num = parseFloat(duration);
+    return isNaN(num) ? undefined : num;
+  }
+  return undefined;
+}
+
 const APIFY_BASE_URL = "https://api.apify.com/v2";
 
 // ==================== INSTAGRAM RESULT PROCESSING ====================
@@ -85,7 +98,7 @@ export const processInstagramResults = mutation({
           mentions,
           thumbnailUrl: item.displayUrl || item.thumbnailUrl,
           mediaUrls: item.images || (item.displayUrl ? [item.displayUrl] : []),
-          videoDuration: item.videoDuration,
+          videoDuration: parseDuration(item.videoDuration),
           postedAt: item.timestamp ? new Date(item.timestamp).getTime() : Date.now(),
           lastUpdatedAt: Date.now(),
         };
@@ -215,7 +228,7 @@ export const processTikTokResults = mutation({
           mentions,
           thumbnailUrl: item.covers?.[0] || item.cover,
           mediaUrls: item.videoUrl ? [item.videoUrl] : [],
-          videoDuration: item.videoMeta?.duration || item.duration,
+          videoDuration: parseDuration(item.videoMeta?.duration || item.duration),
           postedAt: item.createTime ? item.createTime * 1000 : Date.now(),
           lastUpdatedAt: Date.now(),
         };
@@ -351,7 +364,7 @@ export const processYouTubeResults = mutation({
           mentions,
           thumbnailUrl: item.thumbnailUrl || item.thumbnail,
           mediaUrls: [],
-          videoDuration: item.duration,
+          videoDuration: parseDuration(item.duration),
           postedAt: item.date ? new Date(item.date).getTime() : Date.now(),
           lastUpdatedAt: Date.now(),
         };
@@ -409,7 +422,7 @@ export const processYouTubeResults = mutation({
 
 // ==================== POLL AND PROCESS RUNNING JOBS ====================
 
-export const pollAndProcessJob = action({
+export const pollAndProcessJob: ReturnType<typeof action> = action({
   args: {
     jobId: v.id("scrapingJobs"),
   },
@@ -500,7 +513,7 @@ export const pollAndProcessJob = action({
 });
 
 // Poll all running jobs
-export const pollAllRunningJobs = action({
+export const pollAllRunningJobs: ReturnType<typeof action> = action({
   args: {},
   handler: async (ctx) => {
     const runningJobs = await ctx.runQuery(api.scraping.getRunningJobs, {});
