@@ -90,8 +90,11 @@ function extractSocialHandle(platform: string, input: string): string {
         if (pathname.startsWith("/c/")) return pathname.slice(3);
         if (pathname.startsWith("/channel/")) return pathname.slice(9);
         const ytParts = pathname.split("/").filter(Boolean);
-        if (ytParts.length > 0 && !["watch", "playlist", "feed"].includes(ytParts[0])) {
+        if (ytParts.length > 0 && !["watch", "playlist", "feed", "user", "c", "channel"].includes(ytParts[0])) {
           return ytParts[0].replace(/^@/, "");
+        }
+        if (ytParts[0] === "user" && ytParts.length > 1) {
+          return ytParts[1];
         }
         break;
       case "facebook":

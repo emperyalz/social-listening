@@ -8,8 +8,8 @@ const APIFY_BASE_URL = "https://api.apify.com/v2";
 const ACTORS = {
   instagram: "apify/instagram-scraper",
   instagramComments: "apify/instagram-comment-scraper",
-  tiktok: "clockworks/tiktok-scraper",
-  youtube: "streamers/youtube-scraper",
+  tiktok: "clockworks/free-tiktok-scraper",
+  youtube: "apify/youtube-scraper",
 };
 
 // Create a scraping job record
@@ -429,5 +429,41 @@ export const getRunningJobs = query({
       .query("scrapingJobs")
       .withIndex("by_status", (q) => q.eq("status", "running"))
       .collect();
+  },
+});
+
+// Scrape all Instagram profiles (for follower counts and avatars)
+export const scrapeAllProfiles: ReturnType<typeof action> = action({
+  args: {
+    platform: v.union(
+      v.literal("instagram"),
+      v.literal("tiktok"),
+      v.literal("youtube")
+    ),
+  },
+  handler: async (ctx, args) => {
+    const accounts = await ctx.runQuery(api.accounts.list, {
+      platform: args.platform,
+    });
+
+    const results = [];
+    for (const account of accounts) {
+      try {
+        let result;
+        if (args.platform === "instagram") {
+          result = await ctx.runAction(api.scraping.scrapeInstagramProfile, {
+            username: account.username,
+            accountId: account._id,
+          });
+        }
+        if (result) {
+          results.push({ account: account.username, ...result });
+        }
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        results.push({ account: account.username, error: errorMessage });
+      }
+    }
+    return results;
   },
 });
