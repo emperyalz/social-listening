@@ -5,6 +5,9 @@ import { mutation, query } from "./_generated/server";
 export const getDashboardStats = query({
   args: {
     marketId: v.optional(v.id("markets")),
+        platform: v.optional(
+                v.union(v.literal("instagram"), v.literal("tiktok"), v.literal("youtube"))
+              ),
   },
   handler: async (ctx, args) => {
     let accounts = await ctx.db
@@ -14,6 +17,9 @@ export const getDashboardStats = query({
 
     if (args.marketId) {
       accounts = accounts.filter((a) => a.marketId === args.marketId);
+          if (args.platform) {
+                  accounts = accounts.filter((a) => a.platform === args.platform);
+          }
     }
 
     const accountIds = new Set(accounts.map((a) => a._id));
