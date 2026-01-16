@@ -8,7 +8,7 @@ const APIFY_BASE_URL = "https://api.apify.com/v2";
 const ACTORS = {
   instagram: "apify/instagram-scraper",
   instagramComments: "apify/instagram-comment-scraper",
-  tiktok: "clockworks/free-tiktok-scraper",
+  tiktok: "clockworks/tiktok-scraper",
   youtube: "apify/youtube-scraper",
 };
 
