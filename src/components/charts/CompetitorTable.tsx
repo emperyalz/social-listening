@@ -51,7 +51,7 @@ function getProfileUrl(platform: string, username: string, profileUrl?: string):
 
 function Avatar({ src, username, platform }: { src?: string; username: string; platform: string }) {
   const [hasError, setHasError] = useState(false);
-  const initial = username[0]?.toUpperCase() || "?";
+  const initial = username?.[0]?.toUpperCase() || "?";
   
   const platformColors: Record<string, string> = {
     instagram: "bg-gradient-to-br from-purple-500 to-pink-500",
