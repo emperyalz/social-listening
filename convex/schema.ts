@@ -300,5 +300,20 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index("by_account_period", ["accountId", "period"])
+
+      // Avatar history - stores all profile pictures with versioning
+      avatars: defineTable({
+      accountId: v.id("accounts"),
+      storageId: v.id("_storage"), // Convex file storage ID
+      originalUrl: v.string(), // Original URL from platform
+      mimeType: v.string(),
+      fileSize: v.optional(v.number()),
+      isCurrent: v.boolean(), // Is this the current avatar?
+      firstSeenAt: v.number(), // When we first saw this avatar
+      lastSeenAt: v.number(), // Last time we saw this avatar in use
+      archivedAt: v.optional(v.number()), // When it was replaced
+})
+      .index("by_account", ["accountId"])
+      .index("by_account_current", ["accountId", "isCurrent"]),
     .index("by_account_date", ["accountId", "periodDate"]),
 });
