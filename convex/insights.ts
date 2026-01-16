@@ -17,11 +17,10 @@ export const getDashboardStats = query({
 
     if (args.marketId) {
       accounts = accounts.filter((a) => a.marketId === args.marketId);
-          if (args.platform) {
-                  accounts = accounts.filter((a) => a.platform === args.platform);
-          }
     }
-
+        if (args.platform) {
+                        accounts = accounts.filter((a) => a.platform === args.platform);
+        }
     const accountIds = new Set(accounts.map((a) => a._id));
 
     // Get recent posts (last 7 days)
