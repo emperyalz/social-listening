@@ -72,16 +72,15 @@ function JobsContent() {
   const [selectedTimePeriods, setSelectedTimePeriods] = useState<string[]>(["30"]);
 
   // Derive the filter values for the query
-  const platformFilter = selectedPlatforms.length === 1
-    ? selectedPlatforms[0] as "instagram" | "tiktok" | "youtube"
-    : "all";
   const daysBack = selectedTimePeriods.length === 1
     ? parseInt(selectedTimePeriods[0])
     : 30;
 
-  // Queries
+  // Queries - pass platforms array for multi-select filtering
   const jobs = useQuery(api.scraping.getFilteredJobs, {
-    platform: platformFilter,
+    platforms: selectedPlatforms.length > 0
+      ? selectedPlatforms as ("instagram" | "tiktok" | "youtube")[]
+      : undefined,
     daysBack: daysBack,
     limit: 100
   });

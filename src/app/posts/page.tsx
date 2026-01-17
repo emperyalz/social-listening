@@ -83,6 +83,31 @@ function PostsContent() {
     }
   };
 
+  // Get thumbnail URL with fallbacks
+  const getThumbnailUrl = (post: typeof posts[number], platform?: string) => {
+    // If we have a valid thumbnail URL, use it
+    if (post.thumbnailUrl) {
+      return post.thumbnailUrl;
+    }
+
+    // For YouTube, we can construct thumbnail from platformPostId
+    if (platform === "youtube" && post.platformPostId) {
+      return `https://img.youtube.com/vi/${post.platformPostId}/hqdefault.jpg`;
+    }
+
+    // For TikTok, try the cover images or mediaUrls
+    if (platform === "tiktok" && post.mediaUrls && post.mediaUrls.length > 0) {
+      return post.mediaUrls[0];
+    }
+
+    // For Instagram, try mediaUrls
+    if (platform === "instagram" && post.mediaUrls && post.mediaUrls.length > 0) {
+      return post.mediaUrls[0];
+    }
+
+    return null;
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -164,17 +189,27 @@ function PostsContent() {
           sortedPosts.map((post) => {
             const account = accounts?.find(a => a._id === post.accountId);
             const engagement = post.engagement;
+            const thumbnailUrl = getThumbnailUrl(post, account?.platform);
             return (
               <Card key={post._id} className="overflow-hidden hover:shadow-lg transition-shadow group">
                 {/* Thumbnail */}
                 <div className="relative aspect-square bg-gray-100 overflow-hidden">
-                  {post.thumbnailUrl ? (
+                  {thumbnailUrl ? (
                     <img
-                      src={post.thumbnailUrl}
+                      src={thumbnailUrl}
                       alt={post.caption || "Post thumbnail"}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      crossOrigin="anonymous"
+                      referrerPolicy="no-referrer"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect fill='%23f3f4f6' width='100' height='100'/%3E%3Ctext x='50' y='50' font-family='Arial' font-size='30' fill='%239ca3af' text-anchor='middle' dy='.3em'%3E📷%3C/text%3E%3C/svg%3E";
+                        // Try YouTube thumbnail as second attempt for YouTube posts
+                        const target = e.target as HTMLImageElement;
+                        if (account?.platform === "youtube" && post.platformPostId && !target.dataset.fallbackAttempted) {
+                          target.dataset.fallbackAttempted = "true";
+                          target.src = `https://img.youtube.com/vi/${post.platformPostId}/mqdefault.jpg`;
+                        } else {
+                          target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect fill='%23f3f4f6' width='100' height='100'/%3E%3Ctext x='50' y='50' font-family='Arial' font-size='30' fill='%239ca3af' text-anchor='middle' dy='.3em'%3E📷%3C/text%3E%3C/svg%3E";
+                        }
                       }}
                     />
                   ) : (

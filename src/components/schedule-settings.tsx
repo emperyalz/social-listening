@@ -14,6 +14,8 @@ import {
   Save,
   Loader2,
   AlertCircle,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 
 // Frequency options
@@ -59,6 +61,7 @@ export function ScheduleSettings() {
 
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // Local state for the "all" platform setting
   const [settings, setSettings] = useState<ScheduleState>({
@@ -156,19 +159,32 @@ export function ScheduleSettings() {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader
+        className="cursor-pointer hover:bg-gray-50 transition-colors"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
         <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5" />
-              Schedule Settings
-            </CardTitle>
-            <CardDescription className="mt-1">
-              Configure automated scraping schedule for all platforms
-            </CardDescription>
+          <div className="flex items-center gap-3">
+            {isExpanded ? (
+              <ChevronDown className="h-5 w-5 text-gray-500" />
+            ) : (
+              <ChevronRight className="h-5 w-5 text-gray-500" />
+            )}
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="h-5 w-5" />
+                Schedule Settings
+              </CardTitle>
+              <CardDescription className="mt-1">
+                Configure automated scraping schedule for all platforms
+              </CardDescription>
+            </div>
           </div>
           <button
-            onClick={() => updateSettings({ isEnabled: !settings.isEnabled })}
+            onClick={(e) => {
+              e.stopPropagation();
+              updateSettings({ isEnabled: !settings.isEnabled });
+            }}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
               settings.isEnabled
                 ? "bg-green-100 text-green-700 hover:bg-green-200"
@@ -189,6 +205,7 @@ export function ScheduleSettings() {
           </button>
         </div>
       </CardHeader>
+      {isExpanded && (
       <CardContent className="space-y-6">
         {/* Status Info */}
         <div className="grid gap-4 md:grid-cols-2">
@@ -318,6 +335,7 @@ export function ScheduleSettings() {
           </div>
         )}
       </CardContent>
+      )}
     </Card>
   );
 }

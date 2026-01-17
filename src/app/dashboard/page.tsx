@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { StatCard } from "@/components/charts/StatCard";
@@ -14,23 +14,37 @@ import {
   FileText,
 } from "lucide-react";
 import { MultiSelect } from "@/components/ui/multi-select";
+import { useFilterParams } from "@/hooks/useFilterParams";
+import { Id } from "../../../convex/_generated/dataModel";
 
-export default function DashboardPage() {
-  const [selectedMarkets, setSelectedMarkets] = useState<string[]>([]);
-  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
+function DashboardContent() {
+  const {
+    selectedMarkets,
+    setSelectedMarkets,
+    selectedPlatforms,
+    setSelectedPlatforms,
+  } = useFilterParams();
 
   const markets = useQuery(api.markets.list);
-  
-  // Use first selected market for API query, or undefined for all
-  const firstMarketId = selectedMarkets.length > 0 ? selectedMarkets[0] : undefined;
-  const firstPlatform = selectedPlatforms.length > 0 ? selectedPlatforms[0] : undefined;
-  
+
+  // Pass filters to stats query - using arrays for multi-select support
   const stats = useQuery(api.insights.getDashboardStats, {
-    marketId: firstMarketId as any,
+    marketIds: selectedMarkets.length > 0
+      ? selectedMarkets as Id<"markets">[]
+      : undefined,
+    platforms: selectedPlatforms.length > 0
+      ? selectedPlatforms as ("instagram" | "tiktok" | "youtube")[]
+      : undefined,
   });
+
+  // Pass filters to competitor comparison query - using arrays for multi-select support
   const competitors = useQuery(api.insights.getCompetitorComparison, {
-    marketId: firstMarketId as any,
-    platform: firstPlatform as "instagram" | "tiktok" | "youtube" | undefined,
+    marketIds: selectedMarkets.length > 0
+      ? selectedMarkets as Id<"markets">[]
+      : undefined,
+    platforms: selectedPlatforms.length > 0
+      ? selectedPlatforms as ("instagram" | "tiktok" | "youtube")[]
+      : undefined,
     days: 30,
   });
 
@@ -128,5 +142,13 @@ export default function DashboardPage() {
         title="Competitor Rankings (Last 30 Days)"
       />
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <DashboardContent />
+    </Suspense>
   );
 }

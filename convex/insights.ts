@@ -1,13 +1,17 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
-// Get dashboard overview stats
+// Get dashboard overview stats - supports multiple platforms and markets
 export const getDashboardStats = query({
   args: {
     marketId: v.optional(v.id("markets")),
-        platform: v.optional(
-                v.union(v.literal("instagram"), v.literal("tiktok"), v.literal("youtube"))
-              ),
+    marketIds: v.optional(v.array(v.id("markets"))),
+    platform: v.optional(
+      v.union(v.literal("instagram"), v.literal("tiktok"), v.literal("youtube"))
+    ),
+    platforms: v.optional(v.array(
+      v.union(v.literal("instagram"), v.literal("tiktok"), v.literal("youtube"))
+    )),
   },
   handler: async (ctx, args) => {
     let accounts = await ctx.db
@@ -15,12 +19,22 @@ export const getDashboardStats = query({
       .filter((q) => q.eq(q.field("isActive"), true))
       .collect();
 
-    if (args.marketId) {
+    // Filter by markets (supports array)
+    if (args.marketIds && args.marketIds.length > 0) {
+      const marketSet = new Set(args.marketIds);
+      accounts = accounts.filter((a) => marketSet.has(a.marketId));
+    } else if (args.marketId) {
       accounts = accounts.filter((a) => a.marketId === args.marketId);
     }
-        if (args.platform) {
-                        accounts = accounts.filter((a) => a.platform === args.platform);
-        }
+
+    // Filter by platforms (supports array)
+    if (args.platforms && args.platforms.length > 0) {
+      const platformSet = new Set(args.platforms);
+      accounts = accounts.filter((a) => platformSet.has(a.platform));
+    } else if (args.platform) {
+      accounts = accounts.filter((a) => a.platform === args.platform);
+    }
+
     const accountIds = new Set(accounts.map((a) => a._id));
 
     // Get recent posts (last 7 days)
@@ -85,13 +99,17 @@ export const getDashboardStats = query({
   },
 });
 
-// Get competitor comparison data
+// Get competitor comparison data - supports multiple platforms and markets
 export const getCompetitorComparison = query({
   args: {
     marketId: v.optional(v.id("markets")),
+    marketIds: v.optional(v.array(v.id("markets"))),
     platform: v.optional(
       v.union(v.literal("instagram"), v.literal("tiktok"), v.literal("youtube"))
     ),
+    platforms: v.optional(v.array(
+      v.union(v.literal("instagram"), v.literal("tiktok"), v.literal("youtube"))
+    )),
     days: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
@@ -103,10 +121,19 @@ export const getCompetitorComparison = query({
       .filter((q) => q.eq(q.field("isActive"), true))
       .collect();
 
-    if (args.marketId) {
+    // Filter by markets (supports array)
+    if (args.marketIds && args.marketIds.length > 0) {
+      const marketSet = new Set(args.marketIds);
+      accounts = accounts.filter((a) => marketSet.has(a.marketId));
+    } else if (args.marketId) {
       accounts = accounts.filter((a) => a.marketId === args.marketId);
     }
-    if (args.platform) {
+
+    // Filter by platforms (supports array)
+    if (args.platforms && args.platforms.length > 0) {
+      const platformSet = new Set(args.platforms);
+      accounts = accounts.filter((a) => platformSet.has(a.platform));
+    } else if (args.platform) {
       accounts = accounts.filter((a) => a.platform === args.platform);
     }
 
