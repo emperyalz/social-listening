@@ -1,469 +1,303 @@
-import { v } from "convex/values";
-import { action, mutation, query } from "./_generated/server";
-import { api } from "./_generated/api";
+"use client";
 
-const APIFY_BASE_URL = "https://api.apify.com/v2";
+import { Suspense } from "react";
+import { useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { MultiSelect } from "@/components/ui/multi-select";
+import { ExternalLink, Calendar, X, Heart, MessageCircle, Eye, Play, Clock } from "lucide-react";
+import { Id } from "../../../convex/_generated/dataModel";
+import { useFilterParams } from "@/hooks/useFilterParams";
 
-// Actor IDs
-const ACTORS = {
-  instagram: "apify/instagram-scraper",
-  instagramComments: "apify/instagram-comment-scraper",
-  tiktok: "clockworks/tiktok-scraper",
-  youtube: "apify/youtube-scraper",
-};
+function PostsContent() {
+  const {
+    selectedMarkets,
+    setSelectedMarkets,
+    selectedPlatforms,
+    setSelectedPlatforms,
+    clearAllFilters,
+  } = useFilterParams();
 
-// Create a scraping job record
-export const createJob = mutation({
-  args: {
-    platform: v.union(
-      v.literal("instagram"),
-      v.literal("tiktok"),
-      v.literal("youtube")
-    ),
-    jobType: v.union(
-      v.literal("profile"),
-      v.literal("posts"),
-      v.literal("comments"),
-      v.literal("engagers")
-    ),
-    accountId: v.optional(v.id("accounts")),
-    marketId: v.optional(v.id("markets")),
-  },
-  handler: async (ctx, args) => {
-    return await ctx.db.insert("scrapingJobs", {
-      ...args,
-      status: "pending",
-      startedAt: Date.now(),
+  const posts = useQuery(api.posts.list, {});
+  const accounts = useQuery(api.accounts.list, {});
+  const markets = useQuery(api.markets.getAll);
+
+  // Filter posts based on URL params
+  const filteredPosts = posts?.filter((post) => {
+    const account = accounts?.find(a => a._id === post.accountId);
+    if (!account) return false;
+
+    const platformMatch = selectedPlatforms.length === 0 || selectedPlatforms.includes(account.platform);
+    const marketMatch = selectedMarkets.length === 0 || selectedMarkets.some(m => account.marketId === m as Id<"markets">);
+
+    return platformMatch && marketMatch;
+  }) || [];
+
+  // Sort by most recent
+  const sortedPosts = [...filteredPosts].sort((a, b) => b.postedAt - a.postedAt);
+
+  // Platform options
+  const platformOptions = [
+    { value: "instagram", label: "📸 Instagram" },
+    { value: "tiktok", label: "🎵 TikTok" },
+    { value: "youtube", label: "▶️ YouTube" },
+  ];
+
+  // Market options
+  const marketOptions = markets?.map(m => ({
+    value: m._id,
+    label: m.name,
+  })) || [];
+
+  const hasAnyFilter = selectedPlatforms.length > 0 || selectedMarkets.length > 0;
+
+  const formatDate = (timestamp: number) => {
+    return new Date(timestamp).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
     });
-  },
-});
+  };
 
-export const updateJob = mutation({
-  args: {
-    jobId: v.id("scrapingJobs"),
-    status: v.optional(
-      v.union(
-        v.literal("pending"),
-        v.literal("running"),
-        v.literal("completed"),
-        v.literal("failed")
-      )
-    ),
-    apifyRunId: v.optional(v.string()),
-    completedAt: v.optional(v.number()),
-    itemsScraped: v.optional(v.number()),
-    error: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    const { jobId, ...updates } = args;
-    const filtered = Object.fromEntries(
-      Object.entries(updates).filter(([_, v]) => v !== undefined)
-    );
-    await ctx.db.patch(jobId, filtered);
-  },
-});
+  const formatNumber = (num: number | undefined) => {
+    if (num === undefined || num === null) return "0";
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
+    if (num >= 1000) return (num / 1000).toFixed(1) + "K";
+    return num.toString();
+  };
 
-export const getRecentJobs = query({
-  args: { limit: v.optional(v.number()) },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("scrapingJobs")
-      .order("desc")
-      .take(args.limit || 20);
-  },
-});
+  const formatDuration = (seconds: number | undefined) => {
+    if (!seconds) return null;
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
 
-// ==================== INSTAGRAM SCRAPING ====================
-
-export const scrapeInstagramProfile = action({
-  args: {
-    username: v.string(),
-    accountId: v.id("accounts"),
-  },
-  handler: async (ctx, args): Promise<{ jobId: string; runId: string }> => {
-    const apiToken = process.env.APIFY_API_TOKEN;
-    if (!apiToken) throw new Error("APIFY_API_TOKEN not configured");
-
-    // Create job record
-    const jobId = await ctx.runMutation(api.scraping.createJob, {
-      platform: "instagram",
-      jobType: "profile",
-      accountId: args.accountId,
-    });
-
-    try {
-      // Run the actor
-      const response = await fetch(
-        `${APIFY_BASE_URL}/acts/${encodeURIComponent(ACTORS.instagram)}/runs?token=${apiToken}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            directUrls: [`https://www.instagram.com/${args.username}/`],
-            resultsType: "details",
-            resultsLimit: 50,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Apify API error: ${response.statusText}`);
-      }
-
-      const runData = await response.json();
-
-      await ctx.runMutation(api.scraping.updateJob, {
-        jobId,
-        status: "running",
-        apifyRunId: runData.data.id,
-      });
-
-      return { jobId, runId: runData.data.id };
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      await ctx.runMutation(api.scraping.updateJob, {
-        jobId,
-        status: "failed",
-        error: errorMessage,
-        completedAt: Date.now(),
-      });
-      throw error;
+  const getPlatformIcon = (platform: string) => {
+    switch (platform) {
+      case "instagram": return "📸";
+      case "tiktok": return "🎵";
+      case "youtube": return "▶️";
+      default: return "📱";
     }
-  },
-});
+  };
 
-export const scrapeInstagramPosts = action({
-  args: {
-    username: v.string(),
-    accountId: v.id("accounts"),
-    postsLimit: v.optional(v.number()),
-  },
-  handler: async (ctx, args): Promise<{ jobId: string; runId: string }> => {
-    const apiToken = process.env.APIFY_API_TOKEN;
-    if (!apiToken) throw new Error("APIFY_API_TOKEN not configured");
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Posts</h1>
+          <p className="text-muted-foreground">
+            Browse and analyze competitor content
+          </p>
+        </div>
+      </div>
 
-    const jobId = await ctx.runMutation(api.scraping.createJob, {
-      platform: "instagram",
-      jobType: "posts",
-      accountId: args.accountId,
-    });
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Filters</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap items-center gap-3">
+            <MultiSelect
+              options={platformOptions}
+              selected={selectedPlatforms}
+              onChange={setSelectedPlatforms}
+              placeholder="All Platforms"
+            />
+            <MultiSelect
+              options={marketOptions}
+              selected={selectedMarkets}
+              onChange={setSelectedMarkets}
+              placeholder="All Markets"
+            />
+            {hasAnyFilter && (
+              <Button variant="ghost" onClick={clearAllFilters}>
+                <X className="h-4 w-4 mr-1" />
+                Clear All Filters
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
-    try {
-      const response = await fetch(
-        `${APIFY_BASE_URL}/acts/${encodeURIComponent(ACTORS.instagram)}/runs?token=${apiToken}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            directUrls: [`https://www.instagram.com/${args.username}/`],
-            resultsLimit: args.postsLimit || 30,
-          }),
-        }
-      );
+      {/* Stats */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100">
+          <CardContent className="pt-6">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Total Posts</p>
+              <p className="text-3xl font-bold">{sortedPosts.length}</p>
+            </div>
+          </CardContent>
+        </Card>
 
-      if (!response.ok) {
-        throw new Error(`Apify API error: ${response.statusText}`);
-      }
+        <Card className="bg-gradient-to-br from-green-50 to-green-100">
+          <CardContent className="pt-6">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">This Week</p>
+              <p className="text-3xl font-bold">
+                {sortedPosts.filter(p => p.postedAt > Date.now() - 7 * 24 * 60 * 60 * 1000).length}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
-      const runData = await response.json();
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100">
+          <CardContent className="pt-6">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">This Month</p>
+              <p className="text-3xl font-bold">
+                {sortedPosts.filter(p => p.postedAt > Date.now() - 30 * 24 * 60 * 60 * 1000).length}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-      await ctx.runMutation(api.scraping.updateJob, {
-        jobId,
-        status: "running",
-        apifyRunId: runData.data.id,
-      });
+      {/* Posts Grid */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {sortedPosts.length > 0 ? (
+          sortedPosts.map((post) => {
+            const account = accounts?.find(a => a._id === post.accountId);
+            const engagement = post.engagement;
+            return (
+              <Card key={post._id} className="overflow-hidden hover:shadow-lg transition-shadow group">
+                {/* Thumbnail */}
+                <div className="relative aspect-square bg-gray-100 overflow-hidden">
+                  {post.thumbnailUrl ? (
+                    <img
+                      src={post.thumbnailUrl}
+                      alt={post.caption || "Post thumbnail"}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect fill='%23f3f4f6' width='100' height='100'/%3E%3Ctext x='50' y='50' font-family='Arial' font-size='30' fill='%239ca3af' text-anchor='middle' dy='.3em'%3E📷%3C/text%3E%3C/svg%3E";
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-4xl text-gray-400">
+                      {getPlatformIcon(account?.platform || "")}
+                    </div>
+                  )}
 
-      return { jobId, runId: runData.data.id };
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      await ctx.runMutation(api.scraping.updateJob, {
-        jobId,
-        status: "failed",
-        error: errorMessage,
-        completedAt: Date.now(),
-      });
-      throw error;
-    }
-  },
-});
+                  {/* Platform badge */}
+                  <div className={`absolute top-2 left-2 px-2 py-1 text-xs font-medium rounded-full backdrop-blur-sm ${
+                    account?.platform === 'instagram' ? 'bg-pink-500/90 text-white' :
+                    account?.platform === 'tiktok' ? 'bg-black/90 text-white' :
+                    'bg-red-500/90 text-white'
+                  }`}>
+                    {getPlatformIcon(account?.platform || "")} {account?.platform}
+                  </div>
 
-// ==================== TIKTOK SCRAPING ====================
+                  {/* Post type badge */}
+                  <div className="absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded-full bg-black/60 text-white backdrop-blur-sm">
+                    {post.postType}
+                  </div>
 
-export const scrapeTikTokProfile = action({
-  args: {
-    username: v.string(),
-    accountId: v.id("accounts"),
-  },
-  handler: async (ctx, args): Promise<{ jobId: string; runId: string }> => {
-    const apiToken = process.env.APIFY_API_TOKEN;
-    if (!apiToken) throw new Error("APIFY_API_TOKEN not configured");
+                  {/* Duration badge for videos */}
+                  {post.videoDuration && (
+                    <div className="absolute bottom-2 right-2 px-2 py-1 text-xs font-medium rounded bg-black/70 text-white flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {formatDuration(post.videoDuration)}
+                    </div>
+                  )}
 
-    const jobId = await ctx.runMutation(api.scraping.createJob, {
-      platform: "tiktok",
-      jobType: "profile",
-      accountId: args.accountId,
-    });
+                  {/* Play overlay for videos */}
+                  {(post.postType === "video" || post.postType === "reel" || post.postType === "short") && (
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+                      <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center">
+                        <Play className="h-6 w-6 text-gray-800 ml-1" />
+                      </div>
+                    </div>
+                  )}
+                </div>
 
-    try {
-      const response = await fetch(
-        `${APIFY_BASE_URL}/acts/${encodeURIComponent(ACTORS.tiktok)}/runs?token=${apiToken}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            profiles: [args.username],
-            resultsPerPage: 30,
-            shouldDownloadVideos: false,
-            shouldDownloadCovers: true,
-          }),
-        }
-      );
+                {/* Content */}
+                <CardContent className="p-4 space-y-3">
+                  {/* Username and date */}
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium text-gray-900">@{account?.username}</span>
+                    <span className="text-muted-foreground">{formatDate(post.postedAt)}</span>
+                  </div>
 
-      if (!response.ok) {
-        throw new Error(`Apify API error: ${response.statusText}`);
-      }
+                  {/* Caption */}
+                  <p className="text-sm text-gray-600 line-clamp-2 min-h-[2.5rem]">
+                    {post.caption || "No caption"}
+                  </p>
 
-      const runData = await response.json();
+                  {/* Engagement Stats */}
+                  {engagement && (
+                    <div className="flex items-center gap-4 text-sm text-gray-500 pt-2 border-t">
+                      <div className="flex items-center gap-1" title="Likes">
+                        <Heart className="h-4 w-4 text-red-500" />
+                        <span>{formatNumber(engagement.likesCount)}</span>
+                      </div>
+                      <div className="flex items-center gap-1" title="Comments">
+                        <MessageCircle className="h-4 w-4 text-blue-500" />
+                        <span>{formatNumber(engagement.commentsCount)}</span>
+                      </div>
+                      {engagement.viewsCount !== undefined && engagement.viewsCount > 0 && (
+                        <div className="flex items-center gap-1" title="Views">
+                          <Eye className="h-4 w-4 text-green-500" />
+                          <span>{formatNumber(engagement.viewsCount)}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
-      await ctx.runMutation(api.scraping.updateJob, {
-        jobId,
-        status: "running",
-        apifyRunId: runData.data.id,
-      });
+                  {/* Hashtags */}
+                  {post.hashtags && post.hashtags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {post.hashtags.slice(0, 3).map((tag, i) => (
+                        <span key={i} className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                          #{tag}
+                        </span>
+                      ))}
+                      {post.hashtags.length > 3 && (
+                        <span className="text-xs text-gray-400">+{post.hashtags.length - 3} more</span>
+                      )}
+                    </div>
+                  )}
 
-      return { jobId, runId: runData.data.id };
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      await ctx.runMutation(api.scraping.updateJob, {
-        jobId,
-        status: "failed",
-        error: errorMessage,
-        completedAt: Date.now(),
-      });
-      throw error;
-    }
-  },
-});
-
-// ==================== YOUTUBE SCRAPING ====================
-
-export const scrapeYouTubeChannel = action({
-  args: {
-    channelUrl: v.string(),
-    accountId: v.id("accounts"),
-  },
-  handler: async (ctx, args): Promise<{ jobId: string; runId: string }> => {
-    const apiToken = process.env.APIFY_API_TOKEN;
-    if (!apiToken) throw new Error("APIFY_API_TOKEN not configured");
-
-    const jobId = await ctx.runMutation(api.scraping.createJob, {
-      platform: "youtube",
-      jobType: "profile",
-      accountId: args.accountId,
-    });
-
-    try {
-      const response = await fetch(
-        `${APIFY_BASE_URL}/acts/${encodeURIComponent(ACTORS.youtube)}/runs?token=${apiToken}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            startUrls: [{ url: args.channelUrl }],
-            maxResults: 50,
-            maxResultsShorts: 20,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Apify API error: ${response.statusText}`);
-      }
-
-      const runData = await response.json();
-
-      await ctx.runMutation(api.scraping.updateJob, {
-        jobId,
-        status: "running",
-        apifyRunId: runData.data.id,
-      });
-
-      return { jobId, runId: runData.data.id };
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      await ctx.runMutation(api.scraping.updateJob, {
-        jobId,
-        status: "failed",
-        error: errorMessage,
-        completedAt: Date.now(),
-      });
-      throw error;
-    }
-  },
-});
-
-// ==================== CHECK RUN STATUS & PROCESS RESULTS ====================
-
-export const checkAndProcessRun = action({
-  args: {
-    runId: v.string(),
-    jobId: v.id("scrapingJobs"),
-  },
-  handler: async (ctx, args): Promise<{ status: string; results?: unknown[] }> => {
-    const apiToken = process.env.APIFY_API_TOKEN;
-    if (!apiToken) throw new Error("APIFY_API_TOKEN not configured");
-
-    // Check run status
-    const statusResponse = await fetch(
-      `${APIFY_BASE_URL}/actor-runs/${args.runId}?token=${apiToken}`
-    );
-    const statusData = await statusResponse.json();
-
-    if (statusData.data.status === "RUNNING") {
-      return { status: "running" };
-    }
-
-    if (statusData.data.status === "FAILED") {
-      await ctx.runMutation(api.scraping.updateJob, {
-        jobId: args.jobId,
-        status: "failed",
-        error: "Apify run failed",
-        completedAt: Date.now(),
-      });
-      return { status: "failed" };
-    }
-
-    if (statusData.data.status === "SUCCEEDED") {
-      // Fetch results
-      const resultsResponse = await fetch(
-        `${APIFY_BASE_URL}/actor-runs/${args.runId}/dataset/items?token=${apiToken}`
-      );
-      const results = await resultsResponse.json();
-
-      await ctx.runMutation(api.scraping.updateJob, {
-        jobId: args.jobId,
-        status: "completed",
-        completedAt: Date.now(),
-        itemsScraped: results.length,
-      });
-
-      return { status: "completed", results };
-    }
-
-    return { status: statusData.data.status };
-  },
-});
-
-// ==================== BATCH SCRAPING ====================
-
-interface ScrapeResult {
-  account: string;
-  jobId?: string;
-  runId?: string;
-  error?: string;
+                  {/* View Post Button */}
+                  {post.postUrl && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full mt-2"
+                      onClick={() => window.open(post.postUrl, "_blank")}
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      View Original
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })
+        ) : (
+          <div className="col-span-full">
+            <Card>
+              <CardContent className="py-12 text-center">
+                <p className="text-muted-foreground">
+                  No posts match the current filters
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
-export const scrapeAllAccounts = action({
-  args: {
-    platform: v.union(
-      v.literal("instagram"),
-      v.literal("tiktok"),
-      v.literal("youtube")
-    ),
-  },
-  handler: async (ctx, args): Promise<ScrapeResult[]> => {
-    // Get accounts due for scraping
-    const accounts = await ctx.runQuery(api.accounts.getAccountsDueForScraping, {
-      platform: args.platform,
-    });
-
-    const results: ScrapeResult[] = [];
-
-    for (const account of accounts) {
-      try {
-        let result: { jobId: string; runId: string };
-        if (args.platform === "instagram") {
-          result = await ctx.runAction(api.scraping.scrapeInstagramPosts, {
-            username: account.username,
-            accountId: account._id,
-          });
-        } else if (args.platform === "tiktok") {
-          result = await ctx.runAction(api.scraping.scrapeTikTokProfile, {
-            username: account.username,
-            accountId: account._id,
-          });
-        } else {
-          result = await ctx.runAction(api.scraping.scrapeYouTubeChannel, {
-            channelUrl: account.profileUrl,
-            accountId: account._id,
-          });
-        }
-        results.push({ account: account.username, ...result });
-      } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        results.push({
-          account: account.username,
-          error: errorMessage,
-        });
-      }
-    }
-
-    return results;
-  },
-});
-// Add these to the end of your existing convex/scraping.ts file
-
-// Get a single job by ID
-export const getJob = query({
-  args: { jobId: v.id("scrapingJobs") },
-  handler: async (ctx, args) => {
-    return await ctx.db.get(args.jobId);
-  },
-});
-
-// Get all running jobs
-export const getRunningJobs = query({
-  args: {},
-  handler: async (ctx) => {
-    return await ctx.db
-      .query("scrapingJobs")
-      .withIndex("by_status", (q) => q.eq("status", "running"))
-      .collect();
-  },
-});
-
-// Scrape all Instagram profiles (for follower counts and avatars)
-export const scrapeAllProfiles: ReturnType<typeof action> = action({
-  args: {
-    platform: v.union(
-      v.literal("instagram"),
-      v.literal("tiktok"),
-      v.literal("youtube")
-    ),
-  },
-  handler: async (ctx, args) => {
-    const accounts = await ctx.runQuery(api.accounts.list, {
-      platform: args.platform,
-    });
-
-    const results = [];
-    for (const account of accounts) {
-      try {
-        let result;
-        if (args.platform === "instagram") {
-          result = await ctx.runAction(api.scraping.scrapeInstagramProfile, {
-            username: account.username,
-            accountId: account._id,
-          });
-        }
-        if (result) {
-          results.push({ account: account.username, ...result });
-        }
-      } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        results.push({ account: account.username, error: errorMessage });
-      }
-    }
-    return results;
-  },
-});
+export default function PostsPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PostsContent />
+    </Suspense>
+  );
+}
