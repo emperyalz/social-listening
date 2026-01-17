@@ -1,303 +1,622 @@
-"use client";
+import { v } from "convex/values";
+import { action, mutation, internalMutation } from "./_generated/server";
+import { api, internal } from "./_generated/api";
+import { Id } from "./_generated/dataModel";
 
-import { Suspense } from "react";
-import { useQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { MultiSelect } from "@/components/ui/multi-select";
-import { ExternalLink, Calendar, X, Heart, MessageCircle, Eye, Play, Clock } from "lucide-react";
-import { Id } from "../../../convex/_generated/dataModel";
-import { useFilterParams } from "@/hooks/useFilterParams";
+// Helper to download and store avatar after processing results
+async function downloadAvatarIfNeeded(
+  ctx: any,
+  accountId: Id<"accounts">,
+  avatarUrl: string | undefined
+) {
+  if (!avatarUrl) return;
 
-function PostsContent() {
-  const {
-    selectedMarkets,
-    setSelectedMarkets,
-    selectedPlatforms,
-    setSelectedPlatforms,
-    clearAllFilters,
-  } = useFilterParams();
+  // Skip if URL is already from Convex storage
+  if (avatarUrl.includes("convex.cloud")) return;
 
-  const posts = useQuery(api.posts.list, {});
-  const accounts = useQuery(api.accounts.list, {});
-  const markets = useQuery(api.markets.getAll);
-
-  // Filter posts based on URL params
-  const filteredPosts = posts?.filter((post) => {
-    const account = accounts?.find(a => a._id === post.accountId);
-    if (!account) return false;
-
-    const platformMatch = selectedPlatforms.length === 0 || selectedPlatforms.includes(account.platform);
-    const marketMatch = selectedMarkets.length === 0 || selectedMarkets.some(m => account.marketId === m as Id<"markets">);
-
-    return platformMatch && marketMatch;
-  }) || [];
-
-  // Sort by most recent
-  const sortedPosts = [...filteredPosts].sort((a, b) => b.postedAt - a.postedAt);
-
-  // Platform options
-  const platformOptions = [
-    { value: "instagram", label: "📸 Instagram" },
-    { value: "tiktok", label: "🎵 TikTok" },
-    { value: "youtube", label: "▶️ YouTube" },
-  ];
-
-  // Market options
-  const marketOptions = markets?.map(m => ({
-    value: m._id,
-    label: m.name,
-  })) || [];
-
-  const hasAnyFilter = selectedPlatforms.length > 0 || selectedMarkets.length > 0;
-
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
+  try {
+    await ctx.runAction(api.avatars.downloadAndStoreAvatar, {
+      accountId,
+      avatarUrl,
     });
-  };
+  } catch (error) {
+    console.error("Failed to download avatar:", error);
+  }
+}
 
-  const formatNumber = (num: number | undefined) => {
-    if (num === undefined || num === null) return "0";
-    if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
-    if (num >= 1000) return (num / 1000).toFixed(1) + "K";
-    return num.toString();
-  };
+function parseDuration(duration: string | number | undefined): number | undefined {
+  if (duration === undefined || duration === null) return undefined;
+  if (typeof duration === "number") return duration;
+  if (typeof duration === "string") {
+    const parts = duration.split(":").map(Number);
+    if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    if (parts.length === 2) return parts[0] * 60 + parts[1];
+    const num = parseFloat(duration);
+    return isNaN(num) ? undefined : num;
+  }
+  return undefined;
+}
 
-  const formatDuration = (seconds: number | undefined) => {
-    if (!seconds) return null;
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
+const APIFY_BASE_URL = "https://api.apify.com/v2";
 
-  const getPlatformIcon = (platform: string) => {
-    switch (platform) {
-      case "instagram": return "📸";
-      case "tiktok": return "🎵";
-      case "youtube": return "▶️";
-      default: return "📱";
+// ==================== INSTAGRAM RESULT PROCESSING ====================
+
+export const processInstagramResults = mutation({
+  args: {
+    accountId: v.id("accounts"),
+    results: v.array(v.any()),
+  },
+  handler: async (ctx, args) => {
+    const account = await ctx.db.get(args.accountId);
+    if (!account) throw new Error("Account not found");
+
+    const today = new Date().toISOString().split("T")[0];
+    let postsCreated = 0;
+    let postsUpdated = 0;
+
+    for (const item of args.results) {
+      // Handle profile data
+      if (item.followersCount !== undefined) {
+        // Check if snapshot already exists for today
+        const existingSnapshot = await ctx.db
+          .query("accountSnapshots")
+          .withIndex("by_account_date", (q) =>
+            q.eq("accountId", args.accountId).eq("snapshotDate", today)
+          )
+          .first();
+
+        if (!existingSnapshot) {
+          await ctx.db.insert("accountSnapshots", {
+            accountId: args.accountId,
+            followersCount: item.followersCount || 0,
+            followingCount: item.followingCount || 0,
+            postsCount: item.postsCount || 0,
+            snapshotDate: today,
+            createdAt: Date.now(),
+          });
+        }
+
+        // Update account with latest info
+        await ctx.db.patch(args.accountId, {
+          displayName: item.fullName || item.username,
+          bio: item.biography,
+          avatarUrl: item.profilePicUrl,
+          lastScrapedAt: Date.now(),
+        });
+      }
+
+      // Handle post data
+      if (item.shortCode || item.id) {
+        const platformPostId = item.shortCode || item.id;
+        
+        // Check if post exists
+        const existingPost = await ctx.db
+          .query("posts")
+          .withIndex("by_platform_post_id", (q) =>
+            q.eq("platform", "instagram").eq("platformPostId", platformPostId)
+          )
+          .first();
+
+        // Extract hashtags from caption
+        const caption = item.caption || "";
+        const hashtags = caption.match(/#[\w\u0080-\uFFFF]+/g)?.map((h: string) => h.slice(1)) || [];
+        const mentions = caption.match(/@[\w.]+/g)?.map((m: string) => m.slice(1)) || [];
+
+        // Determine post type
+        let postType: "image" | "video" | "carousel" | "reel" = "image";
+        if (item.type === "Video" || item.isVideo) postType = "video";
+        if (item.type === "Sidecar" || item.childPosts?.length > 0) postType = "carousel";
+        if (item.productType === "clips" || item.type === "Reel") postType = "reel";
+
+        const postData = {
+          accountId: args.accountId,
+          platform: "instagram" as const,
+          platformPostId,
+          postUrl: item.url || `https://www.instagram.com/p/${platformPostId}/`,
+          postType,
+          caption,
+          hashtags,
+          mentions,
+          thumbnailUrl: item.displayUrl || item.thumbnailUrl,
+          mediaUrls: item.images || (item.displayUrl ? [item.displayUrl] : []),
+          videoDuration: parseDuration(item.videoDuration),
+          postedAt: item.timestamp ? new Date(item.timestamp).getTime() : Date.now(),
+          lastUpdatedAt: Date.now(),
+        };
+
+        let postId: Id<"posts">;
+        
+        if (existingPost) {
+          await ctx.db.patch(existingPost._id, {
+            ...postData,
+            createdAt: existingPost.createdAt,
+          });
+          postId = existingPost._id;
+          postsUpdated++;
+        } else {
+          postId = await ctx.db.insert("posts", {
+            ...postData,
+            createdAt: Date.now(),
+          });
+          postsCreated++;
+        }
+
+        // Create/update engagement snapshot
+        const existingEngagement = await ctx.db
+          .query("postSnapshots")
+          .withIndex("by_post_date", (q) =>
+            q.eq("postId", postId).eq("snapshotDate", today)
+          )
+          .first();
+
+        const engagementData = {
+          postId,
+          likesCount: item.likesCount || 0,
+          commentsCount: item.commentsCount || 0,
+          viewsCount: item.videoViewCount || item.playCount,
+          snapshotDate: today,
+        };
+
+        if (existingEngagement) {
+          await ctx.db.patch(existingEngagement._id, {
+            ...engagementData,
+            createdAt: existingEngagement.createdAt,
+          });
+        } else {
+          await ctx.db.insert("postSnapshots", {
+            ...engagementData,
+            createdAt: Date.now(),
+          });
+        }
+      }
     }
-  };
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Posts</h1>
-          <p className="text-muted-foreground">
-            Browse and analyze competitor content
-          </p>
-        </div>
-      </div>
+    return { postsCreated, postsUpdated };
+  },
+});
 
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Filters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap items-center gap-3">
-            <MultiSelect
-              options={platformOptions}
-              selected={selectedPlatforms}
-              onChange={setSelectedPlatforms}
-              placeholder="All Platforms"
-            />
-            <MultiSelect
-              options={marketOptions}
-              selected={selectedMarkets}
-              onChange={setSelectedMarkets}
-              placeholder="All Markets"
-            />
-            {hasAnyFilter && (
-              <Button variant="ghost" onClick={clearAllFilters}>
-                <X className="h-4 w-4 mr-1" />
-                Clear All Filters
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+// ==================== TIKTOK RESULT PROCESSING ====================
 
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100">
-          <CardContent className="pt-6">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Total Posts</p>
-              <p className="text-3xl font-bold">{sortedPosts.length}</p>
-            </div>
-          </CardContent>
-        </Card>
+export const processTikTokResults = mutation({
+  args: {
+    accountId: v.id("accounts"),
+    results: v.array(v.any()),
+  },
+  handler: async (ctx, args) => {
+    const account = await ctx.db.get(args.accountId);
+    if (!account) throw new Error("Account not found");
 
-        <Card className="bg-gradient-to-br from-green-50 to-green-100">
-          <CardContent className="pt-6">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">This Week</p>
-              <p className="text-3xl font-bold">
-                {sortedPosts.filter(p => p.postedAt > Date.now() - 7 * 24 * 60 * 60 * 1000).length}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+    const today = new Date().toISOString().split("T")[0];
+    let postsCreated = 0;
+    let postsUpdated = 0;
 
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100">
-          <CardContent className="pt-6">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">This Month</p>
-              <p className="text-3xl font-bold">
-                {sortedPosts.filter(p => p.postedAt > Date.now() - 30 * 24 * 60 * 60 * 1000).length}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+    for (const item of args.results) {
+      // Handle profile/author data
+      if (item.authorMeta || item.followerCount !== undefined) {
+        const author = item.authorMeta || item;
+        
+        const existingSnapshot = await ctx.db
+          .query("accountSnapshots")
+          .withIndex("by_account_date", (q) =>
+            q.eq("accountId", args.accountId).eq("snapshotDate", today)
+          )
+          .first();
 
-      {/* Posts Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {sortedPosts.length > 0 ? (
-          sortedPosts.map((post) => {
-            const account = accounts?.find(a => a._id === post.accountId);
-            const engagement = post.engagement;
-            return (
-              <Card key={post._id} className="overflow-hidden hover:shadow-lg transition-shadow group">
-                {/* Thumbnail */}
-                <div className="relative aspect-square bg-gray-100 overflow-hidden">
-                  {post.thumbnailUrl ? (
-                    <img
-                      src={post.thumbnailUrl}
-                      alt={post.caption || "Post thumbnail"}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect fill='%23f3f4f6' width='100' height='100'/%3E%3Ctext x='50' y='50' font-family='Arial' font-size='30' fill='%239ca3af' text-anchor='middle' dy='.3em'%3E📷%3C/text%3E%3C/svg%3E";
-                      }}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-4xl text-gray-400">
-                      {getPlatformIcon(account?.platform || "")}
-                    </div>
-                  )}
+        if (!existingSnapshot) {
+          await ctx.db.insert("accountSnapshots", {
+            accountId: args.accountId,
+            followersCount: author.fans || author.followerCount || 0,
+            followingCount: author.following || author.followingCount || 0,
+            postsCount: author.video || author.videoCount || 0,
+            likesCount: author.heart || author.heartCount || 0,
+            snapshotDate: today,
+            createdAt: Date.now(),
+          });
+        }
 
-                  {/* Platform badge */}
-                  <div className={`absolute top-2 left-2 px-2 py-1 text-xs font-medium rounded-full backdrop-blur-sm ${
-                    account?.platform === 'instagram' ? 'bg-pink-500/90 text-white' :
-                    account?.platform === 'tiktok' ? 'bg-black/90 text-white' :
-                    'bg-red-500/90 text-white'
-                  }`}>
-                    {getPlatformIcon(account?.platform || "")} {account?.platform}
-                  </div>
+        await ctx.db.patch(args.accountId, {
+          displayName: author.nickname || author.name,
+          bio: author.signature || author.bio,
+          avatarUrl: author.avatar || author.avatarUrl,
+          lastScrapedAt: Date.now(),
+        });
+      }
 
-                  {/* Post type badge */}
-                  <div className="absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded-full bg-black/60 text-white backdrop-blur-sm">
-                    {post.postType}
-                  </div>
+      // Handle video data
+      if (item.id || item.videoId) {
+        const platformPostId = item.id || item.videoId;
+        
+        const existingPost = await ctx.db
+          .query("posts")
+          .withIndex("by_platform_post_id", (q) =>
+            q.eq("platform", "tiktok").eq("platformPostId", platformPostId)
+          )
+          .first();
 
-                  {/* Duration badge for videos */}
-                  {post.videoDuration && (
-                    <div className="absolute bottom-2 right-2 px-2 py-1 text-xs font-medium rounded bg-black/70 text-white flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {formatDuration(post.videoDuration)}
-                    </div>
-                  )}
+        const text = item.text || item.desc || "";
+        const hashtags = item.hashtags?.map((h: any) => h.name || h) || 
+                        text.match(/#[\w\u0080-\uFFFF]+/g)?.map((h: string) => h.slice(1)) || [];
+        const mentions = text.match(/@[\w.]+/g)?.map((m: string) => m.slice(1)) || [];
 
-                  {/* Play overlay for videos */}
-                  {(post.postType === "video" || post.postType === "reel" || post.postType === "short") && (
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
-                      <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center">
-                        <Play className="h-6 w-6 text-gray-800 ml-1" />
-                      </div>
-                    </div>
-                  )}
-                </div>
+        const postData = {
+          accountId: args.accountId,
+          platform: "tiktok" as const,
+          platformPostId,
+          postUrl: item.webVideoUrl || `https://www.tiktok.com/@${account.username}/video/${platformPostId}`,
+          postType: "video" as const,
+          caption: text,
+          hashtags,
+          mentions,
+          thumbnailUrl: item.covers?.[0] || item.cover,
+          mediaUrls: item.videoUrl ? [item.videoUrl] : [],
+          videoDuration: parseDuration(item.videoMeta?.duration || item.duration),
+          postedAt: item.createTime ? item.createTime * 1000 : Date.now(),
+          lastUpdatedAt: Date.now(),
+        };
 
-                {/* Content */}
-                <CardContent className="p-4 space-y-3">
-                  {/* Username and date */}
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-gray-900">@{account?.username}</span>
-                    <span className="text-muted-foreground">{formatDate(post.postedAt)}</span>
-                  </div>
+        let postId: Id<"posts">;
+        
+        if (existingPost) {
+          await ctx.db.patch(existingPost._id, {
+            ...postData,
+            createdAt: existingPost.createdAt,
+          });
+          postId = existingPost._id;
+          postsUpdated++;
+        } else {
+          postId = await ctx.db.insert("posts", {
+            ...postData,
+            createdAt: Date.now(),
+          });
+          postsCreated++;
+        }
 
-                  {/* Caption */}
-                  <p className="text-sm text-gray-600 line-clamp-2 min-h-[2.5rem]">
-                    {post.caption || "No caption"}
-                  </p>
+        // Engagement snapshot
+        const existingEngagement = await ctx.db
+          .query("postSnapshots")
+          .withIndex("by_post_date", (q) =>
+            q.eq("postId", postId).eq("snapshotDate", today)
+          )
+          .first();
 
-                  {/* Engagement Stats */}
-                  {engagement && (
-                    <div className="flex items-center gap-4 text-sm text-gray-500 pt-2 border-t">
-                      <div className="flex items-center gap-1" title="Likes">
-                        <Heart className="h-4 w-4 text-red-500" />
-                        <span>{formatNumber(engagement.likesCount)}</span>
-                      </div>
-                      <div className="flex items-center gap-1" title="Comments">
-                        <MessageCircle className="h-4 w-4 text-blue-500" />
-                        <span>{formatNumber(engagement.commentsCount)}</span>
-                      </div>
-                      {engagement.viewsCount !== undefined && engagement.viewsCount > 0 && (
-                        <div className="flex items-center gap-1" title="Views">
-                          <Eye className="h-4 w-4 text-green-500" />
-                          <span>{formatNumber(engagement.viewsCount)}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
+        const engagementData = {
+          postId,
+          likesCount: item.diggCount || item.likes || 0,
+          commentsCount: item.commentCount || item.comments || 0,
+          sharesCount: item.shareCount || item.shares,
+          viewsCount: item.playCount || item.plays,
+          snapshotDate: today,
+        };
 
-                  {/* Hashtags */}
-                  {post.hashtags && post.hashtags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 pt-1">
-                      {post.hashtags.slice(0, 3).map((tag, i) => (
-                        <span key={i} className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
-                          #{tag}
-                        </span>
-                      ))}
-                      {post.hashtags.length > 3 && (
-                        <span className="text-xs text-gray-400">+{post.hashtags.length - 3} more</span>
-                      )}
-                    </div>
-                  )}
+        if (existingEngagement) {
+          await ctx.db.patch(existingEngagement._id, {
+            ...engagementData,
+            createdAt: existingEngagement.createdAt,
+          });
+        } else {
+          await ctx.db.insert("postSnapshots", {
+            ...engagementData,
+            createdAt: Date.now(),
+          });
+        }
+      }
+    }
 
-                  {/* View Post Button */}
-                  {post.postUrl && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full mt-2"
-                      onClick={() => window.open(post.postUrl, "_blank")}
-                    >
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      View Original
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })
-        ) : (
-          <div className="col-span-full">
-            <Card>
-              <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">
-                  No posts match the current filters
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
+    return { postsCreated, postsUpdated };
+  },
+});
 
-export default function PostsPage() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <PostsContent />
-    </Suspense>
-  );
-}
+// ==================== YOUTUBE RESULT PROCESSING ====================
+
+export const processYouTubeResults = mutation({
+  args: {
+    accountId: v.id("accounts"),
+    results: v.array(v.any()),
+  },
+  handler: async (ctx, args) => {
+    const account = await ctx.db.get(args.accountId);
+    if (!account) throw new Error("Account not found");
+
+    const today = new Date().toISOString().split("T")[0];
+    let postsCreated = 0;
+    let postsUpdated = 0;
+    let channelUpdated = false;
+
+    for (const item of args.results) {
+      // Extract video ID from various possible fields
+      // streamers/youtube-scraper uses 'id' or the URL contains the video ID
+      let platformPostId = item.id || item.videoId;
+
+      // If no direct ID, try to extract from URL
+      if (!platformPostId && item.url) {
+        const urlMatch = item.url.match(/(?:v=|\/shorts\/|\/watch\/)([a-zA-Z0-9_-]{11})/);
+        if (urlMatch) platformPostId = urlMatch[1];
+      }
+
+      // Handle channel/author data (update account info once)
+      if (!channelUpdated && (item.channelName || item.channelId || item.subscriberCountText)) {
+        const existingSnapshot = await ctx.db
+          .query("accountSnapshots")
+          .withIndex("by_account_date", (q) =>
+            q.eq("accountId", args.accountId).eq("snapshotDate", today)
+          )
+          .first();
+
+        // Parse subscriber count from text like "1.5M subscribers"
+        let subscriberCount = item.subscriberCount;
+        if (!subscriberCount && item.subscriberCountText) {
+          const match = item.subscriberCountText.match(/([\d.]+)([KMB])?/i);
+          if (match) {
+            let num = parseFloat(match[1]);
+            const suffix = (match[2] || '').toUpperCase();
+            if (suffix === 'K') num *= 1000;
+            else if (suffix === 'M') num *= 1000000;
+            else if (suffix === 'B') num *= 1000000000;
+            subscriberCount = Math.round(num);
+          }
+        }
+
+        if (!existingSnapshot) {
+          await ctx.db.insert("accountSnapshots", {
+            accountId: args.accountId,
+            followersCount: 0,
+            followingCount: 0,
+            postsCount: item.videoCount || item.videosCount || 0,
+            subscribersCount: subscriberCount,
+            viewsCount: item.viewCount || item.totalViews,
+            snapshotDate: today,
+            createdAt: Date.now(),
+          });
+        }
+
+        await ctx.db.patch(args.accountId, {
+          displayName: item.channelName || item.channelTitle || item.title,
+          bio: item.channelDescription || item.description,
+          avatarUrl: item.channelThumbnail || item.channelAvatar || item.thumbnailUrl,
+          lastScrapedAt: Date.now(),
+        });
+
+        channelUpdated = true;
+      }
+
+      // Handle video data - must have an ID
+      if (platformPostId) {
+        const existingPost = await ctx.db
+          .query("posts")
+          .withIndex("by_platform_post_id", (q) =>
+            q.eq("platform", "youtube").eq("platformPostId", platformPostId)
+          )
+          .first();
+
+        const title = item.title || "";
+        const description = item.description || item.text || "";
+        const fullText = `${title} ${description}`;
+        const hashtags = fullText.match(/#[\w\u0080-\uFFFF]+/g)?.map((h: string) => h.slice(1)) || [];
+        const mentions = fullText.match(/@[\w.]+/g)?.map((m: string) => m.slice(1)) || [];
+
+        // Determine if it's a short
+        const isShort = item.isShort ||
+                       item.type === 'short' ||
+                       item.url?.includes("/shorts/") ||
+                       (item.duration && typeof item.duration === 'number' && item.duration <= 60);
+
+        // Parse duration - could be seconds, "MM:SS", or "HH:MM:SS"
+        const duration = parseDuration(item.duration || item.lengthSeconds);
+
+        // Get thumbnail - various possible field names
+        const thumbnailUrl = item.thumbnailUrl ||
+                            item.thumbnail ||
+                            item.thumbnails?.[0]?.url ||
+                            (platformPostId ? `https://img.youtube.com/vi/${platformPostId}/hqdefault.jpg` : undefined);
+
+        // Parse upload date
+        let postedAt = Date.now();
+        if (item.date) {
+          postedAt = new Date(item.date).getTime();
+        } else if (item.uploadDate) {
+          postedAt = new Date(item.uploadDate).getTime();
+        } else if (item.publishedAt) {
+          postedAt = new Date(item.publishedAt).getTime();
+        }
+
+        const postData = {
+          accountId: args.accountId,
+          platform: "youtube" as const,
+          platformPostId,
+          postUrl: item.url || `https://www.youtube.com/watch?v=${platformPostId}`,
+          postType: isShort ? "short" as const : "video" as const,
+          caption: title,
+          hashtags,
+          mentions,
+          thumbnailUrl,
+          mediaUrls: [],
+          videoDuration: duration,
+          postedAt,
+          lastUpdatedAt: Date.now(),
+        };
+
+        let postId: Id<"posts">;
+
+        if (existingPost) {
+          await ctx.db.patch(existingPost._id, {
+            ...postData,
+            createdAt: existingPost.createdAt,
+          });
+          postId = existingPost._id;
+          postsUpdated++;
+        } else {
+          postId = await ctx.db.insert("posts", {
+            ...postData,
+            createdAt: Date.now(),
+          });
+          postsCreated++;
+        }
+
+        // Parse view/like counts - could be numbers or strings like "1.5M"
+        const parseCount = (val: string | number | undefined): number => {
+          if (val === undefined || val === null) return 0;
+          if (typeof val === 'number') return val;
+          const match = String(val).replace(/,/g, '').match(/([\d.]+)([KMB])?/i);
+          if (!match) return 0;
+          let num = parseFloat(match[1]);
+          const suffix = (match[2] || '').toUpperCase();
+          if (suffix === 'K') num *= 1000;
+          else if (suffix === 'M') num *= 1000000;
+          else if (suffix === 'B') num *= 1000000000;
+          return Math.round(num);
+        };
+
+        // Engagement snapshot
+        const existingEngagement = await ctx.db
+          .query("postSnapshots")
+          .withIndex("by_post_date", (q) =>
+            q.eq("postId", postId).eq("snapshotDate", today)
+          )
+          .first();
+
+        const engagementData = {
+          postId,
+          likesCount: parseCount(item.likes || item.likeCount || item.likesCount),
+          commentsCount: parseCount(item.commentsCount || item.numberOfComments || item.commentCount),
+          viewsCount: parseCount(item.viewCount || item.views || item.viewsCount),
+          snapshotDate: today,
+        };
+
+        if (existingEngagement) {
+          await ctx.db.patch(existingEngagement._id, {
+            ...engagementData,
+            createdAt: existingEngagement.createdAt,
+          });
+        } else {
+          await ctx.db.insert("postSnapshots", {
+            ...engagementData,
+            createdAt: Date.now(),
+          });
+        }
+      }
+    }
+
+    return { postsCreated, postsUpdated };
+  },
+});
+
+// ==================== POLL AND PROCESS RUNNING JOBS ====================
+
+export const pollAndProcessJob: ReturnType<typeof action> = action({
+  args: {
+    jobId: v.id("scrapingJobs"),
+  },
+  handler: async (ctx, args) => {
+    const apiToken = process.env.APIFY_API_TOKEN;
+    if (!apiToken) throw new Error("APIFY_API_TOKEN not configured");
+
+    // Get the job
+    const job = await ctx.runQuery(api.scraping.getJob, { jobId: args.jobId });
+    if (!job || !job.apifyRunId) {
+      return { status: "error", message: "Job not found or no run ID" };
+    }
+
+    // Check status
+    const statusResponse = await fetch(
+      `${APIFY_BASE_URL}/actor-runs/${job.apifyRunId}?token=${apiToken}`
+    );
+    const statusData = await statusResponse.json();
+
+    if (statusData.data.status === "RUNNING") {
+      return { status: "running" };
+    }
+
+    if (statusData.data.status === "FAILED") {
+      await ctx.runMutation(api.scraping.updateJob, {
+        jobId: args.jobId,
+        status: "failed",
+        error: statusData.data.statusMessage || "Apify run failed",
+        completedAt: Date.now(),
+      });
+      return { status: "failed" };
+    }
+
+    if (statusData.data.status === "SUCCEEDED") {
+      // Fetch results
+      const resultsResponse = await fetch(
+        `${APIFY_BASE_URL}/actor-runs/${job.apifyRunId}/dataset/items?token=${apiToken}`
+      );
+      const results = await resultsResponse.json();
+
+      // Process based on platform
+      if (job.accountId && results.length > 0) {
+        const account = await ctx.runQuery(api.accounts.get, { id: job.accountId });
+        
+        if (account) {
+          let processResult;
+          if (job.platform === "instagram") {
+            processResult = await ctx.runMutation(api.scrapingProcessor.processInstagramResults, {
+              accountId: job.accountId,
+              results,
+            });
+          } else if (job.platform === "tiktok") {
+            processResult = await ctx.runMutation(api.scrapingProcessor.processTikTokResults, {
+              accountId: job.accountId,
+              results,
+            });
+          } else if (job.platform === "youtube") {
+            processResult = await ctx.runMutation(api.scrapingProcessor.processYouTubeResults, {
+              accountId: job.accountId,
+              results,
+            });
+          }
+
+          // Download and store avatar after processing
+          const updatedAccount = await ctx.runQuery(api.accounts.get, { id: job.accountId });
+          if (updatedAccount?.avatarUrl) {
+            await downloadAvatarIfNeeded(ctx, job.accountId, updatedAccount.avatarUrl);
+          }
+
+          await ctx.runMutation(api.scraping.updateJob, {
+            jobId: args.jobId,
+            status: "completed",
+            completedAt: Date.now(),
+            itemsScraped: results.length,
+          });
+
+          return { status: "completed", results: processResult, itemCount: results.length };
+        }
+      }
+
+      // No account or no results
+      await ctx.runMutation(api.scraping.updateJob, {
+        jobId: args.jobId,
+        status: "completed",
+        completedAt: Date.now(),
+        itemsScraped: results.length,
+      });
+
+      return { status: "completed", itemCount: results.length };
+    }
+
+    return { status: statusData.data.status };
+  },
+});
+
+// Poll all running jobs
+export const pollAllRunningJobs: ReturnType<typeof action> = action({
+  args: {},
+  handler: async (ctx) => {
+    const runningJobs = await ctx.runQuery(api.scraping.getRunningJobs, {});
+    
+    const results = [];
+    for (const job of runningJobs) {
+      try {
+        const result = await ctx.runAction(api.scrapingProcessor.pollAndProcessJob, {
+          jobId: job._id,
+        });
+        results.push({ jobId: job._id, ...result });
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        results.push({ jobId: job._id, status: "error", error: errorMessage });
+      }
+    }
+    
+    return results;
+  },
+});
