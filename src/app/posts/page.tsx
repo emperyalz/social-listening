@@ -6,7 +6,7 @@ import { api } from "../../../convex/_generated/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MultiSelect } from "@/components/ui/multi-select";
-import { ExternalLink, Calendar, X, Heart, MessageCircle, Eye, Play, Clock } from "lucide-react";
+import { ExternalLink, X, Heart, MessageCircle, Eye, Play, Clock } from "lucide-react";
 import { Id } from "../../../convex/_generated/dataModel";
 import { useFilterParams } from "@/hooks/useFilterParams";
 
