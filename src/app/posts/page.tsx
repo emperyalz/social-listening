@@ -39,7 +39,7 @@ function PostsContent() {
 
   // Platform options
   const platformOptions = [
-    { value: "instagram", label: "📸 Instagram" },
+    { value: "instagram", label: "�� Instagram" },
     { value: "tiktok", label: "🎵 TikTok" },
     { value: "youtube", label: "▶️ YouTube" },
   ];
@@ -84,7 +84,7 @@ function PostsContent() {
   };
 
   // Get thumbnail URL with fallbacks
-  const getThumbnailUrl = (post: typeof posts[number], platform?: string) => {
+  const getThumbnailUrl = (post: NonNullable<typeof posts>[number], platform?: string) => {
     // If we have a valid thumbnail URL, use it
     if (post.thumbnailUrl) {
       return post.thumbnailUrl;
