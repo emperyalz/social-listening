@@ -322,9 +322,110 @@ export const processYouTubeResults = mutation({
     let postsUpdated = 0;
     let channelUpdated = false;
 
+    // Helper to parse counts from strings like "1.5M" or "1,234"
+    const parseCountValue = (val: string | number | undefined): number => {
+      if (val === undefined || val === null) return 0;
+      if (typeof val === 'number') return val;
+      const str = String(val).replace(/,/g, '').replace(/subscribers?/i, '').trim();
+      const match = str.match(/([\d.]+)\s*([KMB])?/i);
+      if (!match) return 0;
+      let num = parseFloat(match[1]);
+      const suffix = (match[2] || '').toUpperCase();
+      if (suffix === 'K') num *= 1000;
+      else if (suffix === 'M') num *= 1000000;
+      else if (suffix === 'B') num *= 1000000000;
+      return Math.round(num);
+    };
+
+    // First pass: collect channel metadata from all items
+    // The streamers/youtube-scraper actor includes channel info in each video item
+    let bestSubscriberCount = 0;
+    let bestVideoCount = 0;
+    let bestViewCount = 0;
+    let channelName = "";
+    let channelAvatar = "";
+    let channelDescription = "";
+
     for (const item of args.results) {
+      // Try to extract subscriber count from various fields
+      const subCount = parseCountValue(item.subscriberCount || item.subscriberCountText || item.numberOfSubscribers);
+      if (subCount > bestSubscriberCount) bestSubscriberCount = subCount;
+
+      // Video count
+      const vidCount = item.videoCount || item.videosCount || item.numberOfVideos || 0;
+      if (vidCount > bestVideoCount) bestVideoCount = vidCount;
+
+      // Total channel views
+      const viewCount = parseCountValue(item.channelTotalViews || item.viewCount || item.totalViews);
+      if (viewCount > bestViewCount) bestViewCount = viewCount;
+
+      // Channel name (prefer from channel-level fields)
+      if (!channelName && (item.channelName || item.channelTitle || item.uploaderName)) {
+        channelName = item.channelName || item.channelTitle || item.uploaderName;
+      }
+
+      // Channel avatar
+      if (!channelAvatar && (item.channelThumbnail || item.channelAvatar || item.uploaderAvatar)) {
+        channelAvatar = item.channelThumbnail || item.channelAvatar || item.uploaderAvatar;
+      }
+
+      // Channel description
+      if (!channelDescription && (item.channelDescription || item.uploaderDescription)) {
+        channelDescription = item.channelDescription || item.uploaderDescription;
+      }
+    }
+
+    // Create/update account snapshot with aggregated channel data
+    if (bestSubscriberCount > 0 || bestVideoCount > 0 || channelName) {
+      const existingSnapshot = await ctx.db
+        .query("accountSnapshots")
+        .withIndex("by_account_date", (q) =>
+          q.eq("accountId", args.accountId).eq("snapshotDate", today)
+        )
+        .first();
+
+      if (!existingSnapshot) {
+        await ctx.db.insert("accountSnapshots", {
+          accountId: args.accountId,
+          followersCount: 0, // YouTube doesn't use followers
+          followingCount: 0,
+          postsCount: bestVideoCount,
+          subscribersCount: bestSubscriberCount,
+          viewsCount: bestViewCount,
+          snapshotDate: today,
+          createdAt: Date.now(),
+        });
+      } else if (bestSubscriberCount > 0) {
+        // Update existing snapshot if we have better subscriber data
+        await ctx.db.patch(existingSnapshot._id, {
+          subscribersCount: bestSubscriberCount,
+          postsCount: bestVideoCount || existingSnapshot.postsCount,
+          viewsCount: bestViewCount || existingSnapshot.viewsCount,
+        });
+      }
+
+      // Update account info
+      if (channelName || channelAvatar) {
+        await ctx.db.patch(args.accountId, {
+          ...(channelName && { displayName: channelName }),
+          ...(channelDescription && { bio: channelDescription }),
+          ...(channelAvatar && { avatarUrl: channelAvatar }),
+          lastScrapedAt: Date.now(),
+        });
+      }
+
+      channelUpdated = true;
+    }
+
+    // Second pass: process each video item
+    for (const item of args.results) {
+      // Skip if this looks like pure channel data without video info
+      // (some actors return a channel info item without a video ID)
+      if (!item.id && !item.videoId && !item.url && !item.title) {
+        continue;
+      }
+
       // Extract video ID from various possible fields
-      // streamers/youtube-scraper uses 'id' or the URL contains the video ID
       let platformPostId = item.id || item.videoId;
 
       // If no direct ID, try to extract from URL
@@ -333,54 +434,11 @@ export const processYouTubeResults = mutation({
         if (urlMatch) platformPostId = urlMatch[1];
       }
 
-      // Handle channel/author data (update account info once)
-      if (!channelUpdated && (item.channelName || item.channelId || item.subscriberCountText)) {
-        const existingSnapshot = await ctx.db
-          .query("accountSnapshots")
-          .withIndex("by_account_date", (q) =>
-            q.eq("accountId", args.accountId).eq("snapshotDate", today)
-          )
-          .first();
-
-        // Parse subscriber count from text like "1.5M subscribers"
-        let subscriberCount = item.subscriberCount;
-        if (!subscriberCount && item.subscriberCountText) {
-          const match = item.subscriberCountText.match(/([\d.]+)([KMB])?/i);
-          if (match) {
-            let num = parseFloat(match[1]);
-            const suffix = (match[2] || '').toUpperCase();
-            if (suffix === 'K') num *= 1000;
-            else if (suffix === 'M') num *= 1000000;
-            else if (suffix === 'B') num *= 1000000000;
-            subscriberCount = Math.round(num);
-          }
-        }
-
-        if (!existingSnapshot) {
-          await ctx.db.insert("accountSnapshots", {
-            accountId: args.accountId,
-            followersCount: 0,
-            followingCount: 0,
-            postsCount: item.videoCount || item.videosCount || 0,
-            subscribersCount: subscriberCount,
-            viewsCount: item.viewCount || item.totalViews,
-            snapshotDate: today,
-            createdAt: Date.now(),
-          });
-        }
-
-        await ctx.db.patch(args.accountId, {
-          displayName: item.channelName || item.channelTitle || item.title,
-          bio: item.channelDescription || item.description,
-          avatarUrl: item.channelThumbnail || item.channelAvatar || item.thumbnailUrl,
-          lastScrapedAt: Date.now(),
-        });
-
-        channelUpdated = true;
-      }
-
-      // Handle video data - must have an ID
-      if (platformPostId) {
+      // Handle video data - must have an ID or a title (for proper video items)
+      if (platformPostId || item.title) {
+        // If we still don't have an ID but have a title, skip this item
+        // (might be channel-only data)
+        if (!platformPostId) continue;
         const existingPost = await ctx.db
           .query("posts")
           .withIndex("by_platform_post_id", (q) =>
