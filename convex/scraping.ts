@@ -73,6 +73,93 @@ export const getRecentJobs = query({
   },
 });
 
+// Get jobs with filters (platform, time period)
+export const getFilteredJobs = query({
+  args: {
+    platform: v.optional(v.union(
+      v.literal("instagram"),
+      v.literal("tiktok"),
+      v.literal("youtube"),
+      v.literal("all")
+    )),
+    daysBack: v.optional(v.number()), // 1, 7, 14, 30, 60, 90
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const daysBack = args.daysBack || 30;
+    const cutoffTime = Date.now() - (daysBack * 24 * 60 * 60 * 1000);
+    const limit = args.limit || 100;
+
+    let jobs;
+
+    // If filtering by platform, use the index
+    if (args.platform && args.platform !== "all") {
+      jobs = await ctx.db
+        .query("scrapingJobs")
+        .withIndex("by_platform", (q) => q.eq("platform", args.platform as "instagram" | "tiktok" | "youtube"))
+        .order("desc")
+        .collect();
+    } else {
+      jobs = await ctx.db
+        .query("scrapingJobs")
+        .order("desc")
+        .collect();
+    }
+
+    // Filter by time and limit
+    return jobs
+      .filter(job => job.startedAt >= cutoffTime)
+      .slice(0, limit);
+  },
+});
+
+// Cancel a stuck job (mark as failed)
+export const cancelJob = mutation({
+  args: {
+    jobId: v.id("scrapingJobs"),
+  },
+  handler: async (ctx, args) => {
+    const job = await ctx.db.get(args.jobId);
+    if (!job) throw new Error("Job not found");
+    if (job.status !== "running" && job.status !== "pending") {
+      throw new Error("Can only cancel running or pending jobs");
+    }
+
+    await ctx.db.patch(args.jobId, {
+      status: "failed",
+      error: "Manually cancelled",
+      completedAt: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+// Auto-timeout stuck jobs (jobs running for more than 30 minutes)
+export const timeoutStuckJobs = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const thirtyMinutesAgo = Date.now() - (30 * 60 * 1000);
+
+    const runningJobs = await ctx.db
+      .query("scrapingJobs")
+      .withIndex("by_status", (q) => q.eq("status", "running"))
+      .collect();
+
+    const stuckJobs = runningJobs.filter(job => job.startedAt < thirtyMinutesAgo);
+
+    for (const job of stuckJobs) {
+      await ctx.db.patch(job._id, {
+        status: "failed",
+        error: "Timed out (exceeded 30 minutes)",
+        completedAt: Date.now(),
+      });
+    }
+
+    return { timedOut: stuckJobs.length };
+  },
+});
+
 // ==================== INSTAGRAM SCRAPING ====================
 
 export const scrapeInstagramProfile = action({
@@ -415,7 +502,6 @@ export const scrapeAllAccounts = action({
     return results;
   },
 });
-// Add these to the end of your existing convex/scraping.ts file
 
 // Get a single job by ID
 export const getJob = query({
