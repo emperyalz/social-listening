@@ -73,9 +73,15 @@ export const getRecentJobs = query({
   },
 });
 
-// Get jobs with filters (platform, time period)
+// Get jobs with filters (platform, time period) - supports multiple platforms
 export const getFilteredJobs = query({
   args: {
+    platforms: v.optional(v.array(v.union(
+      v.literal("instagram"),
+      v.literal("tiktok"),
+      v.literal("youtube")
+    ))),
+    // Keep old single platform arg for backwards compatibility
     platform: v.optional(v.union(
       v.literal("instagram"),
       v.literal("tiktok"),
@@ -90,24 +96,26 @@ export const getFilteredJobs = query({
     const cutoffTime = Date.now() - (daysBack * 24 * 60 * 60 * 1000);
     const limit = args.limit || 100;
 
-    let jobs;
+    // Get all jobs first
+    const jobs = await ctx.db
+      .query("scrapingJobs")
+      .order("desc")
+      .collect();
 
-    // If filtering by platform, use the index
-    if (args.platform && args.platform !== "all") {
-      jobs = await ctx.db
-        .query("scrapingJobs")
-        .withIndex("by_platform", (q) => q.eq("platform", args.platform as "instagram" | "tiktok" | "youtube"))
-        .order("desc")
-        .collect();
-    } else {
-      jobs = await ctx.db
-        .query("scrapingJobs")
-        .order("desc")
-        .collect();
+    let filteredJobs = jobs;
+
+    // Support multi-platform filtering (new approach)
+    if (args.platforms && args.platforms.length > 0) {
+      const platformSet = new Set(args.platforms);
+      filteredJobs = jobs.filter(job => platformSet.has(job.platform));
+    }
+    // Fall back to single platform filter for backwards compatibility
+    else if (args.platform && args.platform !== "all") {
+      filteredJobs = jobs.filter(job => job.platform === args.platform);
     }
 
     // Filter by time and limit
-    return jobs
+    return filteredJobs
       .filter(job => job.startedAt >= cutoffTime)
       .slice(0, limit);
   },
