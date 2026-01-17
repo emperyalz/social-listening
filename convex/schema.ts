@@ -316,4 +316,27 @@ export default defineSchema({
   })
     .index("by_account_period", ["accountId", "period"])
     .index("by_account_date", ["accountId", "periodDate"]),
+
+  // Schedule settings for automated scraping
+  scheduleSettings: defineTable({
+    platform: v.union(
+      v.literal("instagram"),
+      v.literal("tiktok"),
+      v.literal("youtube"),
+      v.literal("all") // Global setting
+    ),
+    isEnabled: v.boolean(),
+    frequency: v.union(
+      v.literal("hourly"),
+      v.literal("every_6_hours"),
+      v.literal("every_12_hours"),
+      v.literal("daily"),
+      v.literal("weekly")
+    ),
+    preferredHour: v.number(), // 0-23 UTC
+    preferredDays: v.optional(v.array(v.number())), // 0-6 (Sun-Sat) for weekly
+    lastRunAt: v.optional(v.number()),
+    nextScheduledAt: v.optional(v.number()),
+    updatedAt: v.number(),
+  }).index("by_platform", ["platform"]),
 });

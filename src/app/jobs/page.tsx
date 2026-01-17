@@ -6,6 +6,7 @@ import { api } from "../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MultiSelect } from "@/components/ui/multi-select";
+import { ScheduleSettings } from "@/components/schedule-settings";
 import { formatDate, getPlatformIcon } from "@/lib/utils";
 import {
   Play,
@@ -276,6 +277,9 @@ function JobsContent() {
         </Card>
       </div>
 
+      {/* Schedule Settings */}
+      <ScheduleSettings />
+
       {/* Filters */}
       <Card>
         <CardHeader>
@@ -407,8 +411,7 @@ function JobsContent() {
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">
           <p className="mb-2">
-            Daily scraping is configured to run automatically via Vercel Cron at
-            6:00 AM UTC. This collects:
+            Automated scraping collects the following data for each platform:
           </p>
           <ul className="ml-4 list-disc space-y-1">
             <li>Profile updates (followers, following, bio)</li>
@@ -417,8 +420,8 @@ function JobsContent() {
             <li>Daily snapshots for trend analysis</li>
           </ul>
           <p className="mt-4">
-            You can also trigger manual scrapes using the buttons above for
-            immediate data refresh.
+            Use the <strong>Schedule Settings</strong> above to configure your automation preferences.
+            Manual scrapes can be triggered using the platform buttons at the top.
           </p>
           <p className="mt-2 text-yellow-600">
             <strong>Note:</strong> Jobs running longer than 30 minutes are automatically timed out when you click &quot;Check Running Jobs&quot;.
