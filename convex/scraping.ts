@@ -351,17 +351,17 @@ export const scrapeYouTubeChannel = action({
 
     try {
       // Use streamers/youtube-scraper with proper input format
+      // The actor expects startUrls as array of objects with url property
       const response = await fetch(
         `${APIFY_BASE_URL}/acts/${encodeURIComponent(ACTORS.youtube)}/runs?token=${apiToken}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            startUrls: [args.channelUrl],
+            startUrls: [{ url: args.channelUrl }],
             maxResults: 30,
             maxResultsShorts: 10,
-            subtitlesLanguage: "en",
-            subtitlesFormat: "srt",
+            maxResultStreams: 5,
           }),
         }
       );
@@ -502,6 +502,7 @@ export const scrapeAllAccounts = action({
     return results;
   },
 });
+// Add these to the end of your existing convex/scraping.ts file
 
 // Get a single job by ID
 export const getJob = query({

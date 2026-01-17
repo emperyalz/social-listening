@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useQuery, useAction, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { formatDate, getPlatformIcon } from "@/lib/utils";
 import {
   Play,
@@ -14,27 +15,24 @@ import {
   Clock,
   Loader2,
   X,
-  Calendar,
-  Filter
 } from "lucide-react";
 import { Id } from "../../../convex/_generated/dataModel";
 
-// Time period options
-const TIME_PERIODS = [
-  { label: "1 Day", value: 1 },
-  { label: "7 Days", value: 7 },
-  { label: "14 Days", value: 14 },
-  { label: "30 Days", value: 30 },
-  { label: "60 Days", value: 60 },
-  { label: "90 Days", value: 90 },
+// Platform options for MultiSelect
+const PLATFORM_OPTIONS = [
+  { label: "📸 Instagram", value: "instagram" },
+  { label: "🎵 TikTok", value: "tiktok" },
+  { label: "▶️ YouTube", value: "youtube" },
 ];
 
-// Platform options
-const PLATFORMS = [
-  { label: "All Platforms", value: "all" },
-  { label: "Instagram", value: "instagram" },
-  { label: "TikTok", value: "tiktok" },
-  { label: "YouTube", value: "youtube" },
+// Time period options for MultiSelect
+const TIME_PERIOD_OPTIONS = [
+  { label: "Last 24 Hours", value: "1" },
+  { label: "Last 7 Days", value: "7" },
+  { label: "Last 14 Days", value: "14" },
+  { label: "Last 30 Days", value: "30" },
+  { label: "Last 60 Days", value: "60" },
+  { label: "Last 90 Days", value: "90" },
 ];
 
 // Format relative time with actual timestamp
@@ -63,22 +61,38 @@ function formatTimeWithTimestamp(timestamp: number): string {
   return `${relative} (${actualDate})`;
 }
 
-export default function JobsPage() {
+function JobsContent() {
   const [isRunning, setIsRunning] = useState<string | null>(null);
   const [isPolling, setIsPolling] = useState(false);
   const [cancellingJob, setCancellingJob] = useState<string | null>(null);
 
-  // Filters
-  const [selectedPlatform, setSelectedPlatform] = useState<"all" | "instagram" | "tiktok" | "youtube">("all");
-  const [selectedDays, setSelectedDays] = useState(30);
+  // Filters using MultiSelect pattern
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
+  const [selectedTimePeriods, setSelectedTimePeriods] = useState<string[]>(["30"]);
+
+  // Derive the filter values for the query
+  const platformFilter = selectedPlatforms.length === 1
+    ? selectedPlatforms[0] as "instagram" | "tiktok" | "youtube"
+    : "all";
+  const daysBack = selectedTimePeriods.length === 1
+    ? parseInt(selectedTimePeriods[0])
+    : 30;
 
   // Queries
   const jobs = useQuery(api.scraping.getFilteredJobs, {
-    platform: selectedPlatform,
-    daysBack: selectedDays,
+    platform: platformFilter,
+    daysBack: daysBack,
     limit: 100
   });
   const runningJobs = useQuery(api.scraping.getRunningJobs, {});
+
+  // Clear all filters
+  const clearAllFilters = () => {
+    setSelectedPlatforms([]);
+    setSelectedTimePeriods(["30"]);
+  };
+
+  const hasAnyFilter = selectedPlatforms.length > 0 || (selectedTimePeriods.length > 0 && selectedTimePeriods[0] !== "30");
 
   // Actions and mutations
   const scrapeAllAccounts = useAction(api.scraping.scrapeAllAccounts);
@@ -263,46 +277,36 @@ export default function JobsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-4 items-center">
-        <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-medium">Filters:</span>
-        </div>
-
-        {/* Platform Filter */}
-        <select
-          value={selectedPlatform}
-          onChange={(e) => setSelectedPlatform(e.target.value as typeof selectedPlatform)}
-          className="px-3 py-2 border rounded-md bg-background text-sm"
-        >
-          {PLATFORMS.map((p) => (
-            <option key={p.value} value={p.value}>
-              {p.label}
-            </option>
-          ))}
-        </select>
-
-        {/* Time Period Filter */}
-        <div className="flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-muted-foreground" />
-          <select
-            value={selectedDays}
-            onChange={(e) => setSelectedDays(Number(e.target.value))}
-            className="px-3 py-2 border rounded-md bg-background text-sm"
-          >
-            {TIME_PERIODS.map((t) => (
-              <option key={t.value} value={t.value}>
-                Last {t.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Results count */}
-        <span className="text-sm text-muted-foreground ml-auto">
-          {jobs?.length || 0} jobs found
-        </span>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Filters</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap items-center gap-3">
+            <MultiSelect
+              options={PLATFORM_OPTIONS}
+              selected={selectedPlatforms}
+              onChange={setSelectedPlatforms}
+              placeholder="All Platforms"
+            />
+            <MultiSelect
+              options={TIME_PERIOD_OPTIONS}
+              selected={selectedTimePeriods}
+              onChange={setSelectedTimePeriods}
+              placeholder="Time Period"
+            />
+            {hasAnyFilter && (
+              <Button variant="ghost" onClick={clearAllFilters}>
+                <X className="h-4 w-4 mr-1" />
+                Clear All Filters
+              </Button>
+            )}
+            <span className="text-sm text-muted-foreground ml-auto">
+              {jobs?.length || 0} jobs found
+            </span>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Jobs History */}
       <Card>
@@ -422,5 +426,13 @@ export default function JobsPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function JobsPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <JobsContent />
+    </Suspense>
   );
 }
