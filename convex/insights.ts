@@ -59,7 +59,12 @@ export const getDashboardStats = query({
         .first();
 
       if (snapshot) {
-        totalFollowers += snapshot.followersCount;
+        // For YouTube, use subscribersCount instead of followersCount
+        if (account.platform === "youtube") {
+          totalFollowers += (snapshot as any).subscribersCount || snapshot.followersCount || 0;
+        } else {
+          totalFollowers += snapshot.followersCount;
+        }
         totalPosts += snapshot.postsCount;
       }
     }
@@ -180,11 +185,18 @@ export const getCompetitorComparison = query({
           }
         }
 
-        const followers = latestSnapshot?.followersCount || 0;
-        const followerGrowth =
-          latestSnapshot && oldestSnapshot
-            ? latestSnapshot.followersCount - oldestSnapshot.followersCount
-            : 0;
+        // For YouTube, use subscribersCount instead of followersCount
+        const getFollowerCount = (snapshot: typeof latestSnapshot) => {
+          if (!snapshot) return 0;
+          if (account.platform === "youtube") {
+            return (snapshot as any).subscribersCount || snapshot.followersCount || 0;
+          }
+          return snapshot.followersCount || 0;
+        };
+
+        const followers = getFollowerCount(latestSnapshot);
+        const oldFollowers = getFollowerCount(oldestSnapshot);
+        const followerGrowth = followers - oldFollowers;
 
         return {
           account: {
@@ -200,8 +212,8 @@ export const getCompetitorComparison = query({
           followers,
           followerGrowth,
           followerGrowthRate:
-            oldestSnapshot && oldestSnapshot.followersCount > 0
-              ? ((followerGrowth / oldestSnapshot.followersCount) * 100).toFixed(1)
+            oldFollowers > 0
+              ? ((followerGrowth / oldFollowers) * 100).toFixed(1)
               : "0",
           postsCount: posts.length,
           postsPerWeek: ((posts.length / daysAgo) * 7).toFixed(1),

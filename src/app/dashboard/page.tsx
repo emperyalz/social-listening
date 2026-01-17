@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { StatCard } from "@/components/charts/StatCard";
@@ -17,6 +17,18 @@ import { MultiSelect } from "@/components/ui/multi-select";
 import { useFilterParams } from "@/hooks/useFilterParams";
 import { Id } from "../../../convex/_generated/dataModel";
 
+// Time period options for competitor rankings
+const TIME_PERIOD_OPTIONS = [
+  { value: "1", label: "Last 24 Hours" },
+  { value: "3", label: "Last 3 Days" },
+  { value: "7", label: "Last 7 Days" },
+  { value: "14", label: "Last 2 Weeks" },
+  { value: "30", label: "Last 30 Days" },
+  { value: "60", label: "Last 2 Months" },
+  { value: "90", label: "Last 3 Months" },
+  { value: "180", label: "Last 6 Months" },
+];
+
 function DashboardContent() {
   const {
     selectedMarkets,
@@ -25,7 +37,12 @@ function DashboardContent() {
     setSelectedPlatforms,
   } = useFilterParams();
 
+  const [competitorDays, setCompetitorDays] = useState<string[]>(["30"]);
+
   const markets = useQuery(api.markets.list);
+
+  // Get the selected days value
+  const daysValue = competitorDays.length > 0 ? parseInt(competitorDays[0]) : 30;
 
   // Pass filters to stats query - using arrays for multi-select support
   const stats = useQuery(api.insights.getDashboardStats, {
@@ -45,7 +62,7 @@ function DashboardContent() {
     platforms: selectedPlatforms.length > 0
       ? selectedPlatforms as ("instagram" | "tiktok" | "youtube")[]
       : undefined,
-    days: 30,
+    days: daysValue,
   });
 
   // Build options for MultiSelect
@@ -137,10 +154,21 @@ function DashboardContent() {
       </div>
 
       {/* Competitor Rankings */}
-      <CompetitorTable
-        data={competitors || []}
-        title="Competitor Rankings (Last 30 Days)"
-      />
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">Competitor Rankings</h2>
+          <MultiSelect
+            options={TIME_PERIOD_OPTIONS}
+            selected={competitorDays}
+            onChange={setCompetitorDays}
+            placeholder="Time Period"
+          />
+        </div>
+        <CompetitorTable
+          data={competitors || []}
+          title={`Competitor Rankings (${TIME_PERIOD_OPTIONS.find(o => o.value === competitorDays[0])?.label || "Last 30 Days"})`}
+        />
+      </div>
     </div>
   );
 }
