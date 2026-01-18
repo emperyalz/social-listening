@@ -58,6 +58,7 @@ export const list = query({
           ...platform,
           logos: logosWithUrls,
           selectedLogos: {
+            avatar: getLogoById(platform.logoForAvatar),
             navigation: getLogoById(platform.logoForNavigation),
             filters: getLogoById(platform.logoForFilters),
             posts: getLogoById(platform.logoForPosts),
@@ -139,6 +140,7 @@ export const getLogoForContext = query({
   args: {
     platformId: platformIdValidator,
     context: v.union(
+      v.literal("avatar"),
       v.literal("navigation"),
       v.literal("filters"),
       v.literal("posts"),
@@ -155,6 +157,7 @@ export const getLogoForContext = query({
     if (!platform) return null;
 
     const contextFieldMap: Record<string, keyof typeof platform> = {
+      avatar: "logoForAvatar",
       navigation: "logoForNavigation",
       filters: "logoForFilters",
       posts: "logoForPosts",
@@ -243,6 +246,7 @@ export const setLogoForContext = mutation({
   args: {
     platformId: v.id("platforms"),
     context: v.union(
+      v.literal("avatar"),
       v.literal("navigation"),
       v.literal("filters"),
       v.literal("posts"),
@@ -264,6 +268,7 @@ export const setLogoForContext = mutation({
     }
 
     const fieldMap: Record<string, string> = {
+      avatar: "logoForAvatar",
       navigation: "logoForNavigation",
       filters: "logoForFilters",
       posts: "logoForPosts",
@@ -372,6 +377,7 @@ export const deleteLogo = mutation({
     if (platform) {
       const updates: Record<string, undefined> = {};
 
+      if (platform.logoForAvatar === args.id) updates.logoForAvatar = undefined;
       if (platform.logoForNavigation === args.id) updates.logoForNavigation = undefined;
       if (platform.logoForFilters === args.id) updates.logoForFilters = undefined;
       if (platform.logoForPosts === args.id) updates.logoForPosts = undefined;
