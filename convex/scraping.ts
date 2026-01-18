@@ -367,7 +367,7 @@ export const scrapeYouTubeChannelStats = action({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            channelUrls: [args.channelUrl],
+            startUrls: [{ url: args.channelUrl }],
             maxVideos: 0, // We just want channel stats, not videos
           }),
         }
@@ -543,8 +543,6 @@ interface ScrapeResult {
   account: string;
   jobId?: string;
   runId?: string;
-  statsJobId?: string;
-  videosJobId?: string;
   error?: string;
 }
 
@@ -599,6 +597,7 @@ export const scrapeAllAccounts = action({
     return results;
   },
 });
+// Add these to the end of your existing convex/scraping.ts file
 
 // Get a single job by ID
 export const getJob = query({
