@@ -361,6 +361,7 @@ export const scrapeYouTubeChannelStats = action({
 
     try {
       // Use youtube-channel-scraper for channel stats (subscribers, etc.)
+      // Use minimal settings to speed up scraping and avoid timeouts
       const response = await fetch(
         `${APIFY_BASE_URL}/acts/${encodeURIComponent(ACTORS.youtubeChannel)}/runs?token=${apiToken}`,
         {
@@ -369,6 +370,10 @@ export const scrapeYouTubeChannelStats = action({
           body: JSON.stringify({
             startUrls: [{ url: args.channelUrl }],
             maxVideos: 0, // We just want channel stats, not videos
+            maxVideosPerChannel: 0, // Ensure no videos are fetched for speed
+            scrapeChannelInfo: true, // Get subscriber count
+            scrapeVideoComments: false, // Don't need comments
+            scrapeVideoDetails: false, // Don't need video details
           }),
         }
       );
@@ -419,6 +424,7 @@ export const scrapeYouTubeChannel = action({
     try {
       // Use streamers/youtube-scraper for video details
       // This actor expects startUrls as array of objects with url property
+      // Reduced limits to prevent 30-minute timeout
       const response = await fetch(
         `${APIFY_BASE_URL}/acts/${encodeURIComponent(ACTORS.youtube)}/runs?token=${apiToken}`,
         {
@@ -426,9 +432,9 @@ export const scrapeYouTubeChannel = action({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             startUrls: [{ url: args.channelUrl }],
-            maxResults: 30,
-            maxResultsShorts: 10,
-            maxResultStreams: 5,
+            maxResults: 10, // Reduced from 30 to prevent timeout
+            maxResultsShorts: 5, // Reduced from 10
+            maxResultStreams: 0, // Don't need streams
           }),
         }
       );
