@@ -19,6 +19,11 @@ export default defineSchema({
     // Display settings
     isActive: v.boolean(), // Whether to show this platform in the UI
     displayOrder: v.number(), // Order in which to display platforms
+    // Visibility toggles for different UI contexts
+    showInNavigation: v.optional(v.boolean()),
+    showInFilters: v.optional(v.boolean()),
+    showInPosts: v.optional(v.boolean()),
+    showInCompetitors: v.optional(v.boolean()),
     // Logo selection for each context (references platformLogos._id)
     logoForNavigation: v.optional(v.id("platformLogos")),
     logoForFilters: v.optional(v.id("platformLogos")),
