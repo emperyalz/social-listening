@@ -1,6 +1,19 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
+// Helper function to get follower/subscriber count from a snapshot based on platform
+function getFollowerCountFromSnapshot(
+  snapshot: { followersCount: number; subscribersCount?: number } | null,
+  platform: string
+): number {
+  if (!snapshot) return 0;
+  // For YouTube, use subscribersCount (subscribers) instead of followersCount
+  if (platform === "youtube") {
+    return snapshot.subscribersCount ?? snapshot.followersCount ?? 0;
+  }
+  return snapshot.followersCount ?? 0;
+}
+
 // Get dashboard overview stats - supports multiple platforms and markets
 export const getDashboardStats = query({
   args: {
@@ -59,12 +72,8 @@ export const getDashboardStats = query({
         .first();
 
       if (snapshot) {
-        // For YouTube, use subscribersCount instead of followersCount
-        if (account.platform === "youtube") {
-          totalFollowers += (snapshot as any).subscribersCount || snapshot.followersCount || 0;
-        } else {
-          totalFollowers += snapshot.followersCount;
-        }
+        // Use helper function to correctly get followers/subscribers based on platform
+        totalFollowers += getFollowerCountFromSnapshot(snapshot, account.platform);
         totalPosts += snapshot.postsCount;
       }
     }
@@ -185,17 +194,9 @@ export const getCompetitorComparison = query({
           }
         }
 
-        // For YouTube, use subscribersCount instead of followersCount
-        const getFollowerCount = (snapshot: typeof latestSnapshot) => {
-          if (!snapshot) return 0;
-          if (account.platform === "youtube") {
-            return (snapshot as any).subscribersCount || snapshot.followersCount || 0;
-          }
-          return snapshot.followersCount || 0;
-        };
-
-        const followers = getFollowerCount(latestSnapshot);
-        const oldFollowers = getFollowerCount(oldestSnapshot);
+        // Use helper function to correctly get followers/subscribers based on platform
+        const followers = getFollowerCountFromSnapshot(latestSnapshot, account.platform);
+        const oldFollowers = getFollowerCountFromSnapshot(oldestSnapshot, account.platform);
         const followerGrowth = followers - oldFollowers;
 
         return {
@@ -408,6 +409,10 @@ export const getGrowthTrends = query({
       .toISOString()
       .split("T")[0];
 
+    // Get the account to determine platform
+    const account = await ctx.db.get(args.accountId);
+    const platform = account?.platform || "instagram";
+
     const snapshots = await ctx.db
       .query("accountSnapshots")
       .withIndex("by_account", (q) => q.eq("accountId", args.accountId))
@@ -419,10 +424,63 @@ export const getGrowthTrends = query({
 
     return snapshots.map((s) => ({
       date: s.snapshotDate,
-      followers: s.followersCount,
+      // Use subscribersCount for YouTube, followersCount for others
+      followers: getFollowerCountFromSnapshot(s, platform),
       following: s.followingCount,
       posts: s.postsCount,
+      // Include YouTube-specific metrics if available
+      subscribersCount: (s as any).subscribersCount,
+      viewsCount: (s as any).viewsCount,
     }));
+  },
+});
+
+// Debug query to check account data status
+export const getAccountDataStatus = query({
+  args: {
+    platform: v.optional(
+      v.union(v.literal("instagram"), v.literal("tiktok"), v.literal("youtube"))
+    ),
+  },
+  handler: async (ctx, args) => {
+    let accounts = await ctx.db
+      .query("accounts")
+      .filter((q) => q.eq(q.field("isActive"), true))
+      .collect();
+
+    if (args.platform) {
+      accounts = accounts.filter((a) => a.platform === args.platform);
+    }
+
+    const accountsWithData = await Promise.all(
+      accounts.map(async (account) => {
+        const latestSnapshot = await ctx.db
+          .query("accountSnapshots")
+          .withIndex("by_account", (q) => q.eq("accountId", account._id))
+          .order("desc")
+          .first();
+
+        const postsCount = await ctx.db
+          .query("posts")
+          .withIndex("by_account", (q) => q.eq("accountId", account._id))
+          .collect();
+
+        return {
+          accountId: account._id,
+          username: account.username,
+          platform: account.platform,
+          hasSnapshot: !!latestSnapshot,
+          snapshotDate: latestSnapshot?.snapshotDate,
+          followersCount: latestSnapshot?.followersCount ?? 0,
+          subscribersCount: (latestSnapshot as any)?.subscribersCount ?? 0,
+          postsCountInDb: postsCount.length,
+          postsCountInSnapshot: latestSnapshot?.postsCount ?? 0,
+          lastScrapedAt: account.lastScrapedAt,
+        };
+      })
+    );
+
+    return accountsWithData;
   },
 });
 
