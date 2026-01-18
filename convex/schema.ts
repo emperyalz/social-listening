@@ -2,6 +2,37 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+  // Platform branding/logos configuration
+  platforms: defineTable({
+    platformId: v.union(
+      v.literal("instagram"),
+      v.literal("tiktok"),
+      v.literal("youtube"),
+      v.literal("facebook"),
+      v.literal("linkedin"),
+      v.literal("twitter")
+    ),
+    displayName: v.string(), // "Instagram", "TikTok", "YouTube"
+    // Logo URLs in different formats
+    logoHorizontal: v.optional(v.string()), // Full horizontal logo with text
+    logoVertical: v.optional(v.string()), // Stacked vertical logo
+    logoIcon: v.optional(v.string()), // Icon only (square)
+    logoWhite: v.optional(v.string()), // White/inverted version for dark backgrounds
+    // Brand colors
+    primaryColor: v.optional(v.string()), // e.g., "#E1306C" for Instagram
+    secondaryColor: v.optional(v.string()),
+    // Display settings
+    isActive: v.boolean(), // Whether to show this platform in the UI
+    displayOrder: v.number(), // Order in which to display platforms
+    // Usage flags - control where logos appear
+    showInNavigation: v.boolean(),
+    showInFilters: v.boolean(),
+    showInPosts: v.boolean(),
+    showInCompetitors: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  }).index("by_platform", ["platformId"]),
+
   // Markets we're tracking (Panama City, CDMX, Bogota, etc.)
   markets: defineTable({
     name: v.string(),

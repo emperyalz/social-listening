@@ -11,6 +11,7 @@ import {
   Settings,
   Activity,
   Building2,
+  Palette,
 } from "lucide-react";
 
 const navigation = [
@@ -20,6 +21,7 @@ const navigation = [
   { name: "Posts", href: "/posts", icon: FileText },
   { name: "Markets", href: "/markets", icon: Building2 },
   { name: "Jobs", href: "/jobs", icon: Activity },
+  { name: "Platforms", href: "/platforms", icon: Palette },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
