@@ -4,13 +4,13 @@ import { api } from "./_generated/api";
 
 const APIFY_BASE_URL = "https://api.apify.com/v2";
 
-// Actor IDs
+// Actor IDs - Note: We use youtube-scraper for BOTH videos AND subscriber counts
+// The youtube-channel-scraper only returns URLs without stats, so don't use it
 const ACTORS = {
   instagram: "apify/instagram-scraper",
   instagramComments: "apify/instagram-comment-scraper",
   tiktok: "clockworks/tiktok-scraper",
-  youtube: "streamers/youtube-scraper", // For video details
-  youtubeChannel: "streamers/youtube-channel-scraper", // For channel stats (subscribers)
+  youtube: "streamers/youtube-scraper", // For videos AND subscriber counts (via numberOfSubscribers field)
 };
 
 // Create a scraping job record
