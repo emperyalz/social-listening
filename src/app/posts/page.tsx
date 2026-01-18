@@ -9,6 +9,7 @@ import { MultiSelect } from "@/components/ui/multi-select";
 import { ExternalLink, X, Heart, MessageCircle, Eye, Play, Clock, ChevronLeft, ChevronRight, Maximize2, Volume2, VolumeX } from "lucide-react";
 import { Id } from "../../../convex/_generated/dataModel";
 import { useFilterParams } from "@/hooks/useFilterParams";
+import { usePlatformLogos, type PlatformId } from "@/hooks/usePlatformLogos";
 
 // Types for post data
 type PostType = NonNullable<ReturnType<typeof useQuery<typeof api.posts.list>>>[number];
@@ -354,6 +355,7 @@ function PostsContent() {
   const posts = useQuery(api.posts.list, {});
   const accounts = useQuery(api.accounts.list, {});
   const markets = useQuery(api.markets.getAll);
+  const { getLogoUrl, getEmoji, getColors } = usePlatformLogos();
 
   // State for media player modal
   const [selectedPostIndex, setSelectedPostIndex] = useState<number | null>(null);
@@ -372,11 +374,11 @@ function PostsContent() {
   // Sort by most recent
   const sortedPosts = [...filteredPosts].sort((a, b) => b.postedAt - a.postedAt);
 
-  // Platform options
+  // Platform options - using emojis as labels since MultiSelect expects strings
   const platformOptions = [
-    { value: "instagram", label: "📸 Instagram" },
-    { value: "tiktok", label: "🎵 TikTok" },
-    { value: "youtube", label: "▶️ YouTube" },
+    { value: "instagram", label: `${getEmoji("instagram")} Instagram` },
+    { value: "tiktok", label: `${getEmoji("tiktok")} TikTok` },
+    { value: "youtube", label: `${getEmoji("youtube")} YouTube` },
   ];
 
   // Market options
@@ -410,12 +412,16 @@ function PostsContent() {
   };
 
   const getPlatformIcon = (platform: string) => {
-    switch (platform) {
-      case "instagram": return "📸";
-      case "tiktok": return "🎵";
-      case "youtube": return "▶️";
-      default: return "📱";
+    return getEmoji(platform as PlatformId);
+  };
+
+  // Render platform logo or emoji fallback
+  const renderPlatformLogo = (platform: string, size: string = "h-4 w-4") => {
+    const logoUrl = getLogoUrl(platform as PlatformId, "posts");
+    if (logoUrl) {
+      return <img src={logoUrl} alt={platform} className={`${size} object-contain`} />;
     }
+    return <span>{getEmoji(platform as PlatformId)}</span>;
   };
 
   // Get thumbnail URL with fallbacks
@@ -564,18 +570,26 @@ function PostsContent() {
                       }}
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-4xl text-gray-400">
-                      {getPlatformIcon(account?.platform || "")}
+                    <div className="w-full h-full flex items-center justify-center">
+                      {(() => {
+                        const logoUrl = getLogoUrl(account?.platform as PlatformId, "posts");
+                        if (logoUrl) {
+                          return <img src={logoUrl} alt={account?.platform || ""} className="h-16 w-16 object-contain opacity-40" />;
+                        }
+                        return <span className="text-4xl text-gray-400">{getEmoji(account?.platform as PlatformId)}</span>;
+                      })()}
                     </div>
                   )}
 
                   {/* Platform badge */}
-                  <div className={`absolute top-2 left-2 px-2 py-1 text-xs font-medium rounded-full backdrop-blur-sm ${
-                    account?.platform === 'instagram' ? 'bg-pink-500/90 text-white' :
-                    account?.platform === 'tiktok' ? 'bg-black/90 text-white' :
-                    'bg-red-500/90 text-white'
-                  }`}>
-                    {getPlatformIcon(account?.platform || "")} {account?.platform}
+                  <div
+                    className="absolute top-2 left-2 px-2 py-1 text-xs font-medium rounded-full backdrop-blur-sm text-white flex items-center gap-1"
+                    style={{
+                      backgroundColor: `${getColors(account?.platform as PlatformId || "instagram").primary}E6`
+                    }}
+                  >
+                    {renderPlatformLogo(account?.platform || "", "h-3.5 w-3.5")}
+                    <span className="capitalize">{account?.platform}</span>
                   </div>
 
                   {/* Post type badge */}
