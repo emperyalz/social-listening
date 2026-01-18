@@ -92,29 +92,12 @@ export function usePlatformLogos() {
     return platforms?.find(p => p.platformId === platformId) as Platform | undefined;
   };
 
-  /**
-   * Render either the logo image or emoji fallback
-   * Returns JSX element
-   */
-  const renderLogo = (
-    platformId: PlatformId,
-    context: LogoContext,
-    className: string = "h-4 w-4 object-contain"
-  ): React.ReactNode => {
-    const logoUrl = getLogoUrl(platformId, context);
-    if (logoUrl) {
-      return <img src={logoUrl} alt={platformId} className={className} />;
-    }
-    return <span>{getEmoji(platformId)}</span>;
-  };
-
   return {
     platforms: platforms as Platform[] | undefined,
     getLogoUrl,
     getEmoji,
     getColors,
     getPlatform,
-    renderLogo,
     isLoading: platforms === undefined,
   };
 }
