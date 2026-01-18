@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { Id } from "./_generated/dataModel";
 
 // Platform ID type
 const platformIdValidator = v.union(
@@ -11,13 +12,63 @@ const platformIdValidator = v.union(
   v.literal("twitter")
 );
 
-// Get all platforms
+type PlatformId = "instagram" | "tiktok" | "youtube" | "facebook" | "linkedin" | "twitter";
+
+// Default platform configurations
+const DEFAULT_PLATFORMS: Record<PlatformId, { displayName: string; primaryColor: string; secondaryColor: string }> = {
+  instagram: { displayName: "Instagram", primaryColor: "#E1306C", secondaryColor: "#833AB4" },
+  tiktok: { displayName: "TikTok", primaryColor: "#000000", secondaryColor: "#69C9D0" },
+  youtube: { displayName: "YouTube", primaryColor: "#FF0000", secondaryColor: "#282828" },
+  facebook: { displayName: "Facebook", primaryColor: "#1877F2", secondaryColor: "#4267B2" },
+  linkedin: { displayName: "LinkedIn", primaryColor: "#0A66C2", secondaryColor: "#004182" },
+  twitter: { displayName: "X (Twitter)", primaryColor: "#000000", secondaryColor: "#1DA1F2" },
+};
+
+// ============ PLATFORM QUERIES ============
+
+// Get all platforms with their logos
 export const list = query({
   args: {},
   handler: async (ctx) => {
     const platforms = await ctx.db.query("platforms").collect();
-    // Sort by displayOrder
-    return platforms.sort((a, b) => a.displayOrder - b.displayOrder);
+
+    // Get all logos for these platforms
+    const platformsWithLogos = await Promise.all(
+      platforms.map(async (platform) => {
+        const logos = await ctx.db
+          .query("platformLogos")
+          .withIndex("by_platform", (q) => q.eq("platformId", platform.platformId))
+          .collect();
+
+        // Get URLs for logos
+        const logosWithUrls = await Promise.all(
+          logos.map(async (logo) => ({
+            ...logo,
+            url: await ctx.storage.getUrl(logo.storageId),
+          }))
+        );
+
+        // Get selected logo for each context
+        const getLogoById = (id: Id<"platformLogos"> | undefined) => {
+          if (!id) return null;
+          return logosWithUrls.find(l => l._id === id) || null;
+        };
+
+        return {
+          ...platform,
+          logos: logosWithUrls,
+          selectedLogos: {
+            navigation: getLogoById(platform.logoForNavigation),
+            filters: getLogoById(platform.logoForFilters),
+            posts: getLogoById(platform.logoForPosts),
+            competitors: getLogoById(platform.logoForCompetitors),
+            dashboard: getLogoById(platform.logoForDashboard),
+          },
+        };
+      })
+    );
+
+    return platformsWithLogos.sort((a, b) => a.displayOrder - b.displayOrder);
   },
 });
 
@@ -33,233 +84,124 @@ export const listActive = query({
   },
 });
 
-// Get a specific platform by platformId
+// Get a specific platform by platformId with logos
 export const getByPlatformId = query({
   args: {
     platformId: platformIdValidator,
   },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const platform = await ctx.db
       .query("platforms")
       .withIndex("by_platform", (q) => q.eq("platformId", args.platformId))
       .first();
+
+    if (!platform) return null;
+
+    const logos = await ctx.db
+      .query("platformLogos")
+      .withIndex("by_platform", (q) => q.eq("platformId", platform.platformId))
+      .collect();
+
+    const logosWithUrls = await Promise.all(
+      logos.map(async (logo) => ({
+        ...logo,
+        url: await ctx.storage.getUrl(logo.storageId),
+      }))
+    );
+
+    return {
+      ...platform,
+      logos: logosWithUrls,
+    };
   },
 });
 
-// Get platforms for a specific display context
-export const getForContext = query({
+// Get logos for a specific platform
+export const getLogosForPlatform = query({
+  args: { platformId: platformIdValidator },
+  handler: async (ctx, args) => {
+    const logos = await ctx.db
+      .query("platformLogos")
+      .withIndex("by_platform", (q) => q.eq("platformId", args.platformId))
+      .collect();
+
+    return Promise.all(
+      logos.map(async (logo) => ({
+        ...logo,
+        url: await ctx.storage.getUrl(logo.storageId),
+      }))
+    );
+  },
+});
+
+// Get the logo URL for a specific context
+export const getLogoForContext = query({
   args: {
+    platformId: platformIdValidator,
     context: v.union(
       v.literal("navigation"),
       v.literal("filters"),
       v.literal("posts"),
-      v.literal("competitors")
+      v.literal("competitors"),
+      v.literal("dashboard")
     ),
   },
   handler: async (ctx, args) => {
-    const platforms = await ctx.db
-      .query("platforms")
-      .filter((q) => q.eq(q.field("isActive"), true))
-      .collect();
-
-    // Filter based on context
-    const filtered = platforms.filter((p) => {
-      switch (args.context) {
-        case "navigation":
-          return p.showInNavigation;
-        case "filters":
-          return p.showInFilters;
-        case "posts":
-          return p.showInPosts;
-        case "competitors":
-          return p.showInCompetitors;
-        default:
-          return true;
-      }
-    });
-
-    return filtered.sort((a, b) => a.displayOrder - b.displayOrder);
-  },
-});
-
-// Create or update a platform (upsert)
-export const upsert = mutation({
-  args: {
-    platformId: platformIdValidator,
-    displayName: v.string(),
-    logoHorizontal: v.optional(v.string()),
-    logoVertical: v.optional(v.string()),
-    logoIcon: v.optional(v.string()),
-    logoWhite: v.optional(v.string()),
-    primaryColor: v.optional(v.string()),
-    secondaryColor: v.optional(v.string()),
-    isActive: v.boolean(),
-    displayOrder: v.number(),
-    showInNavigation: v.boolean(),
-    showInFilters: v.boolean(),
-    showInPosts: v.boolean(),
-    showInCompetitors: v.boolean(),
-  },
-  handler: async (ctx, args) => {
-    const existing = await ctx.db
+    const platform = await ctx.db
       .query("platforms")
       .withIndex("by_platform", (q) => q.eq("platformId", args.platformId))
       .first();
 
-    if (existing) {
-      await ctx.db.patch(existing._id, {
-        ...args,
-        updatedAt: Date.now(),
-      });
-      return existing._id;
-    } else {
-      return await ctx.db.insert("platforms", {
-        ...args,
-        createdAt: Date.now(),
-      });
-    }
-  },
-});
+    if (!platform) return null;
 
-// Update only the logos for a platform
-export const updateLogos = mutation({
-  args: {
-    platformId: platformIdValidator,
-    logoHorizontal: v.optional(v.string()),
-    logoVertical: v.optional(v.string()),
-    logoIcon: v.optional(v.string()),
-    logoWhite: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    const existing = await ctx.db
-      .query("platforms")
-      .withIndex("by_platform", (q) => q.eq("platformId", args.platformId))
-      .first();
-
-    if (!existing) {
-      throw new Error(`Platform ${args.platformId} not found`);
-    }
-
-    const updates: Record<string, string | number | undefined> = {
-      updatedAt: Date.now(),
+    const contextFieldMap: Record<string, keyof typeof platform> = {
+      navigation: "logoForNavigation",
+      filters: "logoForFilters",
+      posts: "logoForPosts",
+      competitors: "logoForCompetitors",
+      dashboard: "logoForDashboard",
     };
 
-    if (args.logoHorizontal !== undefined) updates.logoHorizontal = args.logoHorizontal;
-    if (args.logoVertical !== undefined) updates.logoVertical = args.logoVertical;
-    if (args.logoIcon !== undefined) updates.logoIcon = args.logoIcon;
-    if (args.logoWhite !== undefined) updates.logoWhite = args.logoWhite;
+    const logoId = platform[contextFieldMap[args.context]] as Id<"platformLogos"> | undefined;
+    if (!logoId) return null;
 
-    await ctx.db.patch(existing._id, updates);
-    return existing._id;
-  },
-});
+    const logo = await ctx.db.get(logoId);
+    if (!logo) return null;
 
-// Update display settings for a platform
-export const updateDisplaySettings = mutation({
-  args: {
-    platformId: platformIdValidator,
-    isActive: v.optional(v.boolean()),
-    displayOrder: v.optional(v.number()),
-    showInNavigation: v.optional(v.boolean()),
-    showInFilters: v.optional(v.boolean()),
-    showInPosts: v.optional(v.boolean()),
-    showInCompetitors: v.optional(v.boolean()),
-  },
-  handler: async (ctx, args) => {
-    const existing = await ctx.db
-      .query("platforms")
-      .withIndex("by_platform", (q) => q.eq("platformId", args.platformId))
-      .first();
-
-    if (!existing) {
-      throw new Error(`Platform ${args.platformId} not found`);
-    }
-
-    const updates: Record<string, boolean | number | undefined> = {
-      updatedAt: Date.now(),
+    return {
+      ...logo,
+      url: await ctx.storage.getUrl(logo.storageId),
     };
-
-    if (args.isActive !== undefined) updates.isActive = args.isActive;
-    if (args.displayOrder !== undefined) updates.displayOrder = args.displayOrder;
-    if (args.showInNavigation !== undefined) updates.showInNavigation = args.showInNavigation;
-    if (args.showInFilters !== undefined) updates.showInFilters = args.showInFilters;
-    if (args.showInPosts !== undefined) updates.showInPosts = args.showInPosts;
-    if (args.showInCompetitors !== undefined) updates.showInCompetitors = args.showInCompetitors;
-
-    await ctx.db.patch(existing._id, updates);
-    return existing._id;
   },
 });
 
-// Initialize default platforms (run once to set up)
+// ============ PLATFORM MUTATIONS ============
+
+// Initialize default platforms if they don't exist
 export const initializeDefaults = mutation({
   args: {},
   handler: async (ctx) => {
-    const defaults = [
-      {
-        platformId: "instagram" as const,
-        displayName: "Instagram",
-        primaryColor: "#E1306C",
-        secondaryColor: "#833AB4",
-        displayOrder: 1,
-      },
-      {
-        platformId: "tiktok" as const,
-        displayName: "TikTok",
-        primaryColor: "#000000",
-        secondaryColor: "#69C9D0",
-        displayOrder: 2,
-      },
-      {
-        platformId: "youtube" as const,
-        displayName: "YouTube",
-        primaryColor: "#FF0000",
-        secondaryColor: "#282828",
-        displayOrder: 3,
-      },
-      {
-        platformId: "facebook" as const,
-        displayName: "Facebook",
-        primaryColor: "#1877F2",
-        secondaryColor: "#4267B2",
-        displayOrder: 4,
-      },
-      {
-        platformId: "linkedin" as const,
-        displayName: "LinkedIn",
-        primaryColor: "#0A66C2",
-        secondaryColor: "#004182",
-        displayOrder: 5,
-      },
-      {
-        platformId: "twitter" as const,
-        displayName: "X (Twitter)",
-        primaryColor: "#000000",
-        secondaryColor: "#1DA1F2",
-        displayOrder: 6,
-      },
-    ];
+    const existingPlatforms = await ctx.db.query("platforms").collect();
+    const existingIds = new Set(existingPlatforms.map((p) => p.platformId));
 
+    let order = existingPlatforms.length;
     const results = [];
-    for (const platform of defaults) {
-      const existing = await ctx.db
-        .query("platforms")
-        .withIndex("by_platform", (q) => q.eq("platformId", platform.platformId))
-        .first();
 
-      if (!existing) {
+    for (const [platformId, config] of Object.entries(DEFAULT_PLATFORMS)) {
+      if (!existingIds.has(platformId as PlatformId)) {
         const id = await ctx.db.insert("platforms", {
-          ...platform,
-          isActive: ["instagram", "tiktok", "youtube"].includes(platform.platformId),
-          showInNavigation: true,
-          showInFilters: true,
-          showInPosts: true,
-          showInCompetitors: true,
+          platformId: platformId as PlatformId,
+          displayName: config.displayName,
+          primaryColor: config.primaryColor,
+          secondaryColor: config.secondaryColor,
+          isActive: ["instagram", "tiktok", "youtube"].includes(platformId),
+          displayOrder: order++,
           createdAt: Date.now(),
         });
-        results.push({ platformId: platform.platformId, status: "created", id });
+        results.push({ platformId, status: "created", id });
       } else {
-        results.push({ platformId: platform.platformId, status: "exists", id: existing._id });
+        const existing = existingPlatforms.find(p => p.platformId === platformId);
+        results.push({ platformId, status: "exists", id: existing?._id });
       }
     }
 
@@ -267,21 +209,213 @@ export const initializeDefaults = mutation({
   },
 });
 
-// Delete a platform
-export const remove = mutation({
+// Update platform settings (colors, display name, active status)
+export const update = mutation({
   args: {
-    platformId: platformIdValidator,
+    id: v.id("platforms"),
+    displayName: v.optional(v.string()),
+    primaryColor: v.optional(v.string()),
+    secondaryColor: v.optional(v.string()),
+    isActive: v.optional(v.boolean()),
+    displayOrder: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    const { id, ...updates } = args;
+
+    const platform = await ctx.db.get(id);
+    if (!platform) throw new Error("Platform not found");
+
+    const filteredUpdates = Object.fromEntries(
+      Object.entries(updates).filter(([_, value]) => value !== undefined)
+    );
+
+    await ctx.db.patch(id, {
+      ...filteredUpdates,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+// Set which logo to use for a specific context
+export const setLogoForContext = mutation({
+  args: {
+    platformId: v.id("platforms"),
+    context: v.union(
+      v.literal("navigation"),
+      v.literal("filters"),
+      v.literal("posts"),
+      v.literal("competitors"),
+      v.literal("dashboard")
+    ),
+    logoId: v.union(v.id("platformLogos"), v.null()), // null to clear
+  },
+  handler: async (ctx, args) => {
+    const platform = await ctx.db.get(args.platformId);
+    if (!platform) throw new Error("Platform not found");
+
+    // Verify the logo belongs to this platform if provided
+    if (args.logoId) {
+      const logo = await ctx.db.get(args.logoId);
+      if (!logo || logo.platformId !== platform.platformId) {
+        throw new Error("Logo not found or doesn't belong to this platform");
+      }
+    }
+
+    const fieldMap: Record<string, string> = {
+      navigation: "logoForNavigation",
+      filters: "logoForFilters",
+      posts: "logoForPosts",
+      competitors: "logoForCompetitors",
+      dashboard: "logoForDashboard",
+    };
+
+    await ctx.db.patch(args.platformId, {
+      [fieldMap[args.context]]: args.logoId || undefined,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+// ============ LOGO MUTATIONS ============
+
+// Generate upload URL for logo
+export const generateLogoUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+// Create a new logo after upload
+export const createLogo = mutation({
+  args: {
+    platformId: platformIdValidator,
+    name: v.string(),
+    storageId: v.id("_storage"),
+    mimeType: v.string(),
+    fileSize: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    // Check if a logo with this name already exists for this platform
     const existing = await ctx.db
-      .query("platforms")
-      .withIndex("by_platform", (q) => q.eq("platformId", args.platformId))
+      .query("platformLogos")
+      .withIndex("by_platform_name", (q) =>
+        q.eq("platformId", args.platformId).eq("name", args.name)
+      )
       .first();
 
     if (existing) {
-      await ctx.db.delete(existing._id);
-      return true;
+      throw new Error(`A logo named "${args.name}" already exists for this platform`);
     }
-    return false;
+
+    const logoId = await ctx.db.insert("platformLogos", {
+      platformId: args.platformId,
+      name: args.name,
+      storageId: args.storageId,
+      mimeType: args.mimeType,
+      fileSize: args.fileSize,
+      createdAt: Date.now(),
+    });
+
+    return logoId;
+  },
+});
+
+// Update logo name
+export const updateLogoName = mutation({
+  args: {
+    id: v.id("platformLogos"),
+    name: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const logo = await ctx.db.get(args.id);
+    if (!logo) throw new Error("Logo not found");
+
+    // Check for duplicate name
+    const existing = await ctx.db
+      .query("platformLogos")
+      .withIndex("by_platform_name", (q) =>
+        q.eq("platformId", logo.platformId).eq("name", args.name)
+      )
+      .first();
+
+    if (existing && existing._id !== args.id) {
+      throw new Error(`A logo named "${args.name}" already exists for this platform`);
+    }
+
+    await ctx.db.patch(args.id, {
+      name: args.name,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+// Delete a logo
+export const deleteLogo = mutation({
+  args: { id: v.id("platformLogos") },
+  handler: async (ctx, args) => {
+    const logo = await ctx.db.get(args.id);
+    if (!logo) throw new Error("Logo not found");
+
+    // Find platform and clear references to this logo
+    const platform = await ctx.db
+      .query("platforms")
+      .withIndex("by_platform", (q) => q.eq("platformId", logo.platformId))
+      .first();
+
+    if (platform) {
+      const updates: Record<string, undefined> = {};
+
+      if (platform.logoForNavigation === args.id) updates.logoForNavigation = undefined;
+      if (platform.logoForFilters === args.id) updates.logoForFilters = undefined;
+      if (platform.logoForPosts === args.id) updates.logoForPosts = undefined;
+      if (platform.logoForCompetitors === args.id) updates.logoForCompetitors = undefined;
+      if (platform.logoForDashboard === args.id) updates.logoForDashboard = undefined;
+
+      if (Object.keys(updates).length > 0) {
+        await ctx.db.patch(platform._id, { ...updates, updatedAt: Date.now() });
+      }
+    }
+
+    // Delete the file from storage
+    await ctx.storage.delete(logo.storageId);
+
+    // Delete the logo record
+    await ctx.db.delete(args.id);
+
+    return { success: true };
+  },
+});
+
+// Replace logo file (keeps same ID and name, but updates file)
+export const replaceLogoFile = mutation({
+  args: {
+    id: v.id("platformLogos"),
+    storageId: v.id("_storage"),
+    mimeType: v.string(),
+    fileSize: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const logo = await ctx.db.get(args.id);
+    if (!logo) throw new Error("Logo not found");
+
+    // Delete old file
+    await ctx.storage.delete(logo.storageId);
+
+    // Update with new file
+    await ctx.db.patch(args.id, {
+      storageId: args.storageId,
+      mimeType: args.mimeType,
+      fileSize: args.fileSize,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
   },
 });
