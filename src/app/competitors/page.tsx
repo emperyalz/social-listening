@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
@@ -12,13 +12,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
-  Plus, Trash2, ChevronDown, ChevronUp, X, ExternalLink, 
+import {
+  Plus, Trash2, ChevronDown, ChevronUp, X, ExternalLink,
   Globe, Mail, Phone, MapPin, Building2, User, Instagram,
   Facebook, Linkedin, Twitter, Play, Music2, Pause, CheckCircle,
   MessageCircle, Check
 } from "lucide-react";
 import { Id } from "../../../convex/_generated/dataModel";
+import { usePlatformLogos, type PlatformId } from "@/hooks/usePlatformLogos";
 
 type CompetitorType = "brokerage" | "individual_broker" | "developer" | "property_manager" | "investor" | "other";
 
@@ -147,10 +148,14 @@ function formatPhoneNumber(input: string): string {
   return input;
 }
 
-function getProfileUrl(platform: string, handle: string): string {
+function getProfileUrl(platform: string, handle: string, existingProfileUrl?: string): string {
+  // If we have an existing valid profile URL, prefer it (preserves /user/ format etc)
+  if (existingProfileUrl && existingProfileUrl.includes("://")) {
+    return existingProfileUrl;
+  }
   if (!handle) return "";
   if (handle.includes("://")) return handle;
-  
+
   switch (platform) {
     case "instagram": return `https://www.instagram.com/${handle}`;
     case "tiktok": return `https://www.tiktok.com/@${handle}`;
@@ -158,6 +163,7 @@ function getProfileUrl(platform: string, handle: string): string {
       if (handle.startsWith("UC") && handle.length > 20) {
         return `https://www.youtube.com/channel/${handle}`;
       }
+      // Default to @ format for new handles, but existing URLs are preserved above
       return `https://www.youtube.com/@${handle}`;
     case "facebook": return `https://www.facebook.com/${handle}`;
     case "linkedin":
@@ -457,6 +463,21 @@ export default function CompetitorsPage() {
   const competitors = useQuery(api.competitors.list, {});
   const stats = useQuery(api.competitors.getStats);
   const migrateAccounts = useMutation(api.competitors.migrateFromAccounts);
+  const { getLogoUrl, getEmoji } = usePlatformLogos();
+
+  // Render platform logo or emoji fallback
+  const renderPlatformLogo = (platform: string, size: string = "h-4 w-4") => {
+    const logoUrl = getLogoUrl(platform as PlatformId, "competitors");
+    if (logoUrl) {
+      return <img src={logoUrl} alt={platform} className={`${size} object-contain`} />;
+    }
+    const platformConfig = PLATFORMS[platform as keyof typeof PLATFORMS];
+    if (platformConfig) {
+      const Icon = platformConfig.icon;
+      return <Icon className={`${size} ${platformConfig.color}`} />;
+    }
+    return <span>{getEmoji(platform as PlatformId)}</span>;
+  };
 
   const filteredCompetitors = competitors?.filter(competitor => {
     if (selectedTypes.length > 0 && !selectedTypes.includes(competitor.type)) return false;
@@ -588,6 +609,7 @@ export default function CompetitorsPage() {
             markets={markets || []}
             isExpanded={expandedId === competitor._id}
             onToggle={() => toggleExpand(competitor._id)}
+            renderPlatformLogo={renderPlatformLogo}
           />
         ))}
         {filteredCompetitors?.length === 0 && !showAddCard && (
@@ -611,11 +633,13 @@ function CompetitorCard({
   markets,
   isExpanded,
   onToggle,
+  renderPlatformLogo,
 }: {
   competitor: any;
   markets: any[];
   isExpanded: boolean;
   onToggle: () => void;
+  renderPlatformLogo: (platform: string, size?: string) => React.ReactNode;
 }) {
   const cleanHandle = (platform: string, val: string) => extractSocialHandle(platform, val || "");
   
@@ -815,19 +839,18 @@ function CompetitorCard({
             
             <div className="flex items-center gap-1 mt-2 flex-wrap">
               {competitor.accounts?.map((account: any) => {
-                const platform = PLATFORMS[account.platform as keyof typeof PLATFORMS];
-                if (!platform) return null;
-                const Icon = platform.icon;
+                const platformConfig = PLATFORMS[account.platform as keyof typeof PLATFORMS];
+                if (!platformConfig) return null;
                 // If competitor is paused, all accounts are effectively paused
                 const isPaused = !competitor.isActive || accountPauseStates[account.platform] || account.isPaused;
                 const cleanedUsername = extractSocialHandle(account.platform, account.username);
                 return (
                   <div
                     key={account._id}
-                    className={`flex items-center gap-1 px-2 py-1 rounded ${platform.bg} ${isPaused ? "opacity-50" : ""}`}
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded ${platformConfig.bg} ${isPaused ? "opacity-50" : ""}`}
                     title={`@${cleanedUsername}${isPaused ? " (Paused)" : ""}`}
                   >
-                    <Icon className={`h-3 w-3 ${platform.color}`} />
+                    {renderPlatformLogo(account.platform, "h-3.5 w-3.5")}
                     {account.avatarUrl && <img src={account.avatarUrl} className="h-4 w-4 rounded-full" alt="" />}
                     <span className="text-xs">@{cleanedUsername}</span>
                     {isPaused && <Pause className="h-3 w-3 text-yellow-500" />}
