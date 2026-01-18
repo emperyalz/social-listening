@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { useFilterParams } from "@/hooks/useFilterParams";
+import { usePlatformLogos, type PlatformId } from "@/hooks/usePlatformLogos";
 import { Id } from "../../../convex/_generated/dataModel";
 
 // Time period options for competitor rankings
@@ -40,6 +41,7 @@ function DashboardContent() {
   const [competitorDays, setCompetitorDays] = useState<string[]>(["30"]);
 
   const markets = useQuery(api.markets.list);
+  const { getEmoji } = usePlatformLogos();
 
   // Get the selected days value
   const daysValue = competitorDays.length > 0 ? parseInt(competitorDays[0]) : 30;
@@ -72,9 +74,9 @@ function DashboardContent() {
   })) || [];
 
   const platformOptions = [
-    { value: "instagram", label: "📸 Instagram" },
-    { value: "tiktok", label: "🎵 TikTok" },
-    { value: "youtube", label: "▶️ YouTube" },
+    { value: "instagram", label: `${getEmoji("instagram")} Instagram` },
+    { value: "tiktok", label: `${getEmoji("tiktok")} TikTok` },
+    { value: "youtube", label: `${getEmoji("youtube")} YouTube` },
   ];
 
   return (

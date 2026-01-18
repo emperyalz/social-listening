@@ -1,9 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 import { formatNumber, getPlatformIcon } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ExternalLink } from "lucide-react";
+
+type PlatformId = "instagram" | "tiktok" | "youtube" | "facebook" | "linkedin" | "twitter";
 
 interface CompetitorData {
   account: {
@@ -78,6 +82,25 @@ function Avatar({ src, username, platform }: { src?: string; username: string; p
 }
 
 export function CompetitorTable({ data, title = "Competitor Rankings" }: CompetitorTableProps) {
+  const platforms = useQuery(api.platforms.list);
+
+  // Get logo URL for a platform and context
+  const getLogoUrl = (platformId: string, context: string): string | null => {
+    const platform = platforms?.find(p => p.platformId === platformId);
+    if (!platform?.selectedLogos) return null;
+    const logo = (platform.selectedLogos as Record<string, { url: string | null } | null>)?.[context];
+    return logo?.url || null;
+  };
+
+  // Render platform logo or emoji fallback
+  const renderPlatformLogo = (platform: string) => {
+    const logoUrl = getLogoUrl(platform, "dashboard");
+    if (logoUrl) {
+      return <img src={logoUrl} alt={platform} className="h-5 w-5 object-contain" />;
+    }
+    return <span className="text-lg">{getPlatformIcon(platform)}</span>;
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -120,7 +143,7 @@ export function CompetitorTable({ data, title = "Competitor Rankings" }: Competi
                         </div>
                       </div>
                     </td>
-                    <td className="py-3"><span className="text-lg">{getPlatformIcon(competitor.account.platform)}</span></td>
+                    <td className="py-3">{renderPlatformLogo(competitor.account.platform)}</td>
                     <td className="py-3 text-right font-medium">{formatNumber(competitor.followers)}</td>
                     <td className="py-3 text-right">
                       <span className={competitor.followerGrowth >= 0 ? "text-green-600" : "text-red-600"}>
