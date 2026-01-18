@@ -96,9 +96,9 @@ export function CompetitorTable({ data, title = "Competitor Rankings" }: Competi
   const renderPlatformLogo = (platform: string) => {
     const logoUrl = getLogoUrl(platform, "dashboard");
     if (logoUrl) {
-      return <img src={logoUrl} alt={platform} className="h-5 w-5 object-contain" />;
+      return <img src={logoUrl} alt={platform} className="h-10 w-10 object-contain" />;
     }
-    return <span className="text-lg">{getPlatformIcon(platform)}</span>;
+    return <span className="text-2xl">{getPlatformIcon(platform)}</span>;
   };
 
   return (
@@ -135,7 +135,7 @@ export function CompetitorTable({ data, title = "Competitor Rankings" }: Competi
                       <div className="flex items-center gap-3">
                         <Avatar src={competitor.account.avatarUrl} username={competitor.account.username} platform={competitor.account.platform} />
                         <div>
-                          <a href={profileUrl} target="_blank" rel="noopener noreferrer" className="group flex items-center gap-1 font-medium hover:text-blue-600 hover:underline">
+                          <a href={competitor.account.profileUrl || profileUrl} target="_blank" rel="noopener noreferrer" className="group flex items-center gap-1 font-medium hover:text-blue-600 hover:underline">
                             @{competitor.account.username}
                             <ExternalLink className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" />
                           </a>
