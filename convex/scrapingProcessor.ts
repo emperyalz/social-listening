@@ -338,7 +338,7 @@ export const processYouTubeResults = mutation({
     };
 
     // First pass: collect channel metadata from all items
-    // The streamers/youtube-scraper actor includes channel info in each video item
+    // Handles both youtube-channel-scraper and youtube-scraper output formats
     let bestSubscriberCount = 0;
     let bestVideoCount = 0;
     let bestViewCount = 0;
@@ -347,33 +347,59 @@ export const processYouTubeResults = mutation({
     let channelDescription = "";
 
     for (const item of args.results) {
-      // Try to extract subscriber count from various fields
-      const subCount = parseCountValue(item.subscriberCount || item.subscriberCountText || item.numberOfSubscribers);
+      // youtube-channel-scraper fields: subscriberCount, subscriberCountText, numberOfSubscribers
+      // Also check: subscribers, subscribersCount, channelSubscribers
+      const subCount = parseCountValue(
+        item.subscriberCount ||
+        item.subscriberCountText ||
+        item.numberOfSubscribers ||
+        item.subscribers ||
+        item.subscribersCount ||
+        item.channelSubscribers ||
+        item.channelSubscriberCount
+      );
       if (subCount > bestSubscriberCount) bestSubscriberCount = subCount;
 
-      // Video count
-      const vidCount = item.videoCount || item.videosCount || item.numberOfVideos || 0;
+      // Video count - youtube-channel-scraper uses videoCount or numberOfVideos
+      const vidCount = parseCountValue(
+        item.videoCount ||
+        item.videosCount ||
+        item.numberOfVideos ||
+        item.videos
+      );
       if (vidCount > bestVideoCount) bestVideoCount = vidCount;
 
       // Total channel views
-      const viewCount = parseCountValue(item.channelTotalViews || item.viewCount || item.totalViews);
+      const viewCount = parseCountValue(
+        item.channelTotalViews ||
+        item.viewCount ||
+        item.totalViews ||
+        item.views ||
+        item.channelViews
+      );
       if (viewCount > bestViewCount) bestViewCount = viewCount;
 
-      // Channel name (prefer from channel-level fields)
-      if (!channelName && (item.channelName || item.channelTitle || item.uploaderName)) {
-        channelName = item.channelName || item.channelTitle || item.uploaderName;
+      // Channel name - youtube-channel-scraper uses channelName or name
+      if (!channelName) {
+        channelName = item.channelName || item.channelTitle || item.uploaderName ||
+                      item.name || item.title || item.author || "";
       }
 
-      // Channel avatar
-      if (!channelAvatar && (item.channelThumbnail || item.channelAvatar || item.uploaderAvatar)) {
-        channelAvatar = item.channelThumbnail || item.channelAvatar || item.uploaderAvatar;
+      // Channel avatar - youtube-channel-scraper uses avatar or thumbnail
+      if (!channelAvatar) {
+        channelAvatar = item.channelThumbnail || item.channelAvatar || item.uploaderAvatar ||
+                        item.avatar || item.thumbnail || item.profilePicture ||
+                        item.avatarUrl || item.profileImageUrl || "";
       }
 
       // Channel description
-      if (!channelDescription && (item.channelDescription || item.uploaderDescription)) {
-        channelDescription = item.channelDescription || item.uploaderDescription;
+      if (!channelDescription) {
+        channelDescription = item.channelDescription || item.uploaderDescription ||
+                            item.description || item.about || "";
       }
     }
+
+    console.log(`YouTube processing: Found ${args.results.length} items, subscribers=${bestSubscriberCount}, videos=${bestVideoCount}, channelName=${channelName}`);
 
     // Create/update account snapshot with aggregated channel data
     if (bestSubscriberCount > 0 || bestVideoCount > 0 || channelName) {
@@ -418,27 +444,35 @@ export const processYouTubeResults = mutation({
     }
 
     // Second pass: process each video item
+    let videosProcessed = 0;
     for (const item of args.results) {
       // Skip if this looks like pure channel data without video info
-      // (some actors return a channel info item without a video ID)
-      if (!item.id && !item.videoId && !item.url && !item.title) {
+      // Channel-only items typically have subscriberCount but no video id/url
+      const hasVideoIndicators = item.id || item.videoId || item.videoUrl ||
+                                 (item.url && (item.url.includes('/watch') || item.url.includes('/shorts')));
+
+      if (!hasVideoIndicators && !item.title) {
+        console.log(`Skipping item - no video indicators:`, JSON.stringify(item).substring(0, 200));
         continue;
       }
 
       // Extract video ID from various possible fields
-      let platformPostId = item.id || item.videoId;
+      let platformPostId = item.id || item.videoId || item.video_id;
 
       // If no direct ID, try to extract from URL
       if (!platformPostId && item.url) {
-        const urlMatch = item.url.match(/(?:v=|\/shorts\/|\/watch\/)([a-zA-Z0-9_-]{11})/);
+        const urlMatch = item.url.match(/(?:v=|\/shorts\/|\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
         if (urlMatch) platformPostId = urlMatch[1];
       }
 
-      // Handle video data - must have an ID or a title (for proper video items)
-      if (platformPostId || item.title) {
-        // If we still don't have an ID but have a title, skip this item
-        // (might be channel-only data)
-        if (!platformPostId) continue;
+      // Also try videoUrl field
+      if (!platformPostId && item.videoUrl) {
+        const urlMatch = item.videoUrl.match(/(?:v=|\/shorts\/|\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+        if (urlMatch) platformPostId = urlMatch[1];
+      }
+
+      // Handle video data - must have an ID
+      if (platformPostId) {
         const existingPost = await ctx.db
           .query("posts")
           .withIndex("by_platform_post_id", (q) =>
@@ -551,10 +585,13 @@ export const processYouTubeResults = mutation({
             createdAt: Date.now(),
           });
         }
+
+        videosProcessed++;
       }
     }
 
-    return { postsCreated, postsUpdated };
+    console.log(`YouTube processing complete: ${postsCreated} created, ${postsUpdated} updated, ${videosProcessed} total processed`);
+    return { postsCreated, postsUpdated, channelUpdated, subscribersFound: bestSubscriberCount };
   },
 });
 

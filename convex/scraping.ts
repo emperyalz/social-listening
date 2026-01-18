@@ -9,7 +9,8 @@ const ACTORS = {
   instagram: "apify/instagram-scraper",
   instagramComments: "apify/instagram-comment-scraper",
   tiktok: "clockworks/tiktok-scraper",
-  youtube: "streamers/youtube-scraper", // Better actor with more reliable output
+  youtube: "streamers/youtube-scraper", // For video details
+  youtubeChannel: "streamers/youtube-channel-scraper", // For channel stats (subscribers)
 };
 
 // Create a scraping job record
@@ -342,7 +343,8 @@ export const scrapeTikTokProfile = action({
 
 // ==================== YOUTUBE SCRAPING ====================
 
-export const scrapeYouTubeChannel = action({
+// Scrape YouTube channel stats (subscribers, video count) using youtube-channel-scraper
+export const scrapeYouTubeChannelStats = action({
   args: {
     channelUrl: v.string(),
     accountId: v.id("accounts"),
@@ -358,8 +360,65 @@ export const scrapeYouTubeChannel = action({
     });
 
     try {
-      // Use streamers/youtube-scraper with proper input format
-      // The actor expects startUrls as array of objects with url property
+      // Use youtube-channel-scraper for channel stats (subscribers, etc.)
+      const response = await fetch(
+        `${APIFY_BASE_URL}/acts/${encodeURIComponent(ACTORS.youtubeChannel)}/runs?token=${apiToken}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            channelUrls: [args.channelUrl],
+            maxVideos: 0, // We just want channel stats, not videos
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Apify API error: ${response.statusText} - ${errorText}`);
+      }
+
+      const runData = await response.json();
+
+      await ctx.runMutation(api.scraping.updateJob, {
+        jobId,
+        status: "running",
+        apifyRunId: runData.data.id,
+      });
+
+      return { jobId, runId: runData.data.id };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      await ctx.runMutation(api.scraping.updateJob, {
+        jobId,
+        status: "failed",
+        error: errorMessage,
+        completedAt: Date.now(),
+      });
+      throw error;
+    }
+  },
+});
+
+// Scrape YouTube channel videos using youtube-scraper
+export const scrapeYouTubeChannel = action({
+  args: {
+    channelUrl: v.string(),
+    accountId: v.id("accounts"),
+  },
+  handler: async (ctx, args): Promise<{ jobId: string; runId: string }> => {
+    const apiToken = process.env.APIFY_API_TOKEN;
+    if (!apiToken) throw new Error("APIFY_API_TOKEN not configured");
+
+    const jobId = await ctx.runMutation(api.scraping.createJob, {
+      platform: "youtube",
+      jobType: "posts", // Changed to "posts" since this scrapes videos
+      accountId: args.accountId,
+    });
+
+    try {
+      // Use streamers/youtube-scraper for video details
+      // This actor expects startUrls as array of objects with url property
       const response = await fetch(
         `${APIFY_BASE_URL}/acts/${encodeURIComponent(ACTORS.youtube)}/runs?token=${apiToken}`,
         {
@@ -398,6 +457,31 @@ export const scrapeYouTubeChannel = action({
       });
       throw error;
     }
+  },
+});
+
+// Combined YouTube scrape - runs both channel stats and video scraping
+export const scrapeYouTubeFull = action({
+  args: {
+    channelUrl: v.string(),
+    accountId: v.id("accounts"),
+  },
+  handler: async (ctx, args): Promise<{ statsJobId: string; videosJobId: string }> => {
+    // Run both scrapers
+    const statsResult = await ctx.runAction(api.scraping.scrapeYouTubeChannelStats, {
+      channelUrl: args.channelUrl,
+      accountId: args.accountId,
+    });
+
+    const videosResult = await ctx.runAction(api.scraping.scrapeYouTubeChannel, {
+      channelUrl: args.channelUrl,
+      accountId: args.accountId,
+    });
+
+    return {
+      statsJobId: statsResult.jobId,
+      videosJobId: videosResult.jobId,
+    };
   },
 });
 
@@ -459,6 +543,8 @@ interface ScrapeResult {
   account: string;
   jobId?: string;
   runId?: string;
+  statsJobId?: string;
+  videosJobId?: string;
   error?: string;
 }
 
@@ -480,24 +566,27 @@ export const scrapeAllAccounts = action({
 
     for (const account of accounts) {
       try {
-        let result: { jobId: string; runId: string };
+        let result: { jobId: string; runId: string } | { statsJobId: string; videosJobId: string };
         if (args.platform === "instagram") {
           result = await ctx.runAction(api.scraping.scrapeInstagramPosts, {
             username: account.username,
             accountId: account._id,
           });
+          results.push({ account: account.username, ...result });
         } else if (args.platform === "tiktok") {
           result = await ctx.runAction(api.scraping.scrapeTikTokProfile, {
             username: account.username,
             accountId: account._id,
           });
+          results.push({ account: account.username, ...result });
         } else {
-          result = await ctx.runAction(api.scraping.scrapeYouTubeChannel, {
+          // For YouTube, run the full scraper (both stats and videos)
+          result = await ctx.runAction(api.scraping.scrapeYouTubeFull, {
             channelUrl: account.profileUrl,
             accountId: account._id,
           });
+          results.push({ account: account.username, ...result });
         }
-        results.push({ account: account.username, ...result });
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
         results.push({
@@ -510,7 +599,6 @@ export const scrapeAllAccounts = action({
     return results;
   },
 });
-// Add these to the end of your existing convex/scraping.ts file
 
 // Get a single job by ID
 export const getJob = query({
