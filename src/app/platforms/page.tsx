@@ -435,12 +435,12 @@ function PlatformCard({
     isActive: boolean;
     displayOrder: number;
     logos?: { _id: Id<"platformLogos">; name: string; url: string | null; mimeType: string }[];
-    selectedLogos: {
-      navigation: { _id: Id<"platformLogos">; name: string; url: string | null } | null;
-      filters: { _id: Id<"platformLogos">; name: string; url: string | null } | null;
-      posts: { _id: Id<"platformLogos">; name: string; url: string | null } | null;
-      competitors: { _id: Id<"platformLogos">; name: string; url: string | null } | null;
-      dashboard: { _id: Id<"platformLogos">; name: string; url: string | null } | null;
+    selectedLogos?: {
+      navigation?: { _id: Id<"platformLogos">; name: string; url: string | null } | null;
+      filters?: { _id: Id<"platformLogos">; name: string; url: string | null } | null;
+      posts?: { _id: Id<"platformLogos">; name: string; url: string | null } | null;
+      competitors?: { _id: Id<"platformLogos">; name: string; url: string | null } | null;
+      dashboard?: { _id: Id<"platformLogos">; name: string; url: string | null } | null;
     };
   };
 }) {
@@ -644,7 +644,7 @@ function PlatformCard({
               <LogoSelector
                 label="Navigation / Sidebar"
                 description="Logo shown in the sidebar navigation"
-                value={platform.selectedLogos.navigation?._id || null}
+                value={platform.selectedLogos?.navigation?._id || null}
                 options={platform.logos || []}
                 onChange={(id) => handleSetLogoForContext("navigation", id)}
                 platformId={platform.platformId}
@@ -652,7 +652,7 @@ function PlatformCard({
               <LogoSelector
                 label="Filter Dropdowns"
                 description="Logo shown in filter dropdown options"
-                value={platform.selectedLogos.filters?._id || null}
+                value={platform.selectedLogos?.filters?._id || null}
                 options={platform.logos || []}
                 onChange={(id) => handleSetLogoForContext("filters", id)}
                 platformId={platform.platformId}
@@ -660,7 +660,7 @@ function PlatformCard({
               <LogoSelector
                 label="Posts Page"
                 description="Logo shown on post cards and badges"
-                value={platform.selectedLogos.posts?._id || null}
+                value={platform.selectedLogos?.posts?._id || null}
                 options={platform.logos || []}
                 onChange={(id) => handleSetLogoForContext("posts", id)}
                 platformId={platform.platformId}
@@ -668,7 +668,7 @@ function PlatformCard({
               <LogoSelector
                 label="Competitors Page"
                 description="Logo shown on competitor profiles"
-                value={platform.selectedLogos.competitors?._id || null}
+                value={platform.selectedLogos?.competitors?._id || null}
                 options={platform.logos || []}
                 onChange={(id) => handleSetLogoForContext("competitors", id)}
                 platformId={platform.platformId}
@@ -676,7 +676,7 @@ function PlatformCard({
               <LogoSelector
                 label="Dashboard"
                 description="Logo shown on dashboard cards and stats"
-                value={platform.selectedLogos.dashboard?._id || null}
+                value={platform.selectedLogos?.dashboard?._id || null}
                 options={platform.logos || []}
                 onChange={(id) => handleSetLogoForContext("dashboard", id)}
                 platformId={platform.platformId}
