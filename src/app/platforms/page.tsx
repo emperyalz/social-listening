@@ -3,39 +3,33 @@
 import { useState, useRef } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Upload,
-  Save,
+  Plus,
+  Trash2,
   Eye,
   EyeOff,
-  GripVertical,
-  Check,
-  X,
+  ChevronDown,
+  ChevronUp,
   RefreshCw,
   ImageIcon,
+  Edit2,
+  Check,
+  X,
+  AlertCircle,
 } from "lucide-react";
+import { Id } from "../../../convex/_generated/dataModel";
 
 type PlatformId = "instagram" | "tiktok" | "youtube" | "facebook" | "linkedin" | "twitter";
-
-interface Platform {
-  _id: string;
-  platformId: PlatformId;
-  displayName: string;
-  logoHorizontal?: string;
-  logoVertical?: string;
-  logoIcon?: string;
-  logoWhite?: string;
-  primaryColor?: string;
-  secondaryColor?: string;
-  isActive: boolean;
-  displayOrder: number;
-  showInNavigation: boolean;
-  showInFilters: boolean;
-  showInPosts: boolean;
-  showInCompetitors: boolean;
-}
 
 // Default emoji icons for platforms (fallback)
 const platformEmojis: Record<PlatformId, string> = {
@@ -47,284 +41,655 @@ const platformEmojis: Record<PlatformId, string> = {
   twitter: "🐦",
 };
 
-function LogoUploadCard({
-  label,
-  currentUrl,
-  onUrlChange,
-  platformColor,
-  isWhiteVariant = false,
-}: {
-  label: string;
-  currentUrl?: string;
-  onUrlChange: (url: string) => void;
-  platformColor?: string;
-  isWhiteVariant?: boolean;
-}) {
-  const [inputUrl, setInputUrl] = useState(currentUrl || "");
-  const [isEditing, setIsEditing] = useState(false);
+// Context labels
+const CONTEXT_LABELS = {
+  navigation: "Navigation/Sidebar",
+  filters: "Filter Dropdowns",
+  posts: "Posts Page",
+  competitors: "Competitors Page",
+  dashboard: "Dashboard",
+};
 
-  const handleSave = () => {
-    onUrlChange(inputUrl);
+// ============ LOGO ITEM COMPONENT ============
+function LogoItem({
+  logo,
+  onDelete,
+  onRename,
+  onReplace,
+}: {
+  logo: { _id: Id<"platformLogos">; name: string; url: string | null; mimeType: string };
+  onDelete: () => void;
+  onRename: (newName: string) => void;
+  onReplace: (file: File) => void;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(logo.name);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleSaveName = () => {
+    if (editName.trim() && editName !== logo.name) {
+      onRename(editName.trim());
+    }
     setIsEditing(false);
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      onReplace(file);
+    }
+  };
+
   return (
-    <div className="border rounded-lg p-3 space-y-2">
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-medium">{label}</span>
-        {!isEditing && (
-          <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)}>
-            <Upload className="h-3 w-3 mr-1" />
-            {currentUrl ? "Change" : "Add"}
-          </Button>
+    <div className="flex items-center gap-3 p-3 border rounded-lg bg-white hover:shadow-sm transition-shadow">
+      {/* Logo preview */}
+      <div className="w-16 h-16 rounded bg-gray-50 border flex items-center justify-center overflow-hidden flex-shrink-0">
+        {logo.url ? (
+          <img
+            src={logo.url}
+            alt={logo.name}
+            className="max-w-full max-h-full object-contain"
+          />
+        ) : (
+          <ImageIcon className="h-6 w-6 text-gray-300" />
         )}
       </div>
 
-      {isEditing ? (
-        <div className="space-y-2">
-          <input
-            type="text"
-            value={inputUrl}
-            onChange={(e) => setInputUrl(e.target.value)}
-            placeholder="Enter SVG URL..."
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-          />
-          <div className="flex gap-2">
-            <Button size="sm" onClick={handleSave}>
-              <Check className="h-3 w-3 mr-1" />
-              Save
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => {
-              setInputUrl(currentUrl || "");
-              setIsEditing(false);
-            }}>
-              <X className="h-3 w-3 mr-1" />
-              Cancel
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <div
-          className={`h-16 rounded flex items-center justify-center ${
-            isWhiteVariant ? "bg-gray-800" : "bg-gray-100"
-          }`}
-          style={platformColor && !isWhiteVariant ? { backgroundColor: `${platformColor}10` } : undefined}
-        >
-          {currentUrl ? (
-            <img
-              src={currentUrl}
-              alt={label}
-              className="max-h-12 max-w-full object-contain"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
+      {/* Name and actions */}
+      <div className="flex-1 min-w-0">
+        {isEditing ? (
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              className="flex-1 rounded border px-2 py-1 text-sm"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSaveName();
+                if (e.key === "Escape") {
+                  setEditName(logo.name);
+                  setIsEditing(false);
+                }
               }}
             />
-          ) : (
-            <div className="text-gray-400 text-xs flex flex-col items-center">
-              <ImageIcon className="h-6 w-6 mb-1" />
-              No logo
-            </div>
-          )}
-        </div>
-      )}
+            <Button size="sm" variant="ghost" onClick={handleSaveName}>
+              <Check className="h-4 w-4 text-green-600" />
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => {
+              setEditName(logo.name);
+              setIsEditing(false);
+            }}>
+              <X className="h-4 w-4 text-gray-400" />
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-sm truncate">{logo.name}</span>
+            <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => setIsEditing(true)}>
+              <Edit2 className="h-3 w-3 text-gray-400" />
+            </Button>
+          </div>
+        )}
+        <p className="text-xs text-muted-foreground truncate">{logo.mimeType}</p>
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-1">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/svg+xml,image/png,image/jpeg,image/webp"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => fileInputRef.current?.click()}
+          title="Replace file"
+        >
+          <Upload className="h-4 w-4 text-gray-500" />
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => {
+            if (confirm(`Delete "${logo.name}"? This will remove it from all places where it's used.`)) {
+              setIsDeleting(true);
+              onDelete();
+            }
+          }}
+          disabled={isDeleting}
+          title="Delete"
+        >
+          <Trash2 className="h-4 w-4 text-red-500" />
+        </Button>
+      </div>
     </div>
   );
 }
 
-function PlatformCard({ platform, onUpdate }: { platform: Platform; onUpdate: () => void }) {
-  const updateLogos = useMutation(api.platforms.updateLogos);
-  const updateDisplaySettings = useMutation(api.platforms.updateDisplaySettings);
-  const [isSaving, setIsSaving] = useState(false);
-  const [localLogos, setLocalLogos] = useState({
-    logoHorizontal: platform.logoHorizontal || "",
-    logoVertical: platform.logoVertical || "",
-    logoIcon: platform.logoIcon || "",
-    logoWhite: platform.logoWhite || "",
-  });
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+// ============ UPLOAD NEW LOGO COMPONENT ============
+function UploadNewLogo({
+  platformId,
+  existingNames,
+  onUpload,
+}: {
+  platformId: PlatformId;
+  existingNames: string[];
+  onUpload: (file: File, name: string) => Promise<void>;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleLogoChange = (key: keyof typeof localLogos, value: string) => {
-    setLocalLogos((prev) => ({ ...prev, [key]: value }));
-    setHasUnsavedChanges(true);
-  };
+  const suggestedNames = ["Horizontal", "Vertical", "Icon", "White", "Square", "Dark"];
+  const availableSuggestions = suggestedNames.filter(n => !existingNames.includes(n));
 
-  const handleSaveLogos = async () => {
-    setIsSaving(true);
-    try {
-      await updateLogos({
-        platformId: platform.platformId,
-        logoHorizontal: localLogos.logoHorizontal || undefined,
-        logoVertical: localLogos.logoVertical || undefined,
-        logoIcon: localLogos.logoIcon || undefined,
-        logoWhite: localLogos.logoWhite || undefined,
-      });
-      setHasUnsavedChanges(false);
-      onUpdate();
-    } catch (error) {
-      console.error("Failed to save logos:", error);
-    } finally {
-      setIsSaving(false);
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      setFile(selectedFile);
+      setError("");
+      // Auto-suggest a name based on file name if no name set
+      if (!name) {
+        const baseName = selectedFile.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ");
+        const formatted = baseName.charAt(0).toUpperCase() + baseName.slice(1);
+        setName(formatted);
+      }
     }
   };
 
-  const handleToggleActive = async () => {
-    await updateDisplaySettings({
-      platformId: platform.platformId,
-      isActive: !platform.isActive,
-    });
-    onUpdate();
+  const handleUpload = async () => {
+    if (!file || !name.trim()) {
+      setError("Please provide both a file and a name");
+      return;
+    }
+
+    if (existingNames.includes(name.trim())) {
+      setError(`A logo named "${name.trim()}" already exists`);
+      return;
+    }
+
+    setIsUploading(true);
+    setError("");
+    try {
+      await onUpload(file, name.trim());
+      setFile(null);
+      setName("");
+      setIsOpen(false);
+    } catch (err: any) {
+      setError(err.message || "Failed to upload");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
-  const handleToggleContext = async (context: string, value: boolean) => {
-    const updates: Record<string, boolean> = {};
-    updates[context] = value;
-    await updateDisplaySettings({
-      platformId: platform.platformId,
-      ...updates,
-    });
-    onUpdate();
-  };
+  if (!isOpen) {
+    return (
+      <Button
+        variant="outline"
+        className="w-full border-dashed"
+        onClick={() => setIsOpen(true)}
+      >
+        <Plus className="h-4 w-4 mr-2" />
+        Add New Logo
+      </Button>
+    );
+  }
 
   return (
-    <Card className={!platform.isActive ? "opacity-60" : ""}>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div
-              className="h-10 w-10 rounded-lg flex items-center justify-center text-white text-xl"
-              style={{ backgroundColor: platform.primaryColor || "#666" }}
-            >
-              {platform.logoIcon ? (
-                <img src={platform.logoIcon} alt="" className="h-6 w-6 object-contain" />
-              ) : (
-                platformEmojis[platform.platformId]
-              )}
+    <div className="border-2 border-dashed border-blue-300 rounded-lg p-4 bg-blue-50/50 space-y-4">
+      <div className="flex items-center justify-between">
+        <h4 className="font-medium text-blue-900">Upload New Logo</h4>
+        <Button size="sm" variant="ghost" onClick={() => {
+          setIsOpen(false);
+          setFile(null);
+          setName("");
+          setError("");
+        }}>
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* File input */}
+      <div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/svg+xml,image/png,image/jpeg,image/webp"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+        <div
+          onClick={() => fileInputRef.current?.click()}
+          className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
+        >
+          {file ? (
+            <div className="flex items-center justify-center gap-3">
+              <div className="w-12 h-12 bg-white rounded border flex items-center justify-center">
+                {file.type.startsWith("image/") && (
+                  <img
+                    src={URL.createObjectURL(file)}
+                    alt="Preview"
+                    className="max-w-full max-h-full object-contain"
+                  />
+                )}
+              </div>
+              <div className="text-left">
+                <p className="font-medium text-sm">{file.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {(file.size / 1024).toFixed(1)} KB
+                </p>
+              </div>
             </div>
-            <div>
-              <CardTitle className="text-lg">{platform.displayName}</CardTitle>
-              <CardDescription>{platform.platformId}</CardDescription>
+          ) : (
+            <>
+              <Upload className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+              <p className="text-sm text-gray-600">Click to select a file</p>
+              <p className="text-xs text-gray-400">SVG, PNG, JPG, or WebP</p>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Name input */}
+      <div>
+        <label className="text-sm font-medium text-gray-700 block mb-1">Logo Name</label>
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => {
+            setName(e.target.value);
+            setError("");
+          }}
+          placeholder="e.g., Horizontal, Icon, White..."
+          className="w-full rounded-md border px-3 py-2 text-sm"
+        />
+        {availableSuggestions.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-2">
+            {availableSuggestions.slice(0, 4).map((suggestion) => (
+              <button
+                key={suggestion}
+                type="button"
+                onClick={() => setName(suggestion)}
+                className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded"
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Error message */}
+      {error && (
+        <div className="flex items-center gap-2 text-red-600 text-sm">
+          <AlertCircle className="h-4 w-4" />
+          {error}
+        </div>
+      )}
+
+      {/* Upload button */}
+      <Button
+        onClick={handleUpload}
+        disabled={!file || !name.trim() || isUploading}
+        className="w-full"
+      >
+        {isUploading ? (
+          <>
+            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+            Uploading...
+          </>
+        ) : (
+          <>
+            <Upload className="h-4 w-4 mr-2" />
+            Upload Logo
+          </>
+        )}
+      </Button>
+    </div>
+  );
+}
+
+// ============ LOGO SELECTOR DROPDOWN ============
+function LogoSelector({
+  label,
+  description,
+  value,
+  options,
+  onChange,
+  platformId,
+}: {
+  label: string;
+  description: string;
+  value: Id<"platformLogos"> | null;
+  options: { _id: Id<"platformLogos">; name: string; url: string | null }[];
+  onChange: (logoId: Id<"platformLogos"> | null) => void;
+  platformId: PlatformId;
+}) {
+  const selectedLogo = options.find(o => o._id === value);
+
+  return (
+    <div className="flex items-center justify-between py-3 border-b last:border-b-0">
+      <div className="flex-1">
+        <p className="font-medium text-sm">{label}</p>
+        <p className="text-xs text-muted-foreground">{description}</p>
+      </div>
+      <div className="flex items-center gap-2">
+        {/* Preview */}
+        <div className="w-8 h-8 rounded bg-gray-100 border flex items-center justify-center overflow-hidden">
+          {selectedLogo?.url ? (
+            <img src={selectedLogo.url} alt="" className="max-w-full max-h-full object-contain" />
+          ) : (
+            <span className="text-lg">{platformEmojis[platformId]}</span>
+          )}
+        </div>
+        {/* Dropdown */}
+        <Select
+          value={value || "none"}
+          onValueChange={(v) => onChange(v === "none" ? null : v as Id<"platformLogos">)}
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Select logo..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">
+              <span className="flex items-center gap-2">
+                <span className="text-lg">{platformEmojis[platformId]}</span>
+                Default (emoji)
+              </span>
+            </SelectItem>
+            {options.map((logo) => (
+              <SelectItem key={logo._id} value={logo._id}>
+                <span className="flex items-center gap-2">
+                  {logo.url && (
+                    <img src={logo.url} alt="" className="w-4 h-4 object-contain" />
+                  )}
+                  {logo.name}
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  );
+}
+
+// ============ PLATFORM CARD COMPONENT ============
+function PlatformCard({
+  platform,
+}: {
+  platform: {
+    _id: Id<"platforms">;
+    platformId: PlatformId;
+    displayName: string;
+    primaryColor?: string;
+    secondaryColor?: string;
+    isActive: boolean;
+    displayOrder: number;
+    logos: { _id: Id<"platformLogos">; name: string; url: string | null; mimeType: string }[];
+    selectedLogos: {
+      navigation: { _id: Id<"platformLogos">; name: string; url: string | null } | null;
+      filters: { _id: Id<"platformLogos">; name: string; url: string | null } | null;
+      posts: { _id: Id<"platformLogos">; name: string; url: string | null } | null;
+      competitors: { _id: Id<"platformLogos">; name: string; url: string | null } | null;
+      dashboard: { _id: Id<"platformLogos">; name: string; url: string | null } | null;
+    };
+  };
+}) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const updatePlatform = useMutation(api.platforms.update);
+  const setLogoForContext = useMutation(api.platforms.setLogoForContext);
+  const generateUploadUrl = useMutation(api.platforms.generateLogoUploadUrl);
+  const createLogo = useMutation(api.platforms.createLogo);
+  const deleteLogo = useMutation(api.platforms.deleteLogo);
+  const updateLogoName = useMutation(api.platforms.updateLogoName);
+  const replaceLogoFile = useMutation(api.platforms.replaceLogoFile);
+
+  const handleToggleActive = async () => {
+    await updatePlatform({
+      id: platform._id,
+      isActive: !platform.isActive,
+    });
+  };
+
+  const handleUploadLogo = async (file: File, name: string) => {
+    // Get upload URL
+    const uploadUrl = await generateUploadUrl({});
+
+    // Upload file
+    const response = await fetch(uploadUrl, {
+      method: "POST",
+      headers: { "Content-Type": file.type },
+      body: file,
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to upload file");
+    }
+
+    const { storageId } = await response.json();
+
+    // Create logo record
+    await createLogo({
+      platformId: platform.platformId,
+      name,
+      storageId,
+      mimeType: file.type,
+      fileSize: file.size,
+    });
+  };
+
+  const handleReplaceLogo = async (logoId: Id<"platformLogos">, file: File) => {
+    const uploadUrl = await generateUploadUrl({});
+
+    const response = await fetch(uploadUrl, {
+      method: "POST",
+      headers: { "Content-Type": file.type },
+      body: file,
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to upload file");
+    }
+
+    const { storageId } = await response.json();
+
+    await replaceLogoFile({
+      id: logoId,
+      storageId,
+      mimeType: file.type,
+      fileSize: file.size,
+    });
+  };
+
+  const handleSetLogoForContext = async (context: keyof typeof CONTEXT_LABELS, logoId: Id<"platformLogos"> | null) => {
+    await setLogoForContext({
+      platformId: platform._id,
+      context,
+      logoId,
+    });
+  };
+
+  const iconLogo = platform.logos[0];
+
+  return (
+    <Card className={`transition-all ${isExpanded ? "ring-2 ring-primary shadow-lg" : "hover:shadow-md"} ${!platform.isActive ? "opacity-60" : ""}`}>
+      {/* Header - Always visible */}
+      <div
+        className="flex items-center justify-between p-4 cursor-pointer"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex items-center gap-4">
+          {/* Platform icon */}
+          <div
+            className="h-14 w-14 rounded-lg flex items-center justify-center text-white text-2xl"
+            style={{ backgroundColor: platform.primaryColor || "#666" }}
+          >
+            {iconLogo?.url ? (
+              <img src={iconLogo.url} alt="" className="h-8 w-8 object-contain" />
+            ) : (
+              platformEmojis[platform.platformId]
+            )}
+          </div>
+
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-lg">{platform.displayName}</span>
+              <span className={`rounded-full px-2 py-0.5 text-xs ${platform.isActive ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
+                {platform.isActive ? "Active" : "Inactive"}
+              </span>
+            </div>
+            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+              <span>{platform.logos.length} logo{platform.logos.length !== 1 ? "s" : ""}</span>
+              <span>•</span>
+              <span className="capitalize">{platform.platformId}</span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Color indicators */}
+          <div className="flex gap-1 mr-2">
+            <div
+              className="h-4 w-4 rounded-full border"
+              style={{ backgroundColor: platform.primaryColor || "#ccc" }}
+              title={`Primary: ${platform.primaryColor}`}
+            />
+            <div
+              className="h-4 w-4 rounded-full border"
+              style={{ backgroundColor: platform.secondaryColor || "#ccc" }}
+              title={`Secondary: ${platform.secondaryColor}`}
+            />
+          </div>
+          {isExpanded ? (
+            <ChevronUp className="h-5 w-5 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="h-5 w-5 text-muted-foreground" />
+          )}
+        </div>
+      </div>
+
+      {/* Expanded content */}
+      {isExpanded && (
+        <div className="border-t bg-slate-50 p-6 space-y-6">
+          {/* Active toggle */}
+          <div className="flex items-center justify-between p-3 bg-white rounded-lg border">
+            <div>
+              <span className="font-medium">Platform Status</span>
+              <p className="text-xs text-muted-foreground">
+                {platform.isActive ? "Platform is active and visible in the app" : "Platform is hidden from the app"}
+              </p>
+            </div>
             <Button
               variant={platform.isActive ? "default" : "outline"}
               size="sm"
-              onClick={handleToggleActive}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleToggleActive();
+              }}
             >
               {platform.isActive ? (
-                <>
-                  <Eye className="h-4 w-4 mr-1" />
-                  Active
-                </>
+                <><Eye className="h-4 w-4 mr-1" /> Active</>
               ) : (
-                <>
-                  <EyeOff className="h-4 w-4 mr-1" />
-                  Inactive
-                </>
+                <><EyeOff className="h-4 w-4 mr-1" /> Inactive</>
               )}
             </Button>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Logo uploads */}
-        <div className="grid grid-cols-2 gap-3">
-          <LogoUploadCard
-            label="Horizontal Logo"
-            currentUrl={localLogos.logoHorizontal}
-            onUrlChange={(url) => handleLogoChange("logoHorizontal", url)}
-            platformColor={platform.primaryColor}
-          />
-          <LogoUploadCard
-            label="Vertical Logo"
-            currentUrl={localLogos.logoVertical}
-            onUrlChange={(url) => handleLogoChange("logoVertical", url)}
-            platformColor={platform.primaryColor}
-          />
-          <LogoUploadCard
-            label="Icon Only"
-            currentUrl={localLogos.logoIcon}
-            onUrlChange={(url) => handleLogoChange("logoIcon", url)}
-            platformColor={platform.primaryColor}
-          />
-          <LogoUploadCard
-            label="White Version"
-            currentUrl={localLogos.logoWhite}
-            onUrlChange={(url) => handleLogoChange("logoWhite", url)}
-            platformColor={platform.primaryColor}
-            isWhiteVariant
-          />
-        </div>
 
-        {/* Save button for logos */}
-        {hasUnsavedChanges && (
-          <Button onClick={handleSaveLogos} disabled={isSaving} className="w-full">
-            {isSaving ? (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4 mr-2" />
-                Save Logo Changes
-              </>
-            )}
-          </Button>
-        )}
+          {/* Uploaded Logos Section */}
+          <div>
+            <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+              <ImageIcon className="h-4 w-4" />
+              Uploaded Logos ({platform.logos.length})
+            </h3>
 
-        {/* Display context toggles */}
-        <div className="border-t pt-4">
-          <p className="text-sm font-medium mb-3">Show logo in:</p>
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              { key: "showInNavigation", label: "Navigation" },
-              { key: "showInFilters", label: "Filters" },
-              { key: "showInPosts", label: "Posts" },
-              { key: "showInCompetitors", label: "Competitors" },
-            ].map(({ key, label }) => (
-              <label key={key} className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={platform[key as keyof Platform] as boolean}
-                  onChange={(e) => handleToggleContext(key, e.target.checked)}
-                  className="rounded border-gray-300"
+            <div className="space-y-2">
+              {platform.logos.map((logo) => (
+                <LogoItem
+                  key={logo._id}
+                  logo={logo}
+                  onDelete={() => deleteLogo({ id: logo._id })}
+                  onRename={(newName) => updateLogoName({ id: logo._id, name: newName })}
+                  onReplace={(file) => handleReplaceLogo(logo._id, file)}
                 />
-                {label}
-              </label>
-            ))}
-          </div>
-        </div>
+              ))}
 
-        {/* Color preview */}
-        <div className="border-t pt-4">
-          <p className="text-sm font-medium mb-2">Brand Colors</p>
-          <div className="flex gap-2">
-            <div className="flex items-center gap-2">
-              <div
-                className="h-6 w-6 rounded border"
-                style={{ backgroundColor: platform.primaryColor || "#ccc" }}
+              <UploadNewLogo
+                platformId={platform.platformId}
+                existingNames={platform.logos.map(l => l.name)}
+                onUpload={handleUploadLogo}
               />
-              <span className="text-xs text-muted-foreground">
-                {platform.primaryColor || "Not set"}
-              </span>
             </div>
-            <div className="flex items-center gap-2">
-              <div
-                className="h-6 w-6 rounded border"
-                style={{ backgroundColor: platform.secondaryColor || "#ccc" }}
+          </div>
+
+          {/* Logo Selection for Each Context */}
+          <div>
+            <h3 className="text-sm font-semibold text-slate-700 mb-3">
+              Where to Show Each Logo
+            </h3>
+            <p className="text-xs text-muted-foreground mb-4">
+              Select which logo to display in each section of the application. If no logo is selected, the default emoji will be used.
+            </p>
+
+            <div className="bg-white rounded-lg border p-4">
+              <LogoSelector
+                label="Navigation / Sidebar"
+                description="Logo shown in the sidebar navigation"
+                value={platform.selectedLogos.navigation?._id || null}
+                options={platform.logos}
+                onChange={(id) => handleSetLogoForContext("navigation", id)}
+                platformId={platform.platformId}
               />
-              <span className="text-xs text-muted-foreground">
-                {platform.secondaryColor || "Not set"}
-              </span>
+              <LogoSelector
+                label="Filter Dropdowns"
+                description="Logo shown in filter dropdown options"
+                value={platform.selectedLogos.filters?._id || null}
+                options={platform.logos}
+                onChange={(id) => handleSetLogoForContext("filters", id)}
+                platformId={platform.platformId}
+              />
+              <LogoSelector
+                label="Posts Page"
+                description="Logo shown on post cards and badges"
+                value={platform.selectedLogos.posts?._id || null}
+                options={platform.logos}
+                onChange={(id) => handleSetLogoForContext("posts", id)}
+                platformId={platform.platformId}
+              />
+              <LogoSelector
+                label="Competitors Page"
+                description="Logo shown on competitor profiles"
+                value={platform.selectedLogos.competitors?._id || null}
+                options={platform.logos}
+                onChange={(id) => handleSetLogoForContext("competitors", id)}
+                platformId={platform.platformId}
+              />
+              <LogoSelector
+                label="Dashboard"
+                description="Logo shown on dashboard cards and stats"
+                value={platform.selectedLogos.dashboard?._id || null}
+                options={platform.logos}
+                onChange={(id) => handleSetLogoForContext("dashboard", id)}
+                platformId={platform.platformId}
+              />
             </div>
           </div>
         </div>
-      </CardContent>
+      )}
     </Card>
   );
 }
 
+// ============ MAIN PAGE COMPONENT ============
 export default function PlatformsPage() {
   const platforms = useQuery(api.platforms.list);
   const initializeDefaults = useMutation(api.platforms.initializeDefaults);
@@ -341,18 +706,14 @@ export default function PlatformsPage() {
     }
   };
 
-  const handleUpdate = () => {
-    // Query will automatically refresh
-  };
-
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Platform Management</h1>
           <p className="text-muted-foreground">
-            Configure platform logos and branding across the application
+            Upload and manage platform logos across the application
           </p>
         </div>
         {(!platforms || platforms.length === 0) && (
@@ -363,43 +724,26 @@ export default function PlatformsPage() {
                 Initializing...
               </>
             ) : (
-              "Initialize Default Platforms"
+              "Initialize Platforms"
             )}
           </Button>
         )}
       </div>
 
-      {/* Instructions */}
-      <Card className="bg-blue-50 border-blue-200">
-        <CardContent className="pt-6">
-          <h3 className="font-semibold text-blue-900 mb-2">How to use</h3>
-          <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-            <li>Upload SVG logos by providing URLs (use services like Cloudinary, AWS S3, or direct URLs)</li>
-            <li><strong>Horizontal Logo:</strong> Full logo with text, used in headers</li>
-            <li><strong>Vertical Logo:</strong> Stacked version for compact spaces</li>
-            <li><strong>Icon Only:</strong> Square icon for badges and small displays</li>
-            <li><strong>White Version:</strong> For dark backgrounds and overlays</li>
-            <li>Toggle where each platform's logo appears using the checkboxes</li>
-          </ul>
-        </CardContent>
-      </Card>
-
       {/* Platform Cards */}
       {platforms && platforms.length > 0 ? (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-4">
           {platforms.map((platform) => (
-            <PlatformCard
-              key={platform._id}
-              platform={platform as Platform}
-              onUpdate={handleUpdate}
-            />
+            <PlatformCard key={platform._id} platform={platform as any} />
           ))}
         </div>
       ) : (
         <Card>
           <CardContent className="py-12 text-center">
+            <ImageIcon className="h-12 w-12 mx-auto text-gray-300 mb-4" />
+            <h3 className="font-semibold text-lg mb-2">No platforms configured</h3>
             <p className="text-muted-foreground mb-4">
-              No platforms configured yet. Click the button above to initialize default platforms.
+              Click "Initialize Platforms" to set up the default social media platforms.
             </p>
           </CardContent>
         </Card>
