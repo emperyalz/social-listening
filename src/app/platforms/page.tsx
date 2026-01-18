@@ -434,7 +434,7 @@ function PlatformCard({
     secondaryColor?: string;
     isActive: boolean;
     displayOrder: number;
-    logos: { _id: Id<"platformLogos">; name: string; url: string | null; mimeType: string }[];
+    logos?: { _id: Id<"platformLogos">; name: string; url: string | null; mimeType: string }[];
     selectedLogos: {
       navigation: { _id: Id<"platformLogos">; name: string; url: string | null } | null;
       filters: { _id: Id<"platformLogos">; name: string; url: string | null } | null;
@@ -519,7 +519,7 @@ function PlatformCard({
     });
   };
 
-  const iconLogo = platform.logos[0];
+  const iconLogo = platform.logos?.[0];
 
   return (
     <Card className={`transition-all ${isExpanded ? "ring-2 ring-primary shadow-lg" : "hover:shadow-md"} ${!platform.isActive ? "opacity-60" : ""}`}>
@@ -549,7 +549,7 @@ function PlatformCard({
               </span>
             </div>
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <span>{platform.logos.length} logo{platform.logos.length !== 1 ? "s" : ""}</span>
+              <span>{platform.logos?.length || 0} logo{(platform.logos?.length || 0) !== 1 ? "s" : ""}</span>
               <span>•</span>
               <span className="capitalize">{platform.platformId}</span>
             </div>
@@ -609,11 +609,11 @@ function PlatformCard({
           <div>
             <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
               <ImageIcon className="h-4 w-4" />
-              Uploaded Logos ({platform.logos.length})
+              Uploaded Logos ({platform.logos?.length || 0})
             </h3>
 
             <div className="space-y-2">
-              {platform.logos.map((logo) => (
+              {(platform.logos || []).map((logo) => (
                 <LogoItem
                   key={logo._id}
                   logo={logo}
@@ -625,7 +625,7 @@ function PlatformCard({
 
               <UploadNewLogo
                 platformId={platform.platformId}
-                existingNames={platform.logos.map(l => l.name)}
+                existingNames={(platform.logos || []).map(l => l.name)}
                 onUpload={handleUploadLogo}
               />
             </div>
@@ -645,7 +645,7 @@ function PlatformCard({
                 label="Navigation / Sidebar"
                 description="Logo shown in the sidebar navigation"
                 value={platform.selectedLogos.navigation?._id || null}
-                options={platform.logos}
+                options={platform.logos || []}
                 onChange={(id) => handleSetLogoForContext("navigation", id)}
                 platformId={platform.platformId}
               />
@@ -653,7 +653,7 @@ function PlatformCard({
                 label="Filter Dropdowns"
                 description="Logo shown in filter dropdown options"
                 value={platform.selectedLogos.filters?._id || null}
-                options={platform.logos}
+                options={platform.logos || []}
                 onChange={(id) => handleSetLogoForContext("filters", id)}
                 platformId={platform.platformId}
               />
@@ -661,7 +661,7 @@ function PlatformCard({
                 label="Posts Page"
                 description="Logo shown on post cards and badges"
                 value={platform.selectedLogos.posts?._id || null}
-                options={platform.logos}
+                options={platform.logos || []}
                 onChange={(id) => handleSetLogoForContext("posts", id)}
                 platformId={platform.platformId}
               />
@@ -669,7 +669,7 @@ function PlatformCard({
                 label="Competitors Page"
                 description="Logo shown on competitor profiles"
                 value={platform.selectedLogos.competitors?._id || null}
-                options={platform.logos}
+                options={platform.logos || []}
                 onChange={(id) => handleSetLogoForContext("competitors", id)}
                 platformId={platform.platformId}
               />
@@ -677,7 +677,7 @@ function PlatformCard({
                 label="Dashboard"
                 description="Logo shown on dashboard cards and stats"
                 value={platform.selectedLogos.dashboard?._id || null}
-                options={platform.logos}
+                options={platform.logos || []}
                 onChange={(id) => handleSetLogoForContext("dashboard", id)}
                 platformId={platform.platformId}
               />
