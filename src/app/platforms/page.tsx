@@ -43,6 +43,7 @@ const platformEmojis: Record<PlatformId, string> = {
 
 // Context labels
 const CONTEXT_LABELS = {
+  avatar: "Platform Avatar",
   navigation: "Navigation/Sidebar",
   filters: "Filter Dropdowns",
   posts: "Posts Page",
@@ -436,6 +437,7 @@ function PlatformCard({
     displayOrder: number;
     logos?: { _id: Id<"platformLogos">; name: string; url: string | null; mimeType: string }[];
     selectedLogos?: {
+      avatar?: { _id: Id<"platformLogos">; name: string; url: string | null } | null;
       navigation?: { _id: Id<"platformLogos">; name: string; url: string | null } | null;
       filters?: { _id: Id<"platformLogos">; name: string; url: string | null } | null;
       posts?: { _id: Id<"platformLogos">; name: string; url: string | null } | null;
@@ -445,6 +447,8 @@ function PlatformCard({
   };
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [primaryColor, setPrimaryColor] = useState(platform.primaryColor || "#666666");
+  const [secondaryColor, setSecondaryColor] = useState(platform.secondaryColor || "#999999");
 
   const updatePlatform = useMutation(api.platforms.update);
   const setLogoForContext = useMutation(api.platforms.setLogoForContext);
@@ -519,7 +523,24 @@ function PlatformCard({
     });
   };
 
-  const iconLogo = platform.logos?.[0];
+  const handleColorUpdate = async (type: 'primary' | 'secondary', color: string) => {
+    if (type === 'primary') {
+      setPrimaryColor(color);
+      await updatePlatform({
+        id: platform._id,
+        primaryColor: color,
+      });
+    } else {
+      setSecondaryColor(color);
+      await updatePlatform({
+        id: platform._id,
+        secondaryColor: color,
+      });
+    }
+  };
+
+  // Use selected avatar logo, fall back to first logo if no avatar selected
+  const avatarLogo = platform.selectedLogos?.avatar || platform.logos?.[0];
 
   return (
     <Card className={`transition-all ${isExpanded ? "ring-2 ring-primary shadow-lg" : "hover:shadow-md"} ${!platform.isActive ? "opacity-60" : ""}`}>
@@ -532,10 +553,10 @@ function PlatformCard({
           {/* Platform icon */}
           <div
             className="h-14 w-14 rounded-lg flex items-center justify-center text-white text-2xl"
-            style={{ backgroundColor: platform.primaryColor || "#666" }}
+            style={{ backgroundColor: primaryColor }}
           >
-            {iconLogo?.url ? (
-              <img src={iconLogo.url} alt="" className="h-8 w-8 object-contain" />
+            {avatarLogo?.url ? (
+              <img src={avatarLogo.url} alt="" className="h-8 w-8 object-contain" />
             ) : (
               platformEmojis[platform.platformId]
             )}
@@ -561,13 +582,13 @@ function PlatformCard({
           <div className="flex gap-1 mr-2">
             <div
               className="h-4 w-4 rounded-full border"
-              style={{ backgroundColor: platform.primaryColor || "#ccc" }}
-              title={`Primary: ${platform.primaryColor}`}
+              style={{ backgroundColor: primaryColor }}
+              title={`Primary: ${primaryColor}`}
             />
             <div
               className="h-4 w-4 rounded-full border"
-              style={{ backgroundColor: platform.secondaryColor || "#ccc" }}
-              title={`Secondary: ${platform.secondaryColor}`}
+              style={{ backgroundColor: secondaryColor }}
+              title={`Secondary: ${secondaryColor}`}
             />
           </div>
           {isExpanded ? (
@@ -603,6 +624,77 @@ function PlatformCard({
                 <><EyeOff className="h-4 w-4 mr-1" /> Inactive</>
               )}
             </Button>
+          </div>
+
+          {/* Brand Colors Section */}
+          <div>
+            <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+              🎨 Brand Colors
+            </h3>
+            <div className="bg-white rounded-lg border p-4">
+              <div className="grid grid-cols-2 gap-4">
+                {/* Primary Color */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Primary Color</label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      value={primaryColor}
+                      onChange={(e) => handleColorUpdate('primary', e.target.value)}
+                      className="w-10 h-10 rounded cursor-pointer border-0 p-0"
+                    />
+                    <input
+                      type="text"
+                      value={primaryColor}
+                      onChange={(e) => handleColorUpdate('primary', e.target.value)}
+                      className="flex-1 rounded-md border px-3 py-2 text-sm font-mono uppercase"
+                      placeholder="#E1306C"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">Used for avatar background and primary accents</p>
+                </div>
+                {/* Secondary Color */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Secondary Color</label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      value={secondaryColor}
+                      onChange={(e) => handleColorUpdate('secondary', e.target.value)}
+                      className="w-10 h-10 rounded cursor-pointer border-0 p-0"
+                    />
+                    <input
+                      type="text"
+                      value={secondaryColor}
+                      onChange={(e) => handleColorUpdate('secondary', e.target.value)}
+                      className="flex-1 rounded-md border px-3 py-2 text-sm font-mono uppercase"
+                      placeholder="#833AB4"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">Used for gradients and secondary accents</p>
+                </div>
+              </div>
+              {/* Color Preview */}
+              <div className="mt-4 pt-4 border-t">
+                <p className="text-xs text-muted-foreground mb-2">Preview</p>
+                <div className="flex items-center gap-4">
+                  <div
+                    className="h-12 w-12 rounded-lg flex items-center justify-center text-white text-xl"
+                    style={{ backgroundColor: primaryColor }}
+                  >
+                    {avatarLogo?.url ? (
+                      <img src={avatarLogo.url} alt="" className="h-7 w-7 object-contain" />
+                    ) : (
+                      platformEmojis[platform.platformId]
+                    )}
+                  </div>
+                  <div
+                    className="h-12 flex-1 rounded-lg"
+                    style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Uploaded Logos Section */}
@@ -641,6 +733,14 @@ function PlatformCard({
             </p>
 
             <div className="bg-white rounded-lg border p-4">
+              <LogoSelector
+                label="Platform Avatar"
+                description="Main logo shown in the collapsed card header"
+                value={platform.selectedLogos?.avatar?._id || null}
+                options={platform.logos || []}
+                onChange={(id) => handleSetLogoForContext("avatar", id)}
+                platformId={platform.platformId}
+              />
               <LogoSelector
                 label="Navigation / Sidebar"
                 description="Logo shown in the sidebar navigation"
