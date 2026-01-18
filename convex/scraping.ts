@@ -343,7 +343,9 @@ export const scrapeTikTokProfile = action({
 
 // ==================== YOUTUBE SCRAPING ====================
 
-// Scrape YouTube channel stats (subscribers, video count) using youtube-channel-scraper
+// Scrape YouTube channel stats (subscribers, video count) using youtube-scraper
+// Note: We use the youtube-scraper actor because it returns numberOfSubscribers on each video result
+// The youtube-channel-scraper with maxVideos=0 only returns URLs without any stats
 export const scrapeYouTubeChannelStats = action({
   args: {
     channelUrl: v.string(),
@@ -360,20 +362,18 @@ export const scrapeYouTubeChannelStats = action({
     });
 
     try {
-      // Use youtube-channel-scraper for channel stats (subscribers, etc.)
-      // Use minimal settings to speed up scraping and avoid timeouts
+      // Use youtube-scraper actor (same as video scraping) because it returns
+      // numberOfSubscribers field on each video result. Get just 1 video for speed.
       const response = await fetch(
-        `${APIFY_BASE_URL}/acts/${encodeURIComponent(ACTORS.youtubeChannel)}/runs?token=${apiToken}`,
+        `${APIFY_BASE_URL}/acts/${encodeURIComponent(ACTORS.youtube)}/runs?token=${apiToken}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             startUrls: [{ url: args.channelUrl }],
-            maxVideos: 0, // We just want channel stats, not videos
-            maxVideosPerChannel: 0, // Ensure no videos are fetched for speed
-            scrapeChannelInfo: true, // Get subscriber count
-            scrapeVideoComments: false, // Don't need comments
-            scrapeVideoDetails: false, // Don't need video details
+            maxResults: 1, // Get just one video to extract subscriber count
+            maxResultsShorts: 0, // No shorts needed for stats
+            maxResultStreams: 0, // No streams needed for stats
           }),
         }
       );
