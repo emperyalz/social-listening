@@ -361,6 +361,7 @@ function SocialHandleInput({
   onPauseToggle,
   showPauseControl,
   competitorPaused,
+  existingProfileUrl,
 }: {
   platform: keyof typeof PLATFORMS;
   value: string;
@@ -370,10 +371,11 @@ function SocialHandleInput({
   onPauseToggle?: () => void;
   showPauseControl?: boolean;
   competitorPaused?: boolean;
+  existingProfileUrl?: string;
 }) {
   const config = PLATFORMS[platform];
   const Icon = config.icon;
-  
+
   const handleBlur = () => {
     const cleaned = extractSocialHandle(platform, value);
     if (cleaned !== value) {
@@ -382,7 +384,7 @@ function SocialHandleInput({
   };
 
   const cleanedHandle = extractSocialHandle(platform, value);
-  const profileUrl = getProfileUrl(platform, cleanedHandle);
+  const profileUrl = getProfileUrl(platform, cleanedHandle, existingProfileUrl);
   
   // Effective pause state - paused if competitor is paused OR this specific account is paused
   const effectivelyPaused = competitorPaused || isPaused;
@@ -1001,6 +1003,7 @@ function CompetitorCard({
                 onPauseToggle={() => handleToggleAccountPause("instagram")}
                 showPauseControl={competitor.isActive && !!competitor.accounts?.find((a: any) => a.platform === "instagram")}
                 competitorPaused={!competitor.isActive}
+                existingProfileUrl={competitor.accounts?.find((a: any) => a.platform === "instagram")?.profileUrl}
               />
               <SocialHandleInput
                 platform="tiktok"
@@ -1011,6 +1014,7 @@ function CompetitorCard({
                 onPauseToggle={() => handleToggleAccountPause("tiktok")}
                 showPauseControl={competitor.isActive && !!competitor.accounts?.find((a: any) => a.platform === "tiktok")}
                 competitorPaused={!competitor.isActive}
+                existingProfileUrl={competitor.accounts?.find((a: any) => a.platform === "tiktok")?.profileUrl}
               />
               <SocialHandleInput
                 platform="youtube"
@@ -1021,6 +1025,7 @@ function CompetitorCard({
                 onPauseToggle={() => handleToggleAccountPause("youtube")}
                 showPauseControl={competitor.isActive && !!competitor.accounts?.find((a: any) => a.platform === "youtube")}
                 competitorPaused={!competitor.isActive}
+                existingProfileUrl={competitor.accounts?.find((a: any) => a.platform === "youtube")?.profileUrl}
               />
               <SocialHandleInput platform="facebook" value={facebook} onChange={setFacebook} isMonitored={false} />
               <SocialHandleInput platform="linkedin" value={linkedin} onChange={setLinkedin} isMonitored={false} />
