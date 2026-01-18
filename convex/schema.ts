@@ -25,6 +25,7 @@ export default defineSchema({
     showInPosts: v.optional(v.boolean()),
     showInCompetitors: v.optional(v.boolean()),
     // Logo selection for each context (references platformLogos._id)
+    logoForAvatar: v.optional(v.id("platformLogos")), // Main avatar/icon shown in collapsed view
     logoForNavigation: v.optional(v.id("platformLogos")),
     logoForFilters: v.optional(v.id("platformLogos")),
     logoForPosts: v.optional(v.id("platformLogos")),
