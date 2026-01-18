@@ -3,13 +3,19 @@ import { mutation, query } from "./_generated/server";
 
 // Helper function to get follower/subscriber count from a snapshot based on platform
 function getFollowerCountFromSnapshot(
-  snapshot: { followersCount: number; subscribersCount?: number } | null,
+  snapshot: Record<string, any> | null,
   platform: string
 ): number {
   if (!snapshot) return 0;
   // For YouTube, use subscribersCount (subscribers) instead of followersCount
+  // YouTube stores subscribers in subscribersCount field, not followersCount
   if (platform === "youtube") {
-    return snapshot.subscribersCount ?? snapshot.followersCount ?? 0;
+    const subscribers = snapshot.subscribersCount;
+    if (typeof subscribers === "number" && subscribers > 0) {
+      return subscribers;
+    }
+    // Fallback to followersCount if subscribersCount not available
+    return snapshot.followersCount ?? 0;
   }
   return snapshot.followersCount ?? 0;
 }
