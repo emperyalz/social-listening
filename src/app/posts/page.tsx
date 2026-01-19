@@ -85,7 +85,7 @@ function MediaPlayerModal({
     if (platform !== "instagram") return null;
     if (post.mediaUrls && post.mediaUrls.length > 0) {
       // Look for video file extensions
-      const videoUrl = post.mediaUrls.find(url =>
+      const videoUrl = post.mediaUrls.find((url: string) =>
         url.includes('.mp4') || url.includes('.webm') || url.includes('.mov') ||
         url.includes('video') || url.includes('cdninstagram.com')
       );
@@ -388,7 +388,7 @@ function MediaPlayerModal({
             {/* Hashtags */}
             {post.hashtags && post.hashtags.length > 0 && (
               <div className="flex flex-wrap gap-2 py-2">
-                {post.hashtags.map((tag, i) => (
+                {post.hashtags.map((tag: string, i: number) => (
                   <span key={i} className="text-sm text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
                     #{tag}
                   </span>
@@ -455,12 +455,12 @@ function PostsContent() {
   const [selectedPostIndex, setSelectedPostIndex] = useState<number | null>(null);
 
   // Filter posts based on URL params
-  const filteredPosts = posts?.filter((post) => {
-    const account = accounts?.find(a => a._id === post.accountId);
+  const filteredPosts = posts?.filter((post: PostType) => {
+    const account = accounts?.find((a: AccountType) => a._id === post.accountId);
     if (!account) return false;
 
     const platformMatch = selectedPlatforms.length === 0 || selectedPlatforms.includes(account.platform);
-    const marketMatch = selectedMarkets.length === 0 || selectedMarkets.some(m => account.marketId === m as Id<"markets">);
+    const marketMatch = selectedMarkets.length === 0 || selectedMarkets.some((m: string) => account.marketId === m as Id<"markets">);
 
     return platformMatch && marketMatch;
   }) || [];
@@ -476,7 +476,7 @@ function PostsContent() {
   ];
 
   // Market options
-  const marketOptions = markets?.map(m => ({
+  const marketOptions = markets?.map((m: { _id: string; name: string }) => ({
     value: m._id,
     label: m.name,
   })) || [];
@@ -533,7 +533,7 @@ function PostsContent() {
     // For TikTok, look for image URLs in mediaUrls (avoid video URLs)
     if (platform === "tiktok" && post.mediaUrls && post.mediaUrls.length > 0) {
       // Find an image URL (not video)
-      const imageUrl = post.mediaUrls.find(url =>
+      const imageUrl = post.mediaUrls.find((url: string) =>
         url.includes('.jpg') || url.includes('.jpeg') || url.includes('.png') ||
         url.includes('.webp') || url.includes('cover') || url.includes('thumbnail')
       );
@@ -551,14 +551,14 @@ function PostsContent() {
       const isVideoPost = post.postType === "video" || post.postType === "reel";
       if (isVideoPost) {
         // Look for display image (cdninstagram URLs that don't have video indicators)
-        const imageUrl = post.mediaUrls.find(url =>
+        const imageUrl = post.mediaUrls.find((url: string) =>
           (url.includes('cdninstagram.com') && !url.includes('.mp4')) ||
           url.includes('.jpg') || url.includes('.jpeg') || url.includes('.webp')
         );
         if (imageUrl) return imageUrl;
       }
       // Fall back to first non-video URL
-      const nonVideoUrl = post.mediaUrls.find(url =>
+      const nonVideoUrl = post.mediaUrls.find((url: string) =>
         !url.includes('.mp4') && !url.includes('.webm') && !url.includes('.mov') &&
         !url.includes('video')
       );
@@ -625,7 +625,7 @@ function PostsContent() {
             <div>
               <p className="text-sm font-medium text-muted-foreground">This Week</p>
               <p className="text-3xl font-bold">
-                {sortedPosts.filter(p => p.postedAt > Date.now() - 7 * 24 * 60 * 60 * 1000).length}
+                {sortedPosts.filter((p: PostType) => p.postedAt > Date.now() - 7 * 24 * 60 * 60 * 1000).length}
               </p>
             </div>
           </CardContent>
@@ -636,7 +636,7 @@ function PostsContent() {
             <div>
               <p className="text-sm font-medium text-muted-foreground">This Month</p>
               <p className="text-3xl font-bold">
-                {sortedPosts.filter(p => p.postedAt > Date.now() - 30 * 24 * 60 * 60 * 1000).length}
+                {sortedPosts.filter((p: PostType) => p.postedAt > Date.now() - 30 * 24 * 60 * 60 * 1000).length}
               </p>
             </div>
           </CardContent>
@@ -647,7 +647,7 @@ function PostsContent() {
       {selectedPostIndex !== null && sortedPosts[selectedPostIndex] && (
         <MediaPlayerModal
           post={sortedPosts[selectedPostIndex]}
-          account={accounts?.find(a => a._id === sortedPosts[selectedPostIndex].accountId)}
+          account={accounts?.find((a: AccountType) => a._id === sortedPosts[selectedPostIndex].accountId)}
           onClose={() => setSelectedPostIndex(null)}
           onNext={() => setSelectedPostIndex(prev => prev !== null && prev < sortedPosts.length - 1 ? prev + 1 : prev)}
           onPrev={() => setSelectedPostIndex(prev => prev !== null && prev > 0 ? prev - 1 : prev)}
@@ -659,8 +659,8 @@ function PostsContent() {
       {/* Posts Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {sortedPosts.length > 0 ? (
-          sortedPosts.map((post, index) => {
-            const account = accounts?.find(a => a._id === post.accountId);
+          sortedPosts.map((post: PostType, index: number) => {
+            const account = accounts?.find((a: AccountType) => a._id === post.accountId);
             const engagement = post.engagement;
             const thumbnailUrl = getThumbnailUrl(post, account?.platform);
             return (
@@ -777,7 +777,7 @@ function PostsContent() {
                   {/* Hashtags */}
                   {post.hashtags && post.hashtags.length > 0 && (
                     <div className="flex flex-wrap gap-1 pt-1">
-                      {post.hashtags.slice(0, 3).map((tag, i) => (
+                      {post.hashtags.slice(0, 3).map((tag: string, i: number) => (
                         <span key={i} className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
                           #{tag}
                         </span>
