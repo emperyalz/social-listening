@@ -67,13 +67,29 @@ function MediaPlayerModal({
     return null;
   };
 
-  // Get Instagram embed URL - Instagram requires oEmbed which is complex,
-  // so we'll use their blockquote embed approach
+  // Get Instagram embed URL - Instagram requires oEmbed which is complex
+  // For videos/reels, we need to use their embed endpoint with proper formatting
   const getInstagramEmbedUrl = () => {
     if (platform !== "instagram") return null;
     if (post.postUrl) {
-      // For Instagram, we need to use their embed endpoint
-      return `${post.postUrl}embed/`;
+      // Clean the URL and add embed suffix
+      // Instagram URLs can be /p/, /reel/, or /tv/ format
+      let cleanUrl = post.postUrl.replace(/\/$/, ''); // Remove trailing slash
+      return `${cleanUrl}/embed/captioned/`;
+    }
+    return null;
+  };
+
+  // Check if we have a direct video URL for Instagram
+  const getInstagramVideoUrl = () => {
+    if (platform !== "instagram") return null;
+    if (post.mediaUrls && post.mediaUrls.length > 0) {
+      // Look for video file extensions
+      const videoUrl = post.mediaUrls.find(url =>
+        url.includes('.mp4') || url.includes('.webm') || url.includes('.mov') ||
+        url.includes('video') || url.includes('cdninstagram.com')
+      );
+      return videoUrl || null;
     }
     return null;
   };
@@ -115,17 +131,95 @@ function MediaPlayerModal({
 
     // Instagram
     if (platform === "instagram") {
+      // First, try direct video URL if available (for reels/videos)
+      const directVideoUrl = getInstagramVideoUrl();
+      if (directVideoUrl && isVideo) {
+        return (
+          <div className="flex flex-col items-center justify-center w-full h-full">
+            <video
+              src={directVideoUrl}
+              controls
+              autoPlay
+              muted={isMuted}
+              playsInline
+              className="max-w-full max-h-full object-contain"
+              style={{ maxWidth: "540px" }}
+              onError={(e) => {
+                // If direct video fails, hide it and show embed fallback
+                const videoEl = e.target as HTMLVideoElement;
+                videoEl.style.display = "none";
+                // Show fallback message
+                const parent = videoEl.parentElement;
+                if (parent) {
+                  const fallback = document.createElement("div");
+                  fallback.className = "text-center text-gray-400 p-4";
+                  fallback.innerHTML = `
+                    <p class="mb-4">Video cannot be played directly.</p>
+                    <a href="${post.postUrl}" target="_blank" rel="noopener noreferrer"
+                       class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium hover:from-purple-600 hover:to-pink-600">
+                      View on Instagram
+                    </a>
+                  `;
+                  parent.appendChild(fallback);
+                }
+              }}
+            >
+              Your browser does not support the video tag.
+            </video>
+          </div>
+        );
+      }
+
+      // Fall back to Instagram embed
       const embedUrl = getInstagramEmbedUrl();
       if (embedUrl) {
         return (
-          <iframe
-            src={embedUrl}
-            className="w-full h-full"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            title={post.caption || "Instagram post"}
-            style={{ maxWidth: "540px", margin: "0 auto" }}
-          />
+          <div className="flex flex-col items-center justify-center w-full h-full bg-white">
+            <iframe
+              src={embedUrl}
+              className="w-full h-full border-0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              scrolling="no"
+              title={post.caption || "Instagram post"}
+              style={{ maxWidth: "540px", minHeight: "500px", margin: "0 auto" }}
+              onLoad={(e) => {
+                // Inject Instagram embed script if needed
+                const iframe = e.target as HTMLIFrameElement;
+                try {
+                  // Trigger any needed adjustments after load
+                  iframe.style.opacity = "1";
+                } catch (err) {
+                  // Cross-origin restrictions may prevent this
+                }
+              }}
+            />
+          </div>
+        );
+      }
+
+      // Last resort: show thumbnail with link to Instagram
+      if (post.thumbnailUrl || (post.mediaUrls && post.mediaUrls.length > 0)) {
+        const displayUrl = post.thumbnailUrl || post.mediaUrls?.[0];
+        return (
+          <div className="flex flex-col items-center justify-center w-full h-full relative">
+            <img
+              src={displayUrl}
+              alt={post.caption || "Instagram post"}
+              className="max-w-full max-h-[70%] object-contain"
+            />
+            <div className="mt-4">
+              <a
+                href={post.postUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium hover:from-purple-600 hover:to-pink-600 transition-all"
+              >
+                <Play className="h-5 w-5" />
+                {isVideo ? "Watch on Instagram" : "View on Instagram"}
+              </a>
+            </div>
+          </div>
         );
       }
     }
@@ -328,7 +422,7 @@ function MediaPlayerModal({
       </div>
 
       {/* Mute toggle for videos */}
-      {isVideo && (platform === "youtube") && (
+      {isVideo && (platform === "youtube" || platform === "instagram") && (
         <button
           className="absolute bottom-4 left-4 text-white hover:text-gray-300 z-50 p-2 bg-black/50 rounded-full"
           onClick={(e) => {
@@ -426,7 +520,7 @@ function PostsContent() {
 
   // Get thumbnail URL with fallbacks
   const getThumbnailUrl = (post: NonNullable<typeof posts>[number], platform?: string) => {
-    // If we have a valid thumbnail URL, use it
+    // If we have a valid thumbnail URL, use it first
     if (post.thumbnailUrl) {
       return post.thumbnailUrl;
     }
@@ -436,14 +530,39 @@ function PostsContent() {
       return `https://img.youtube.com/vi/${post.platformPostId}/hqdefault.jpg`;
     }
 
-    // For TikTok, try the cover images or mediaUrls
+    // For TikTok, look for image URLs in mediaUrls (avoid video URLs)
     if (platform === "tiktok" && post.mediaUrls && post.mediaUrls.length > 0) {
-      return post.mediaUrls[0];
+      // Find an image URL (not video)
+      const imageUrl = post.mediaUrls.find(url =>
+        url.includes('.jpg') || url.includes('.jpeg') || url.includes('.png') ||
+        url.includes('.webp') || url.includes('cover') || url.includes('thumbnail')
+      );
+      if (imageUrl) return imageUrl;
+      // If no obvious image, check if first URL is not a video
+      const firstUrl = post.mediaUrls[0];
+      if (!firstUrl.includes('.mp4') && !firstUrl.includes('.webm') && !firstUrl.includes('.mov')) {
+        return firstUrl;
+      }
     }
 
-    // For Instagram, try mediaUrls
+    // For Instagram, look for image URLs in mediaUrls (avoid video URLs for thumbnails)
     if (platform === "instagram" && post.mediaUrls && post.mediaUrls.length > 0) {
-      return post.mediaUrls[0];
+      // For videos/reels, prefer display image over video URL
+      const isVideoPost = post.postType === "video" || post.postType === "reel";
+      if (isVideoPost) {
+        // Look for display image (cdninstagram URLs that don't have video indicators)
+        const imageUrl = post.mediaUrls.find(url =>
+          (url.includes('cdninstagram.com') && !url.includes('.mp4')) ||
+          url.includes('.jpg') || url.includes('.jpeg') || url.includes('.webp')
+        );
+        if (imageUrl) return imageUrl;
+      }
+      // Fall back to first non-video URL
+      const nonVideoUrl = post.mediaUrls.find(url =>
+        !url.includes('.mp4') && !url.includes('.webm') && !url.includes('.mov') &&
+        !url.includes('video')
+      );
+      return nonVideoUrl || post.mediaUrls[0];
     }
 
     return null;
