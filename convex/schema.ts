@@ -31,6 +31,8 @@ export default defineSchema({
     logoForPosts: v.optional(v.id("platformLogos")),
     logoForCompetitors: v.optional(v.id("platformLogos")),
     logoForDashboard: v.optional(v.id("platformLogos")),
+    logoForJobs: v.optional(v.id("platformLogos")), // Scraping Jobs page
+    logoForDropdowns: v.optional(v.id("platformLogos")), // Platform dropdowns/selects sitewide
     createdAt: v.number(),
     updatedAt: v.optional(v.number()),
   }).index("by_platform", ["platformId"]),
