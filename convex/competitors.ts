@@ -1,6 +1,102 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
+// Helper function to generate the correct profile URL for each platform
+// This preserves special URL formats like YouTube /user/ URLs
+function generateProfileUrl(platform: string, handle: string): string {
+  // If the handle is already a full URL, return it as-is
+  if (handle.includes("://")) {
+    return handle;
+  }
+
+  switch (platform) {
+    case "instagram":
+      return `https://www.instagram.com/${handle}`;
+    case "tiktok":
+      return `https://www.tiktok.com/@${handle}`;
+    case "youtube":
+      // Check if it's a channel ID (starts with UC and is long)
+      if (handle.startsWith("UC") && handle.length > 20) {
+        return `https://www.youtube.com/channel/${handle}`;
+      }
+      // Check if it looks like a /user/ path
+      if (handle.startsWith("user/")) {
+        return `https://www.youtube.com/${handle}`;
+      }
+      // Default to @ format for modern YouTube handles
+      return `https://www.youtube.com/@${handle}`;
+    default:
+      return handle;
+  }
+}
+
+// Helper to extract username from a URL, preserving special formats
+function extractUsernameFromUrl(platform: string, input: string): { username: string; profileUrl: string } {
+  const cleanInput = input.trim();
+
+  // If it's not a URL, treat as username
+  if (!cleanInput.includes("://")) {
+    return {
+      username: cleanInput.replace(/^@/, ""),
+      profileUrl: generateProfileUrl(platform, cleanInput.replace(/^@/, ""))
+    };
+  }
+
+  try {
+    const url = new URL(cleanInput);
+    const pathname = url.pathname;
+
+    switch (platform) {
+      case "youtube":
+        // Preserve /user/ URLs exactly
+        if (pathname.startsWith("/user/")) {
+          const username = pathname.slice(6).split("/")[0];
+          return { username, profileUrl: `https://www.youtube.com/user/${username}` };
+        }
+        if (pathname.startsWith("/@")) {
+          const username = pathname.slice(2).split("/")[0];
+          return { username, profileUrl: `https://www.youtube.com/@${username}` };
+        }
+        if (pathname.startsWith("/c/")) {
+          const username = pathname.slice(3).split("/")[0];
+          return { username, profileUrl: `https://www.youtube.com/c/${username}` };
+        }
+        if (pathname.startsWith("/channel/")) {
+          const channelId = pathname.slice(9).split("/")[0];
+          return { username: channelId, profileUrl: `https://www.youtube.com/channel/${channelId}` };
+        }
+        // Default handling
+        const ytParts = pathname.split("/").filter(Boolean);
+        if (ytParts.length > 0) {
+          const username = ytParts[0].replace(/^@/, "");
+          return { username, profileUrl: `https://www.youtube.com/@${username}` };
+        }
+        break;
+
+      case "instagram":
+        const igParts = pathname.split("/").filter(Boolean);
+        if (igParts.length > 0) {
+          const username = igParts[0];
+          return { username, profileUrl: `https://www.instagram.com/${username}` };
+        }
+        break;
+
+      case "tiktok":
+        const ttParts = pathname.split("/").filter(Boolean);
+        if (ttParts.length > 0) {
+          const username = ttParts[0].replace(/^@/, "");
+          return { username, profileUrl: `https://www.tiktok.com/@${username}` };
+        }
+        break;
+    }
+  } catch (e) {
+    // Not a valid URL, treat as username
+  }
+
+  const username = cleanInput.replace(/^@/, "");
+  return { username, profileUrl: generateProfileUrl(platform, username) };
+}
+
 export const list = query({
   args: {
     marketId: v.optional(v.id("markets")),
@@ -37,8 +133,20 @@ export const list = query({
           .query("accounts")
           .withIndex("by_competitor", (q) => q.eq("competitorId", competitor._id))
           .collect();
-        
-        return { ...competitor, market, accounts };
+
+        // Compute the display avatar URL
+        let displayAvatarUrl: string | undefined;
+        if (competitor.displayAvatarAccountId) {
+          // Use the selected account's avatar
+          const selectedAccount = accounts.find(a => a._id === competitor.displayAvatarAccountId);
+          displayAvatarUrl = selectedAccount?.avatarUrl;
+        } else if (accounts.length > 0) {
+          // Fall back to the first account with an avatar
+          const accountWithAvatar = accounts.find(a => a.avatarUrl);
+          displayAvatarUrl = accountWithAvatar?.avatarUrl;
+        }
+
+        return { ...competitor, market, accounts, displayAvatarUrl };
       })
     );
 
@@ -112,40 +220,28 @@ export const create = mutation({
       for (const platform of platforms) {
         const handle = socialHandles[platform];
         if (handle) {
-          const cleanHandle = handle.replace(/^@/, "").trim();
-          if (cleanHandle) {
+          // Use helper function to properly extract username and generate URL
+          const { username, profileUrl } = extractUsernameFromUrl(platform, handle);
+          if (username) {
             // Check if account already exists
             const existing = await ctx.db
               .query("accounts")
               .withIndex("by_platform_username", (q) =>
-                q.eq("platform", platform).eq("username", cleanHandle)
+                q.eq("platform", platform).eq("username", username)
               )
               .first();
 
             if (!existing) {
-              let profileUrl = "";
-              switch (platform) {
-                case "instagram":
-                  profileUrl = `https://www.instagram.com/${cleanHandle}`;
-                  break;
-                case "tiktok":
-                  profileUrl = `https://www.tiktok.com/@${cleanHandle}`;
-                  break;
-                case "youtube":
-                  profileUrl = `https://www.youtube.com/@${cleanHandle}`;
-                  break;
-              }
-
               await ctx.db.insert("accounts", {
                 competitorId,
                 platform,
-                username: cleanHandle,
+                username,
                 profileUrl,
                 marketId: args.marketId,
                 companyName: args.name,
-                accountType: args.type === "individual_broker" ? "individual_broker" 
-                  : args.type === "developer" ? "developer" 
-                  : args.type === "brokerage" ? "brokerage" 
+                accountType: args.type === "individual_broker" ? "individual_broker"
+                  : args.type === "developer" ? "developer"
+                  : args.type === "brokerage" ? "brokerage"
                   : "other",
                 isActive: true,
                 isPaused: false,
@@ -201,17 +297,30 @@ export const update = mutation({
     })),
     notes: v.optional(v.string()),
     logoUrl: v.optional(v.string()),
+    displayAvatarAccountId: v.optional(v.union(v.id("accounts"), v.null())), // null to clear
     isActive: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const { id, ...updates } = args;
-    
-    const filtered = Object.fromEntries(
-      Object.entries(updates).filter(([_, v]) => v !== undefined)
-    );
+    const { id, displayAvatarAccountId, ...updates } = args;
 
-    if (Object.keys(filtered).length > 0) {
-      await ctx.db.patch(id, { ...filtered, updatedAt: Date.now() });
+    // Build the patch object, only including defined values
+    const patchData: Record<string, unknown> = {};
+
+    for (const [key, value] of Object.entries(updates)) {
+      if (value !== undefined) {
+        patchData[key] = value;
+      }
+    }
+
+    // Handle displayAvatarAccountId separately (can be null to clear, undefined to skip)
+    if (displayAvatarAccountId !== undefined) {
+      // null means "clear the field" - Convex treats undefined as "remove"
+      patchData.displayAvatarAccountId = displayAvatarAccountId === null ? undefined : displayAvatarAccountId;
+    }
+
+    if (Object.keys(patchData).length > 0) {
+      patchData.updatedAt = Date.now();
+      await ctx.db.patch(id, patchData as any);
     }
 
     // If social handles changed, update/create accounts
@@ -224,8 +333,9 @@ export const update = mutation({
       for (const platform of platforms) {
         const handle = args.socialHandles[platform];
         if (handle) {
-          const cleanHandle = handle.replace(/^@/, "").trim();
-          
+          // Use helper function to properly extract username and generate URL
+          const { username, profileUrl } = extractUsernameFromUrl(platform, handle);
+
           // Find existing account for this competitor and platform
           const existingForCompetitor = await ctx.db
             .query("accounts")
@@ -234,48 +344,23 @@ export const update = mutation({
             .first();
 
           if (existingForCompetitor) {
-            // Update existing account
-            let profileUrl = "";
-            switch (platform) {
-              case "instagram":
-                profileUrl = `https://www.instagram.com/${cleanHandle}`;
-                break;
-              case "tiktok":
-                profileUrl = `https://www.tiktok.com/@${cleanHandle}`;
-                break;
-              case "youtube":
-                profileUrl = `https://www.youtube.com/@${cleanHandle}`;
-                break;
-            }
+            // Update existing account - preserve the profileUrl format
             await ctx.db.patch(existingForCompetitor._id, {
-              username: cleanHandle,
+              username,
               profileUrl,
             });
-          } else if (cleanHandle) {
+          } else if (username) {
             // Create new account
-            let profileUrl = "";
-            switch (platform) {
-              case "instagram":
-                profileUrl = `https://www.instagram.com/${cleanHandle}`;
-                break;
-              case "tiktok":
-                profileUrl = `https://www.tiktok.com/@${cleanHandle}`;
-                break;
-              case "youtube":
-                profileUrl = `https://www.youtube.com/@${cleanHandle}`;
-                break;
-            }
-
             await ctx.db.insert("accounts", {
               competitorId: id,
               platform,
-              username: cleanHandle,
+              username,
               profileUrl,
               marketId: competitor.marketId,
               companyName: competitor.name,
-              accountType: competitor.type === "individual_broker" ? "individual_broker" 
-                : competitor.type === "developer" ? "developer" 
-                : competitor.type === "brokerage" ? "brokerage" 
+              accountType: competitor.type === "individual_broker" ? "individual_broker"
+                : competitor.type === "developer" ? "developer"
+                : competitor.type === "brokerage" ? "brokerage"
                 : "other",
               isActive: true,
               createdAt: Date.now(),
@@ -495,32 +580,20 @@ export const cleanupSocialHandles = mutation({
 
     // Clean account usernames and profile URLs
     for (const account of accounts) {
-      const cleanedUsername = extractHandle(account.platform, account.username);
-      if (cleanedUsername !== account.username) {
-        let profileUrl = "";
-        switch (account.platform) {
-          case "instagram":
-            profileUrl = `https://www.instagram.com/${cleanedUsername}`;
-            break;
-          case "tiktok":
-            profileUrl = `https://www.tiktok.com/@${cleanedUsername}`;
-            break;
-          case "youtube":
-            if (cleanedUsername.startsWith("UC") && cleanedUsername.length > 20) {
-              profileUrl = `https://www.youtube.com/channel/${cleanedUsername}`;
-            } else {
-              profileUrl = `https://www.youtube.com/@${cleanedUsername}`;
-            }
-            break;
-        }
-        
-        await ctx.db.patch(account._id, { 
+      // Use the smart helper that preserves URL formats like /user/
+      const { username: cleanedUsername, profileUrl } = extractUsernameFromUrl(
+        account.platform,
+        account.profileUrl || account.username
+      );
+
+      if (cleanedUsername !== account.username || profileUrl !== account.profileUrl) {
+        await ctx.db.patch(account._id, {
           username: cleanedUsername,
-          profileUrl: profileUrl || account.profileUrl,
+          profileUrl,
         });
         accountsUpdated++;
       }
-      
+
       // Also ensure isPaused is set
       if (account.isPaused === undefined) {
         await ctx.db.patch(account._id, { isPaused: false });

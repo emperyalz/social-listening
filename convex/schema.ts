@@ -114,6 +114,8 @@ export default defineSchema({
     // Metadata
     notes: v.optional(v.string()),
     logoUrl: v.optional(v.string()),
+    // Which linked account's avatar to use as the competitor's display avatar
+    displayAvatarAccountId: v.optional(v.id("accounts")),
     isActive: v.boolean(), // Master switch for competitor
     createdAt: v.number(),
     updatedAt: v.optional(v.number()),

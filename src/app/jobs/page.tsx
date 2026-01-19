@@ -65,7 +65,7 @@ function JobsContent() {
   const { getLogoUrl, getEmoji, getColors, platforms: allPlatforms } = usePlatformLogos();
 
   // Active scraping platforms (Instagram, TikTok, YouTube)
-  const scrapingPlatforms: PlatformId[] = ["instagram", "tiktok", "youtube"];
+  const scrapingPlatforms: ("instagram" | "tiktok" | "youtube")[] = ["instagram", "tiktok", "youtube"];
 
   // Generate platform options with logos for MultiSelect
   const platformOptions = scrapingPlatforms.map((p) => {
