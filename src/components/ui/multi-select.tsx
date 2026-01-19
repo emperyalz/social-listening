@@ -7,8 +7,8 @@ import { Button } from "./button";
 interface MultiSelectOption {
   value: string;
   label: string;
-  icon?: string; // URL for logo image
-  emoji?: string; // Fallback emoji
+  icon?: string;
+  emoji?: string;
 }
 
 interface MultiSelectProps {
@@ -16,7 +16,7 @@ interface MultiSelectProps {
   selected: string[];
   onChange: (selected: string[]) => void;
   placeholder?: string;
-  logoOnly?: boolean; // When true, show only logos without text labels
+  logoOnly?: boolean;
 }
 
 export function MultiSelect({
@@ -29,7 +29,6 @@ export function MultiSelect({
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -69,10 +68,10 @@ export function MultiSelect({
             <img
               src={option.icon}
               alt={option.label}
-              className={logoOnly ? "h-5 w-auto max-w-[100px] object-contain" : "h-4 w-4 object-contain"}
+              className={logoOnly ? "h-8 w-auto max-w-[180px] object-contain" : "h-4 w-4 object-contain"}
             />
           ) : option.emoji ? (
-            <span className="text-sm">{option.emoji}</span>
+            <span className={logoOnly ? "text-2xl" : "text-sm"}>{option.emoji}</span>
           ) : null}
           {!logoOnly && option.label}
         </span>
@@ -83,7 +82,6 @@ export function MultiSelect({
 
   return (
     <div className="relative" ref={dropdownRef}>
-      {/* Trigger Button */}
       <div className="flex gap-1">
         <Button
           variant="outline"
@@ -105,11 +103,9 @@ export function MultiSelect({
         )}
       </div>
 
-      {/* Dropdown - SOLID WHITE BACKGROUND */}
       {isOpen && (
         <div className="absolute z-50 mt-2 w-full min-w-[240px] rounded-md border border-gray-200 bg-white shadow-lg">
           <div className="max-h-[300px] overflow-y-auto p-1 bg-white">
-            {/* Clear Selection Option */}
             {selected.length > 0 && (
               <>
                 <button
@@ -123,7 +119,6 @@ export function MultiSelect({
               </>
             )}
 
-            {/* Options */}
             {options.map((option) => {
               const isSelected = selected.includes(option.value);
               return (
@@ -145,10 +140,10 @@ export function MultiSelect({
                     <img
                       src={option.icon}
                       alt={option.label}
-                      className={logoOnly ? "h-6 w-auto max-w-[120px] object-contain" : "h-5 w-5 object-contain"}
+                      className={logoOnly ? "h-10 w-auto max-w-[200px] object-contain" : "h-5 w-5 object-contain"}
                     />
                   ) : option.emoji ? (
-                    <span className="text-base">{option.emoji}</span>
+                    <span className={logoOnly ? "text-3xl" : "text-base"}>{option.emoji}</span>
                   ) : null}
                   {!logoOnly && <span>{option.label}</span>}
                 </button>
