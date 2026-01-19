@@ -69,10 +69,10 @@ export function MultiSelect({
             <img
               src={option.icon}
               alt={option.label}
-              className={logoOnly ? "h-[40px] w-auto max-w-[180px] object-contain" : "h-4 w-4 object-contain"}
+              className={logoOnly ? "h-[50px] w-auto max-w-[220px] object-contain" : "h-4 w-4 object-contain"}
             />
           ) : option.emoji ? (
-            <span className={logoOnly ? "text-4xl" : "text-sm"}>{option.emoji}</span>
+            <span className={logoOnly ? "text-5xl" : "text-sm"}>{option.emoji}</span>
           ) : null}
           {!logoOnly && option.label}
         </span>
@@ -88,7 +88,7 @@ export function MultiSelect({
         <Button
           variant="outline"
           onClick={() => setIsOpen(!isOpen)}
-          className={`justify-between bg-white ${logoOnly ? "min-w-[220px] h-[60px] py-2" : "min-w-[180px]"}`}
+          className={`justify-between bg-white ${logoOnly ? "min-w-[280px] h-[80px] py-3" : "min-w-[180px]"}`}
         >
           <span className="truncate">{getDisplayContent()}</span>
           <ChevronDown className="ml-2 h-4 w-4 shrink-0" />
@@ -98,7 +98,7 @@ export function MultiSelect({
             variant="ghost"
             size="icon"
             onClick={clearIndividual}
-            className={`text-muted-foreground hover:text-foreground ${logoOnly ? "h-[60px] w-12" : "h-10 w-10"}`}
+            className={`text-muted-foreground hover:text-foreground ${logoOnly ? "h-[80px] w-12" : "h-10 w-10"}`}
           >
             <X className="h-4 w-4" />
           </Button>
@@ -107,8 +107,8 @@ export function MultiSelect({
 
       {/* Dropdown - SOLID WHITE BACKGROUND */}
       {isOpen && (
-        <div className={`absolute z-50 mt-2 rounded-md border border-gray-200 bg-white shadow-lg ${logoOnly ? "min-w-[280px]" : "w-full min-w-[240px]"}`}>
-          <div className="max-h-[500px] overflow-y-auto p-2 bg-white">
+        <div className={`absolute z-50 mt-2 rounded-md border border-gray-200 bg-white shadow-lg ${logoOnly ? "min-w-[320px]" : "w-full min-w-[240px]"}`}>
+          <div className="max-h-[600px] overflow-y-auto p-3 bg-white">
             {/* Clear Selection Option */}
             {selected.length > 0 && (
               <>
@@ -119,36 +119,36 @@ export function MultiSelect({
                   <X className="h-4 w-4" />
                   Clear selection ({selected.length})
                 </button>
-                <div className="my-1 border-t border-gray-200" />
+                <div className="my-2 border-t border-gray-200" />
               </>
             )}
 
-            {/* Options - LARGE LOGOS */}
+            {/* Options - HUGE LOGOS */}
             {options.map((option) => {
               const isSelected = selected.includes(option.value);
               return (
                 <button
                   key={option.value}
                   onClick={() => toggleOption(option.value)}
-                  className={`w-full flex items-center gap-4 rounded-sm bg-white hover:bg-gray-100 ${logoOnly ? "px-4 py-4" : "px-2 py-1.5 text-sm"}`}
+                  className={`w-full flex items-center gap-4 rounded-sm bg-white hover:bg-gray-100 ${logoOnly ? "px-4 py-5" : "px-2 py-1.5 text-sm"}`}
                 >
                   <div
-                    className={`flex items-center justify-center rounded border shrink-0 ${logoOnly ? "h-6 w-6" : "h-4 w-4"} ${
+                    className={`flex items-center justify-center rounded border shrink-0 ${logoOnly ? "h-7 w-7" : "h-4 w-4"} ${
                       isSelected
                         ? "border-primary bg-primary text-primary-foreground"
                         : "border-gray-300 bg-white"
                     }`}
                   >
-                    {isSelected && <Check className={logoOnly ? "h-4 w-4" : "h-3 w-3"} />}
+                    {isSelected && <Check className={logoOnly ? "h-5 w-5" : "h-3 w-3"} />}
                   </div>
                   {option.icon ? (
                     <img
                       src={option.icon}
                       alt={option.label}
-                      className={logoOnly ? "h-[45px] w-auto max-w-[200px] object-contain" : "h-5 w-5 object-contain"}
+                      className={logoOnly ? "h-[60px] w-auto max-w-[240px] object-contain" : "h-5 w-5 object-contain"}
                     />
                   ) : option.emoji ? (
-                    <span className={logoOnly ? "text-5xl" : "text-base"}>{option.emoji}</span>
+                    <span className={logoOnly ? "text-6xl" : "text-base"}>{option.emoji}</span>
                   ) : null}
                   {!logoOnly && <span>{option.label}</span>}
                 </button>
