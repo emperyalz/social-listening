@@ -674,7 +674,10 @@ function CompetitorCard({
   const [state, setState] = useState(competitor.state || "");
   const [country, setCountry] = useState(competitor.country || "");
   const [notes, setNotes] = useState(competitor.notes || "");
-  
+  const [displayAvatarAccountId, setDisplayAvatarAccountId] = useState<string | null>(
+    competitor.displayAvatarAccountId || null
+  );
+
   const [instagram, setInstagram] = useState(cleanHandle("instagram", competitor.socialHandles?.instagram));
   const [tiktok, setTiktok] = useState(cleanHandle("tiktok", competitor.socialHandles?.tiktok));
   const [youtube, setYoutube] = useState(cleanHandle("youtube", competitor.socialHandles?.youtube));
@@ -739,7 +742,9 @@ function CompetitorCard({
         country: country || undefined,
         notes: notes || undefined,
         socialHandles: cleanedHandles,
-      });
+        // Pass the selected avatar account, or null to clear if explicitly unset
+        displayAvatarAccountId: displayAvatarAccountId || null,
+      } as any);
       
       setInstagram(cleanedHandles.instagram || "");
       setTiktok(cleanedHandles.tiktok || "");
@@ -808,7 +813,10 @@ function CompetitorCard({
       {/* Collapsed View */}
       <div className="flex items-center justify-between p-4 cursor-pointer" onClick={onToggle}>
         <div className="flex items-center gap-4">
-          {competitor.logoUrl ? (
+          {/* Priority: displayAvatarUrl > logoUrl > fallback icon */}
+          {competitor.displayAvatarUrl ? (
+            <img src={competitor.displayAvatarUrl} alt={competitor.name} className="h-14 w-14 rounded-full object-cover border-2 border-slate-200" />
+          ) : competitor.logoUrl ? (
             <img src={competitor.logoUrl} alt={competitor.name} className="h-14 w-14 rounded-lg object-cover border" />
           ) : (
             <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-gradient-to-br from-slate-100 to-slate-200">
@@ -936,6 +944,78 @@ function CompetitorCard({
               </div>
             </div>
           </div>
+
+          {/* Display Avatar Section */}
+          {competitor.accounts && competitor.accounts.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                <User className="h-4 w-4" /> Display Avatar
+              </h3>
+              <p className="text-xs text-muted-foreground mb-3">
+                Choose which social account's profile picture to use as the competitor's avatar.
+              </p>
+              <div className="flex items-center gap-4">
+                {/* Preview of current avatar */}
+                <div className="flex-shrink-0">
+                  {displayAvatarAccountId ? (
+                    (() => {
+                      const selectedAcc = competitor.accounts?.find((a: any) => a._id === displayAvatarAccountId);
+                      return selectedAcc?.avatarUrl ? (
+                        <img src={selectedAcc.avatarUrl} alt="Selected avatar" className="h-16 w-16 rounded-full object-cover border-2 border-primary" />
+                      ) : (
+                        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-200 text-slate-500 text-xs">
+                          No image
+                        </div>
+                      );
+                    })()
+                  ) : competitor.displayAvatarUrl ? (
+                    <img src={competitor.displayAvatarUrl} alt="Auto avatar" className="h-16 w-16 rounded-full object-cover border-2 border-slate-300" />
+                  ) : (
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-200">
+                      {competitor.type === "individual_broker" ? <User className="h-6 w-6 text-slate-500" /> : <Building2 className="h-6 w-6 text-slate-500" />}
+                    </div>
+                  )}
+                </div>
+
+                {/* Avatar selection */}
+                <div className="flex-1">
+                  <Select
+                    value={displayAvatarAccountId || "_auto"}
+                    onValueChange={(v) => setDisplayAvatarAccountId(v === "_auto" ? null : v)}
+                  >
+                    <SelectTrigger className="bg-white">
+                      <SelectValue placeholder="Auto-select avatar" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_auto">
+                        <span className="flex items-center gap-2">
+                          <span className="text-slate-400">Auto</span>
+                          <span className="text-xs text-muted-foreground">(first available)</span>
+                        </span>
+                      </SelectItem>
+                      {competitor.accounts?.filter((acc: any) => acc.avatarUrl).map((acc: any) => {
+                        const platformConfig = PLATFORMS[acc.platform as keyof typeof PLATFORMS];
+                        return (
+                          <SelectItem key={acc._id} value={acc._id}>
+                            <span className="flex items-center gap-2">
+                              <img src={acc.avatarUrl} alt="" className="h-5 w-5 rounded-full object-cover" />
+                              {renderPlatformLogo(acc.platform, "h-4 w-4")}
+                              <span>@{extractSocialHandle(acc.platform, acc.username)}</span>
+                            </span>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                  {competitor.accounts?.filter((acc: any) => acc.avatarUrl).length === 0 && (
+                    <p className="text-xs text-yellow-600 mt-1">
+                      No account avatars available yet. Avatars are fetched during scraping.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Contact Info Section */}
           <div className="mb-6">
