@@ -487,50 +487,66 @@ function PostsContent() {
   };
 
   // Get thumbnail URL with fallbacks
+  // Note: Instagram and TikTok thumbnail URLs from their CDN often expire after 24-48 hours
+  // So we provide robust fallbacks
   const getThumbnailUrl = (post: NonNullable<typeof posts>[number], platform?: string) => {
-    // If we have a valid thumbnail URL, use it first
-    if (post.thumbnailUrl) {
-      return post.thumbnailUrl;
-    }
-
-    // For YouTube, we can construct thumbnail from platformPostId
+    // For YouTube, ALWAYS use the reliable thumbnail URL from YouTube's CDN
+    // This is more reliable than stored thumbnailUrl which may be stale
     if (platform === "youtube" && post.platformPostId) {
       return `https://img.youtube.com/vi/${post.platformPostId}/hqdefault.jpg`;
     }
 
-    // For TikTok, look for image URLs in mediaUrls (avoid video URLs)
-    if (platform === "tiktok" && post.mediaUrls && post.mediaUrls.length > 0) {
-      // Find an image URL (not video)
-      const imageUrl = post.mediaUrls.find((url: string) =>
-        url.includes('.jpg') || url.includes('.jpeg') || url.includes('.png') ||
-        url.includes('.webp') || url.includes('cover') || url.includes('thumbnail')
-      );
-      if (imageUrl) return imageUrl;
-      // If no obvious image, check if first URL is not a video
-      const firstUrl = post.mediaUrls[0];
-      if (!firstUrl.includes('.mp4') && !firstUrl.includes('.webm') && !firstUrl.includes('.mov')) {
-        return firstUrl;
+    // For TikTok, thumbnails expire quickly - check if we have a coverUrl
+    // TikTok's CDN URLs typically expire within hours
+    if (platform === "tiktok") {
+      if (post.thumbnailUrl) {
+        return post.thumbnailUrl; // Try stored thumbnail first
       }
-    }
-
-    // For Instagram, look for image URLs in mediaUrls (avoid video URLs for thumbnails)
-    if (platform === "instagram" && post.mediaUrls && post.mediaUrls.length > 0) {
-      // For videos/reels, prefer display image over video URL
-      const isVideoPost = post.postType === "video" || post.postType === "reel";
-      if (isVideoPost) {
-        // Look for display image (cdninstagram URLs that don't have video indicators)
-        const imageUrl = post.mediaUrls.find((url: string) =>
-          (url.includes('cdninstagram.com') && !url.includes('.mp4')) ||
+      // Look for cover URL in mediaUrls
+      if (post.mediaUrls && post.mediaUrls.length > 0) {
+        const coverUrl = post.mediaUrls.find((url: string) =>
+          url.includes('cover') || url.includes('thumbnail') ||
           url.includes('.jpg') || url.includes('.jpeg') || url.includes('.webp')
         );
-        if (imageUrl) return imageUrl;
+        if (coverUrl) return coverUrl;
       }
-      // Fall back to first non-video URL
-      const nonVideoUrl = post.mediaUrls.find((url: string) =>
-        !url.includes('.mp4') && !url.includes('.webm') && !url.includes('.mov') &&
-        !url.includes('video')
-      );
-      return nonVideoUrl || post.mediaUrls[0];
+      // Return null to trigger fallback display (platform-colored gradient)
+      return null;
+    }
+
+    // For Instagram, thumbnails (displayUrl) often expire within 24-48 hours
+    // The URLs are signed and time-limited by Instagram's CDN
+    if (platform === "instagram") {
+      // Try thumbnailUrl first (displayUrl from scraper)
+      if (post.thumbnailUrl) {
+        return post.thumbnailUrl;
+      }
+      // Try to find an image URL in mediaUrls
+      if (post.mediaUrls && post.mediaUrls.length > 0) {
+        // For videos/reels, prefer display image over video URL
+        const isVideoPost = post.postType === "video" || post.postType === "reel";
+        if (isVideoPost) {
+          // Look for display image (cdninstagram URLs that aren't video files)
+          const imageUrl = post.mediaUrls.find((url: string) =>
+            (url.includes('cdninstagram.com') && !url.includes('.mp4')) ||
+            url.includes('.jpg') || url.includes('.jpeg') || url.includes('.webp')
+          );
+          if (imageUrl) return imageUrl;
+        }
+        // Fall back to first non-video URL
+        const nonVideoUrl = post.mediaUrls.find((url: string) =>
+          !url.includes('.mp4') && !url.includes('.webm') && !url.includes('.mov') &&
+          !url.includes('video')
+        );
+        if (nonVideoUrl) return nonVideoUrl;
+      }
+      // Return null to trigger fallback display
+      return null;
+    }
+
+    // Generic fallback for any platform
+    if (post.thumbnailUrl) {
+      return post.thumbnailUrl;
     }
 
     return null;

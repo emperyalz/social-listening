@@ -65,6 +65,7 @@ export const list = query({
             competitors: getLogoById(platform.logoForCompetitors),
             dashboard: getLogoById(platform.logoForDashboard),
             jobs: getLogoById(platform.logoForJobs),
+            recentJobs: getLogoById(platform.logoForRecentJobs),
             dropdowns: getLogoById(platform.logoForDropdowns),
           },
         };
@@ -149,6 +150,7 @@ export const getLogoForContext = query({
       v.literal("competitors"),
       v.literal("dashboard"),
       v.literal("jobs"),
+      v.literal("recentJobs"),
       v.literal("dropdowns")
     ),
   },
@@ -168,6 +170,7 @@ export const getLogoForContext = query({
       competitors: "logoForCompetitors",
       dashboard: "logoForDashboard",
       jobs: "logoForJobs",
+      recentJobs: "logoForRecentJobs",
       dropdowns: "logoForDropdowns",
     };
 
@@ -259,6 +262,7 @@ export const setLogoForContext = mutation({
       v.literal("competitors"),
       v.literal("dashboard"),
       v.literal("jobs"),
+      v.literal("recentJobs"),
       v.literal("dropdowns")
     ),
     logoId: v.union(v.id("platformLogos"), v.null()), // null to clear
@@ -283,6 +287,7 @@ export const setLogoForContext = mutation({
       competitors: "logoForCompetitors",
       dashboard: "logoForDashboard",
       jobs: "logoForJobs",
+      recentJobs: "logoForRecentJobs",
       dropdowns: "logoForDropdowns",
     };
 
@@ -393,6 +398,9 @@ export const deleteLogo = mutation({
       if (platform.logoForPosts === args.id) updates.logoForPosts = undefined;
       if (platform.logoForCompetitors === args.id) updates.logoForCompetitors = undefined;
       if (platform.logoForDashboard === args.id) updates.logoForDashboard = undefined;
+      if (platform.logoForJobs === args.id) updates.logoForJobs = undefined;
+      if (platform.logoForRecentJobs === args.id) updates.logoForRecentJobs = undefined;
+      if (platform.logoForDropdowns === args.id) updates.logoForDropdowns = undefined;
 
       if (Object.keys(updates).length > 0) {
         await ctx.db.patch(platform._id, { ...updates, updatedAt: Date.now() });
