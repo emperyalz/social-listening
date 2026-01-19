@@ -49,7 +49,8 @@ const CONTEXT_LABELS = {
   posts: "Posts Page",
   competitors: "Competitors Page",
   dashboard: "Dashboard",
-  jobs: "Scraping Jobs",
+  jobs: "Scraping Jobs Cards",
+  recentJobs: "Recent Jobs List",
   dropdowns: "Platform Dropdowns",
 };
 
@@ -446,6 +447,7 @@ function PlatformCard({
       competitors?: { _id: Id<"platformLogos">; name: string; url: string | null } | null;
       dashboard?: { _id: Id<"platformLogos">; name: string; url: string | null } | null;
       jobs?: { _id: Id<"platformLogos">; name: string; url: string | null } | null;
+      recentJobs?: { _id: Id<"platformLogos">; name: string; url: string | null } | null;
       dropdowns?: { _id: Id<"platformLogos">; name: string; url: string | null } | null;
     };
   };
@@ -786,11 +788,19 @@ function PlatformCard({
                 platformId={platform.platformId}
               />
               <LogoSelector
-                label="Scraping Jobs"
-                description="Logo shown on scraping jobs page and recent jobs list"
+                label="Scraping Jobs Cards"
+                description="Large horizontal logo shown on scraper action cards (Instagram, TikTok, YouTube)"
                 value={platform.selectedLogos?.jobs?._id || null}
                 options={platform.logos || []}
                 onChange={(id) => handleSetLogoForContext("jobs", id)}
+                platformId={platform.platformId}
+              />
+              <LogoSelector
+                label="Recent Jobs List"
+                description="Small logo shown in the recent jobs history list"
+                value={platform.selectedLogos?.recentJobs?._id || null}
+                options={platform.logos || []}
+                onChange={(id) => handleSetLogoForContext("recentJobs", id)}
                 platformId={platform.platformId}
               />
               <LogoSelector
