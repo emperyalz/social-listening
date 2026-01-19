@@ -49,6 +49,8 @@ const CONTEXT_LABELS = {
   posts: "Posts Page",
   competitors: "Competitors Page",
   dashboard: "Dashboard",
+  jobs: "Scraping Jobs",
+  dropdowns: "Platform Dropdowns",
 };
 
 // ============ LOGO ITEM COMPONENT ============
@@ -443,6 +445,8 @@ function PlatformCard({
       posts?: { _id: Id<"platformLogos">; name: string; url: string | null } | null;
       competitors?: { _id: Id<"platformLogos">; name: string; url: string | null } | null;
       dashboard?: { _id: Id<"platformLogos">; name: string; url: string | null } | null;
+      jobs?: { _id: Id<"platformLogos">; name: string; url: string | null } | null;
+      dropdowns?: { _id: Id<"platformLogos">; name: string; url: string | null } | null;
     };
   };
 }) {
@@ -779,6 +783,22 @@ function PlatformCard({
                 value={platform.selectedLogos?.dashboard?._id || null}
                 options={platform.logos || []}
                 onChange={(id) => handleSetLogoForContext("dashboard", id)}
+                platformId={platform.platformId}
+              />
+              <LogoSelector
+                label="Scraping Jobs"
+                description="Logo shown on scraping jobs page and recent jobs list"
+                value={platform.selectedLogos?.jobs?._id || null}
+                options={platform.logos || []}
+                onChange={(id) => handleSetLogoForContext("jobs", id)}
+                platformId={platform.platformId}
+              />
+              <LogoSelector
+                label="Platform Dropdowns"
+                description="Logo shown in platform selection dropdowns sitewide"
+                value={platform.selectedLogos?.dropdowns?._id || null}
+                options={platform.logos || []}
+                onChange={(id) => handleSetLogoForContext("dropdowns", id)}
                 platformId={platform.platformId}
               />
             </div>
