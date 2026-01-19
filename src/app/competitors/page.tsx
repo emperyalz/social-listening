@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { Id } from "../../../convex/_generated/dataModel";
 import { usePlatformLogos, type PlatformId } from "@/hooks/usePlatformLogos";
+import { MultiSelect as SharedMultiSelect } from "@/components/ui/multi-select";
 
 type CompetitorType = "brokerage" | "individual_broker" | "developer" | "property_manager" | "investor" | "other";
 
@@ -465,7 +466,21 @@ export default function CompetitorsPage() {
   const competitors = useQuery(api.competitors.list, {});
   const stats = useQuery(api.competitors.getStats);
   const migrateAccounts = useMutation(api.competitors.migrateFromAccounts);
-  const { getLogoUrl, getEmoji } = usePlatformLogos();
+  const { getLogoUrl, getEmoji, platforms: allPlatforms } = usePlatformLogos();
+
+  // Platform options with logos for dropdown
+  const scrapingPlatforms: ("instagram" | "tiktok" | "youtube")[] = ["instagram", "tiktok", "youtube"];
+  const platformOptionsWithLogos = scrapingPlatforms.map((p) => {
+    const logoUrl = getLogoUrl(p, "dropdowns");
+    const emoji = getEmoji(p);
+    const platform = allPlatforms?.find(pl => pl.platformId === p);
+    return {
+      label: platform?.displayName || p.charAt(0).toUpperCase() + p.slice(1),
+      value: p,
+      icon: logoUrl || undefined,
+      emoji: !logoUrl ? emoji : undefined,
+    };
+  });
 
   // Render platform logo or emoji fallback
   const renderPlatformLogo = (platform: string, size: string = "h-4 w-4") => {
@@ -575,12 +590,12 @@ export default function CompetitorsPage() {
           placeholder="All Markets"
           icon={<MapPin className="h-4 w-4 text-slate-400" />}
         />
-        <MultiSelect
-          options={MONITORED_PLATFORMS}
+        <SharedMultiSelect
+          options={platformOptionsWithLogos}
           selected={selectedPlatforms}
           onChange={setSelectedPlatforms}
           placeholder="All Platforms"
-          icon={<Instagram className="h-4 w-4 text-slate-400" />}
+          logoOnly={true}
         />
         {hasAnyFilter && (
           <Button

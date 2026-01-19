@@ -41,7 +41,7 @@ function DashboardContent() {
   const [competitorDays, setCompetitorDays] = useState<string[]>(["30"]);
 
   const markets = useQuery(api.markets.list);
-  const { getEmoji } = usePlatformLogos();
+  const { getLogoUrl, getEmoji, platforms: allPlatforms } = usePlatformLogos();
 
   // Get the selected days value
   const daysValue = competitorDays.length > 0 ? parseInt(competitorDays[0]) : 30;
@@ -73,11 +73,19 @@ function DashboardContent() {
     label: m.name,
   })) || [];
 
-  const platformOptions = [
-    { value: "instagram", label: `${getEmoji("instagram")} Instagram` },
-    { value: "tiktok", label: `${getEmoji("tiktok")} TikTok` },
-    { value: "youtube", label: `${getEmoji("youtube")} YouTube` },
-  ];
+  // Platform options with logos for dropdown
+  const scrapingPlatforms: ("instagram" | "tiktok" | "youtube")[] = ["instagram", "tiktok", "youtube"];
+  const platformOptions = scrapingPlatforms.map((p) => {
+    const logoUrl = getLogoUrl(p, "dropdowns");
+    const emoji = getEmoji(p);
+    const platform = allPlatforms?.find(pl => pl.platformId === p);
+    return {
+      label: platform?.displayName || p.charAt(0).toUpperCase() + p.slice(1),
+      value: p,
+      icon: logoUrl || undefined,
+      emoji: !logoUrl ? emoji : undefined,
+    };
+  });
 
   return (
     <div className="space-y-8">
@@ -101,6 +109,7 @@ function DashboardContent() {
             selected={selectedPlatforms}
             onChange={setSelectedPlatforms}
             placeholder="All Platforms"
+            logoOnly={true}
           />
         </div>
       </div>

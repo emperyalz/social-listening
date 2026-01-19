@@ -217,17 +217,21 @@ function JobsContent() {
           return (
             <Card key={platform}>
               <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-3 text-lg">
+                {/* Horizontal logo area - no text */}
+                <div className="flex justify-center items-center h-12">
                   {logoUrl ? (
-                    <img src={logoUrl} alt={displayName} className="h-8 w-8 object-contain" />
+                    <img
+                      src={logoUrl}
+                      alt={displayName}
+                      className="h-10 w-auto max-w-[160px] object-contain"
+                    />
                   ) : (
-                    <span className="text-2xl">{emoji}</span>
+                    <span className="text-4xl">{emoji}</span>
                   )}
-                  {displayName}
-                </CardTitle>
+                </div>
               </CardHeader>
               <CardContent>
-                <p className="mb-4 text-sm text-muted-foreground">
+                <p className="mb-4 text-sm text-muted-foreground text-center">
                   {descriptions[platform]}
                 </p>
                 <Button
@@ -247,7 +251,7 @@ function JobsContent() {
                   ) : (
                     <>
                       <Play className="mr-2 h-4 w-4" />
-                      Run {displayName} Scrape
+                      Run Scrape
                     </>
                   )}
                 </Button>
@@ -272,6 +276,7 @@ function JobsContent() {
               selected={selectedPlatforms}
               onChange={setSelectedPlatforms}
               placeholder="All Platforms"
+              logoOnly={true}
             />
             <MultiSelect
               options={TIME_PERIOD_OPTIONS}

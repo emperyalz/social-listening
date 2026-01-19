@@ -13,10 +13,14 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MultiSelect } from "@/components/ui/multi-select";
+import { usePlatformLogos } from "@/hooks/usePlatformLogos";
 
 export default function InsightsPage() {
   const [selectedMarkets, setSelectedMarkets] = useState<string[]>([]);
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
+
+  // Platform logos hook
+  const { getLogoUrl, getEmoji, platforms: allPlatforms } = usePlatformLogos();
   const [days, setDays] = useState<string>("30");
 
   const markets = useQuery(api.markets.list);
@@ -37,11 +41,19 @@ export default function InsightsPage() {
     label: m.name,
   })) || [];
 
-  const platformOptions = [
-    { value: "instagram", label: "📸 Instagram" },
-    { value: "tiktok", label: "🎵 TikTok" },
-    { value: "youtube", label: "▶️ YouTube" },
-  ];
+  // Platform options with logos for dropdown
+  const scrapingPlatforms: ("instagram" | "tiktok" | "youtube")[] = ["instagram", "tiktok", "youtube"];
+  const platformOptions = scrapingPlatforms.map((p) => {
+    const logoUrl = getLogoUrl(p, "dropdowns");
+    const emoji = getEmoji(p);
+    const platform = allPlatforms?.find(pl => pl.platformId === p);
+    return {
+      label: platform?.displayName || p.charAt(0).toUpperCase() + p.slice(1),
+      value: p,
+      icon: logoUrl || undefined,
+      emoji: !logoUrl ? emoji : undefined,
+    };
+  });
 
   return (
     <div className="space-y-8">
@@ -65,6 +77,7 @@ export default function InsightsPage() {
             selected={selectedPlatforms}
             onChange={setSelectedPlatforms}
             placeholder="All Platforms"
+            logoOnly={true}
           />
           <Select value={days} onValueChange={setDays}>
             <SelectTrigger className="w-[140px]">

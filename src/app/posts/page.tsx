@@ -80,19 +80,7 @@ function MediaPlayerModal({
     return null;
   };
 
-  // Check if we have a direct video URL for Instagram
-  const getInstagramVideoUrl = () => {
-    if (platform !== "instagram") return null;
-    if (post.mediaUrls && post.mediaUrls.length > 0) {
-      // Look for video file extensions
-      const videoUrl = post.mediaUrls.find((url: string) =>
-        url.includes('.mp4') || url.includes('.webm') || url.includes('.mov') ||
-        url.includes('video') || url.includes('cdninstagram.com')
-      );
-      return videoUrl || null;
-    }
-    return null;
-  };
+  // Note: Instagram direct video URLs expire quickly, so we rely on embeds instead
 
   // Render the appropriate media player
   const renderMediaPlayer = () => {
@@ -112,116 +100,89 @@ function MediaPlayerModal({
       }
     }
 
-    // TikTok
+    // TikTok - use embed for reliable playback
     if (platform === "tiktok") {
       const embedUrl = getTikTokEmbedUrl();
       if (embedUrl) {
         return (
-          <iframe
-            src={embedUrl}
-            className="w-full h-full"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            title={post.caption || "TikTok video"}
-            style={{ maxWidth: "605px", margin: "0 auto" }}
-          />
-        );
-      }
-    }
-
-    // Instagram
-    if (platform === "instagram") {
-      // First, try direct video URL if available (for reels/videos)
-      const directVideoUrl = getInstagramVideoUrl();
-      if (directVideoUrl && isVideo) {
-        return (
-          <div className="flex flex-col items-center justify-center w-full h-full">
-            <video
-              src={directVideoUrl}
-              controls
-              autoPlay
-              muted={isMuted}
-              playsInline
-              className="max-w-full max-h-full object-contain"
-              style={{ maxWidth: "540px" }}
-              onError={(e) => {
-                // If direct video fails, hide it and show embed fallback
-                const videoEl = e.target as HTMLVideoElement;
-                videoEl.style.display = "none";
-                // Show fallback message
-                const parent = videoEl.parentElement;
-                if (parent) {
-                  const fallback = document.createElement("div");
-                  fallback.className = "text-center text-gray-400 p-4";
-                  fallback.innerHTML = `
-                    <p class="mb-4">Video cannot be played directly.</p>
-                    <a href="${post.postUrl}" target="_blank" rel="noopener noreferrer"
-                       class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium hover:from-purple-600 hover:to-pink-600">
-                      View on Instagram
-                    </a>
-                  `;
-                  parent.appendChild(fallback);
-                }
+          <div className="flex flex-col items-center justify-center w-full h-full bg-black overflow-hidden">
+            <iframe
+              src={embedUrl}
+              className="w-full border-0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              title={post.caption || "TikTok video"}
+              style={{
+                maxWidth: "605px",
+                height: "calc(100vh - 200px)",
+                minHeight: "700px",
+                margin: "0 auto"
               }}
-            >
-              Your browser does not support the video tag.
-            </video>
+            />
           </div>
         );
       }
 
-      // Fall back to Instagram embed
+      // Fallback: link to TikTok if embed URL unavailable
+      return (
+        <div className="flex flex-col items-center justify-center w-full h-full bg-black">
+          <div className="text-center mb-6">
+            <p className="text-gray-400 mb-4">Unable to load embed preview</p>
+          </div>
+          <a
+            href={post.postUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-pink-500 via-red-500 to-cyan-400 text-white font-medium hover:opacity-90 transition-opacity"
+          >
+            <Play className="h-5 w-5" />
+            Watch on TikTok
+          </a>
+        </div>
+      );
+    }
+
+    // Instagram - always use embed for reliable playback (direct URLs expire)
+    if (platform === "instagram") {
       const embedUrl = getInstagramEmbedUrl();
       if (embedUrl) {
         return (
-          <div className="flex flex-col items-center justify-center w-full h-full bg-white">
+          <div className="flex flex-col items-center justify-center w-full h-full bg-white overflow-hidden">
             <iframe
               src={embedUrl}
-              className="w-full h-full border-0"
+              className="w-full border-0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
               scrolling="no"
               title={post.caption || "Instagram post"}
-              style={{ maxWidth: "540px", minHeight: "500px", margin: "0 auto" }}
-              onLoad={(e) => {
-                // Inject Instagram embed script if needed
-                const iframe = e.target as HTMLIFrameElement;
-                try {
-                  // Trigger any needed adjustments after load
-                  iframe.style.opacity = "1";
-                } catch (err) {
-                  // Cross-origin restrictions may prevent this
-                }
+              style={{
+                maxWidth: "540px",
+                height: "calc(100vh - 200px)",
+                minHeight: "600px",
+                margin: "0 auto"
               }}
             />
           </div>
         );
       }
 
-      // Last resort: show thumbnail with link to Instagram
-      if (post.thumbnailUrl || (post.mediaUrls && post.mediaUrls.length > 0)) {
-        const displayUrl = post.thumbnailUrl || post.mediaUrls?.[0];
-        return (
-          <div className="flex flex-col items-center justify-center w-full h-full relative">
-            <img
-              src={displayUrl}
-              alt={post.caption || "Instagram post"}
-              className="max-w-full max-h-[70%] object-contain"
-            />
-            <div className="mt-4">
-              <a
-                href={post.postUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium hover:from-purple-600 hover:to-pink-600 transition-all"
-              >
-                <Play className="h-5 w-5" />
-                {isVideo ? "Watch on Instagram" : "View on Instagram"}
-              </a>
-            </div>
+      // Fallback: link to Instagram if embed URL unavailable
+      return (
+        <div className="flex flex-col items-center justify-center w-full h-full">
+          <div className="text-center mb-6">
+            <p className="text-gray-500 mb-4">Unable to load embed preview</p>
           </div>
-        );
-      }
+          <a
+            href={post.postUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium hover:from-purple-600 hover:to-pink-600 transition-all"
+          >
+            <Play className="h-5 w-5" />
+            {isVideo ? "Watch on Instagram" : "View on Instagram"}
+          </a>
+        </div>
+      );
     }
 
     // Fallback to direct video if mediaUrls contain video
@@ -449,7 +410,7 @@ function PostsContent() {
   const posts = useQuery(api.posts.list, {});
   const accounts = useQuery(api.accounts.list, {});
   const markets = useQuery(api.markets.getAll);
-  const { getLogoUrl, getEmoji, getColors } = usePlatformLogos();
+  const { getLogoUrl, getEmoji, getColors, platforms: allPlatforms } = usePlatformLogos();
 
   // State for media player modal
   const [selectedPostIndex, setSelectedPostIndex] = useState<number | null>(null);
@@ -468,12 +429,19 @@ function PostsContent() {
   // Sort by most recent
   const sortedPosts = [...filteredPosts].sort((a, b) => b.postedAt - a.postedAt);
 
-  // Platform options - using emojis as labels since MultiSelect expects strings
-  const platformOptions = [
-    { value: "instagram", label: `${getEmoji("instagram")} Instagram` },
-    { value: "tiktok", label: `${getEmoji("tiktok")} TikTok` },
-    { value: "youtube", label: `${getEmoji("youtube")} YouTube` },
-  ];
+  // Platform options with logos for dropdown
+  const scrapingPlatforms: ("instagram" | "tiktok" | "youtube")[] = ["instagram", "tiktok", "youtube"];
+  const platformOptions = scrapingPlatforms.map((p) => {
+    const logoUrl = getLogoUrl(p, "dropdowns");
+    const emoji = getEmoji(p);
+    const platform = allPlatforms?.find(pl => pl.platformId === p);
+    return {
+      label: platform?.displayName || p.charAt(0).toUpperCase() + p.slice(1),
+      value: p,
+      icon: logoUrl || undefined,
+      emoji: !logoUrl ? emoji : undefined,
+    };
+  });
 
   // Market options
   const marketOptions = markets?.map((m: { _id: string; name: string }) => ({
@@ -592,6 +560,7 @@ function PostsContent() {
               selected={selectedPlatforms}
               onChange={setSelectedPlatforms}
               placeholder="All Platforms"
+              logoOnly={true}
             />
             <MultiSelect
               options={marketOptions}
@@ -684,18 +653,38 @@ function PostsContent() {
                           target.dataset.fallbackAttempted = "true";
                           target.src = `https://img.youtube.com/vi/${post.platformPostId}/mqdefault.jpg`;
                         } else {
-                          target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect fill='%23f3f4f6' width='100' height='100'/%3E%3Ctext x='50' y='50' font-family='Arial' font-size='30' fill='%239ca3af' text-anchor='middle' dy='.3em'%3E📷%3C/text%3E%3C/svg%3E";
+                          // Hide the broken image and show styled fallback
+                          target.style.display = "none";
+                          const parent = target.parentElement;
+                          if (parent && !parent.querySelector('.thumbnail-fallback')) {
+                            const fallback = document.createElement("div");
+                            fallback.className = "thumbnail-fallback w-full h-full flex items-center justify-center";
+                            const colors = getColors(account?.platform as PlatformId || "instagram");
+                            fallback.style.background = `linear-gradient(135deg, ${colors.primary}15, ${colors.secondary || colors.primary}25)`;
+                            const logoUrl = getLogoUrl(account?.platform as PlatformId, "posts");
+                            if (logoUrl) {
+                              fallback.innerHTML = `<img src="${logoUrl}" alt="${account?.platform}" class="h-16 w-16 object-contain opacity-60" />`;
+                            } else {
+                              fallback.innerHTML = `<span class="text-5xl opacity-50">${getEmoji(account?.platform as PlatformId)}</span>`;
+                            }
+                            parent.appendChild(fallback);
+                          }
                         }
                       }}
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center">
+                    <div
+                      className="w-full h-full flex items-center justify-center"
+                      style={{
+                        background: `linear-gradient(135deg, ${getColors(account?.platform as PlatformId || "instagram").primary}15, ${getColors(account?.platform as PlatformId || "instagram").secondary || getColors(account?.platform as PlatformId || "instagram").primary}25)`
+                      }}
+                    >
                       {(() => {
                         const logoUrl = getLogoUrl(account?.platform as PlatformId, "posts");
                         if (logoUrl) {
-                          return <img src={logoUrl} alt={account?.platform || ""} className="h-16 w-16 object-contain opacity-40" />;
+                          return <img src={logoUrl} alt={account?.platform || ""} className="h-16 w-16 object-contain opacity-60" />;
                         }
-                        return <span className="text-4xl text-gray-400">{getEmoji(account?.platform as PlatformId)}</span>;
+                        return <span className="text-5xl opacity-50">{getEmoji(account?.platform as PlatformId)}</span>;
                       })()}
                     </div>
                   )}
