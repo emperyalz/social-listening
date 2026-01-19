@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { ScheduleSettings } from "@/components/schedule-settings";
 import { formatDate, getPlatformIcon } from "@/lib/utils";
+import { usePlatformLogos, type PlatformId } from "@/hooks/usePlatformLogos";
 import {
   Play,
   RefreshCw,
@@ -18,13 +19,6 @@ import {
   X,
 } from "lucide-react";
 import { Id } from "../../../convex/_generated/dataModel";
-
-// Platform options for MultiSelect
-const PLATFORM_OPTIONS = [
-  { label: "📸 Instagram", value: "instagram" },
-  { label: "🎵 TikTok", value: "tiktok" },
-  { label: "▶️ YouTube", value: "youtube" },
-];
 
 // Time period options for MultiSelect
 const TIME_PERIOD_OPTIONS = [
@@ -66,6 +60,25 @@ function JobsContent() {
   const [isRunning, setIsRunning] = useState<string | null>(null);
   const [isPolling, setIsPolling] = useState(false);
   const [cancellingJob, setCancellingJob] = useState<string | null>(null);
+
+  // Platform logos hook
+  const { getLogoUrl, getEmoji, getColors, platforms: allPlatforms } = usePlatformLogos();
+
+  // Active scraping platforms (Instagram, TikTok, YouTube)
+  const scrapingPlatforms: PlatformId[] = ["instagram", "tiktok", "youtube"];
+
+  // Generate platform options with logos for MultiSelect
+  const platformOptions = scrapingPlatforms.map((p) => {
+    const logoUrl = getLogoUrl(p, "dropdowns");
+    const emoji = getEmoji(p);
+    const platform = allPlatforms?.find(pl => pl.platformId === p);
+    return {
+      label: platform?.displayName || p.charAt(0).toUpperCase() + p.slice(1),
+      value: p,
+      icon: logoUrl || undefined,
+      emoji: !logoUrl ? emoji : undefined,
+    };
+  });
 
   // Filters using MultiSelect pattern
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
@@ -185,95 +198,63 @@ function JobsContent() {
 
       {/* Quick Actions */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              📸 Instagram
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="mb-4 text-sm text-muted-foreground">
-              Scrape all Instagram accounts for new posts and engagement data
-            </p>
-            <Button
-              onClick={() => handleScrape("instagram")}
-              disabled={isRunning !== null}
-              className="w-full"
-            >
-              {isRunning === "instagram" ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Running...
-                </>
-              ) : (
-                <>
-                  <Play className="mr-2 h-4 w-4" />
-                  Run Instagram Scrape
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
+        {scrapingPlatforms.map((platform) => {
+          const logoUrl = getLogoUrl(platform, "jobs");
+          const emoji = getEmoji(platform);
+          const colors = getColors(platform);
+          const platformData = allPlatforms?.find(p => p.platformId === platform);
+          const displayName = platformData?.displayName || platform.charAt(0).toUpperCase() + platform.slice(1);
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              🎵 TikTok
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="mb-4 text-sm text-muted-foreground">
-              Scrape all TikTok accounts for new videos and engagement data
-            </p>
-            <Button
-              onClick={() => handleScrape("tiktok")}
-              disabled={isRunning !== null}
-              className="w-full"
-            >
-              {isRunning === "tiktok" ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Running...
-                </>
-              ) : (
-                <>
-                  <Play className="mr-2 h-4 w-4" />
-                  Run TikTok Scrape
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
+          const descriptions: Record<PlatformId, string> = {
+            instagram: "Scrape all Instagram accounts for new posts and engagement data",
+            tiktok: "Scrape all TikTok accounts for new videos and engagement data",
+            youtube: "Scrape all YouTube channels for new videos and engagement data",
+            facebook: "",
+            linkedin: "",
+            twitter: "",
+          };
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              ▶️ YouTube
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="mb-4 text-sm text-muted-foreground">
-              Scrape all YouTube channels for new videos and engagement data
-            </p>
-            <Button
-              onClick={() => handleScrape("youtube")}
-              disabled={isRunning !== null}
-              className="w-full"
-            >
-              {isRunning === "youtube" ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Running...
-                </>
-              ) : (
-                <>
-                  <Play className="mr-2 h-4 w-4" />
-                  Run YouTube Scrape
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
+          return (
+            <Card key={platform}>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-3 text-lg">
+                  {logoUrl ? (
+                    <img src={logoUrl} alt={displayName} className="h-8 w-8 object-contain" />
+                  ) : (
+                    <span className="text-2xl">{emoji}</span>
+                  )}
+                  {displayName}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="mb-4 text-sm text-muted-foreground">
+                  {descriptions[platform]}
+                </p>
+                <Button
+                  onClick={() => handleScrape(platform)}
+                  disabled={isRunning !== null}
+                  className="w-full text-white"
+                  style={{
+                    backgroundColor: colors.primary,
+                    borderColor: colors.primary,
+                  }}
+                >
+                  {isRunning === platform ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Running...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="mr-2 h-4 w-4" />
+                      Run {displayName} Scrape
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Schedule Settings */}
@@ -287,7 +268,7 @@ function JobsContent() {
         <CardContent>
           <div className="flex flex-wrap items-center gap-3">
             <MultiSelect
-              options={PLATFORM_OPTIONS}
+              options={platformOptions}
               selected={selectedPlatforms}
               onChange={setSelectedPlatforms}
               placeholder="All Platforms"
@@ -334,11 +315,21 @@ function JobsContent() {
                   {getStatusIcon(job.status)}
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-lg">
-                        {getPlatformIcon(job.platform)}
-                      </span>
+                      {(() => {
+                        const logoUrl = getLogoUrl(job.platform as PlatformId, "jobs");
+                        const platformData = allPlatforms?.find(p => p.platformId === job.platform);
+                        const displayName = platformData?.displayName || job.platform.charAt(0).toUpperCase() + job.platform.slice(1);
+                        return logoUrl ? (
+                          <img src={logoUrl} alt={job.platform} className="h-6 w-6 object-contain" />
+                        ) : (
+                          <span className="text-lg">{getEmoji(job.platform as PlatformId)}</span>
+                        );
+                      })()}
                       <span className="font-medium capitalize">
-                        {job.platform} - {job.jobType}
+                        {(() => {
+                          const platformData = allPlatforms?.find(p => p.platformId === job.platform);
+                          return platformData?.displayName || job.platform;
+                        })()} - {job.jobType}
                       </span>
                     </div>
                     <div className="text-sm text-muted-foreground">

@@ -96,9 +96,9 @@ export function CompetitorTable({ data, title = "Competitor Rankings" }: Competi
   const renderPlatformLogo = (platform: string) => {
     const logoUrl = getLogoUrl(platform, "dashboard");
     if (logoUrl) {
-      return <img src={logoUrl} alt={platform} className="h-10 w-10 object-contain" />;
+      return <img src={logoUrl} alt={platform} className="h-[52px] w-[52px] object-contain" />;
     }
-    return <span className="text-2xl">{getPlatformIcon(platform)}</span>;
+    return <span className="text-3xl">{getPlatformIcon(platform)}</span>;
   };
 
   return (
