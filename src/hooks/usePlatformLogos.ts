@@ -25,6 +25,7 @@ interface Platform {
     competitors?: PlatformLogo | null;
     dashboard?: PlatformLogo | null;
     jobs?: PlatformLogo | null;
+    recentJobs?: PlatformLogo | null;
     dropdowns?: PlatformLogo | null;
   };
 }
@@ -49,7 +50,7 @@ const platformColors: Record<PlatformId, { primary: string; secondary: string }>
   twitter: { primary: "#000000", secondary: "#1DA1F2" },
 };
 
-export type LogoContext = "avatar" | "navigation" | "filters" | "posts" | "competitors" | "dashboard" | "jobs" | "dropdowns";
+export type LogoContext = "avatar" | "navigation" | "filters" | "posts" | "competitors" | "dashboard" | "jobs" | "recentJobs" | "dropdowns";
 
 /**
  * Hook to access platform logos and colors throughout the app

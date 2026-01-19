@@ -216,14 +216,14 @@ function JobsContent() {
 
           return (
             <Card key={platform}>
-              <CardHeader className="pb-3">
-                {/* Large horizontal logo for scraper cards - significantly larger */}
-                <div className="flex justify-center items-center h-24 py-2">
+              <CardHeader className="pb-4 pt-6">
+                {/* Large horizontal logo for scraper cards - matching mockup size */}
+                <div className="flex justify-center items-center h-[70px]">
                   {logoUrl ? (
                     <img
                       src={logoUrl}
                       alt={displayName}
-                      className="h-20 w-auto max-w-[280px] object-contain"
+                      className="h-[60px] w-auto max-w-[280px] object-contain"
                     />
                   ) : (
                     <span className="text-7xl">{emoji}</span>
@@ -321,11 +321,12 @@ function JobsContent() {
                   <div>
                     <div className="flex items-center gap-2">
                       {(() => {
-                        const logoUrl = getLogoUrl(job.platform as PlatformId, "jobs");
+                        // Use "recentJobs" context for the job history list (separate from scraper cards)
+                        const logoUrl = getLogoUrl(job.platform as PlatformId, "recentJobs");
                         const platformData = allPlatforms?.find(p => p.platformId === job.platform);
                         const displayName = platformData?.displayName || job.platform.charAt(0).toUpperCase() + job.platform.slice(1);
                         return logoUrl ? (
-                          <img src={logoUrl} alt={job.platform} className="h-6 w-6 object-contain" />
+                          <img src={logoUrl} alt={job.platform} className="h-5 w-auto max-w-[80px] object-contain" />
                         ) : (
                           <span className="text-lg">{getEmoji(job.platform as PlatformId)}</span>
                         );
