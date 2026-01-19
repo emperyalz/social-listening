@@ -214,6 +214,7 @@ export const getCompetitorComparison = query({
             avatarUrl: account.avatarUrl,
             companyName: account.companyName,
             accountType: account.accountType,
+            profileUrl: account.profileUrl,
           },
           market: market?.name,
           followers,
