@@ -7,6 +7,8 @@ import { Button } from "./button";
 interface MultiSelectOption {
   value: string;
   label: string;
+  icon?: string; // URL for logo image
+  emoji?: string; // Fallback emoji
 }
 
 interface MultiSelectProps {
@@ -54,12 +56,23 @@ export function MultiSelect({
     clearSelection();
   };
 
-  const getDisplayText = () => {
-    if (selected.length === 0) return placeholder;
+  const getDisplayContent = () => {
+    if (selected.length === 0) return <span>{placeholder}</span>;
     if (selected.length === 1) {
-      return options.find((opt) => opt.value === selected[0])?.label || placeholder;
+      const option = options.find((opt) => opt.value === selected[0]);
+      if (!option) return <span>{placeholder}</span>;
+      return (
+        <span className="flex items-center gap-2">
+          {option.icon ? (
+            <img src={option.icon} alt="" className="h-4 w-4 object-contain" />
+          ) : option.emoji ? (
+            <span className="text-sm">{option.emoji}</span>
+          ) : null}
+          {option.label}
+        </span>
+      );
     }
-    return `${selected.length} selected`;
+    return <span>{selected.length} selected</span>;
   };
 
   return (
@@ -71,7 +84,7 @@ export function MultiSelect({
           onClick={() => setIsOpen(!isOpen)}
           className="justify-between min-w-[180px] bg-white"
         >
-          <span className="truncate">{getDisplayText()}</span>
+          <span className="truncate">{getDisplayContent()}</span>
           <ChevronDown className="ml-2 h-4 w-4 shrink-0" />
         </Button>
         {selected.length > 0 && (
@@ -122,6 +135,11 @@ export function MultiSelect({
                   >
                     {isSelected && <Check className="h-3 w-3" />}
                   </div>
+                  {option.icon ? (
+                    <img src={option.icon} alt="" className="h-5 w-5 object-contain" />
+                  ) : option.emoji ? (
+                    <span className="text-base">{option.emoji}</span>
+                  ) : null}
                   <span>{option.label}</span>
                 </button>
               );

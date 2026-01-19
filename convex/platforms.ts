@@ -64,6 +64,8 @@ export const list = query({
             posts: getLogoById(platform.logoForPosts),
             competitors: getLogoById(platform.logoForCompetitors),
             dashboard: getLogoById(platform.logoForDashboard),
+            jobs: getLogoById(platform.logoForJobs),
+            dropdowns: getLogoById(platform.logoForDropdowns),
           },
         };
       })
@@ -145,7 +147,9 @@ export const getLogoForContext = query({
       v.literal("filters"),
       v.literal("posts"),
       v.literal("competitors"),
-      v.literal("dashboard")
+      v.literal("dashboard"),
+      v.literal("jobs"),
+      v.literal("dropdowns")
     ),
   },
   handler: async (ctx, args) => {
@@ -163,6 +167,8 @@ export const getLogoForContext = query({
       posts: "logoForPosts",
       competitors: "logoForCompetitors",
       dashboard: "logoForDashboard",
+      jobs: "logoForJobs",
+      dropdowns: "logoForDropdowns",
     };
 
     const logoId = platform[contextFieldMap[args.context]] as Id<"platformLogos"> | undefined;
@@ -251,7 +257,9 @@ export const setLogoForContext = mutation({
       v.literal("filters"),
       v.literal("posts"),
       v.literal("competitors"),
-      v.literal("dashboard")
+      v.literal("dashboard"),
+      v.literal("jobs"),
+      v.literal("dropdowns")
     ),
     logoId: v.union(v.id("platformLogos"), v.null()), // null to clear
   },
@@ -274,6 +282,8 @@ export const setLogoForContext = mutation({
       posts: "logoForPosts",
       competitors: "logoForCompetitors",
       dashboard: "logoForDashboard",
+      jobs: "logoForJobs",
+      dropdowns: "logoForDropdowns",
     };
 
     await ctx.db.patch(args.platformId, {
