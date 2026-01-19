@@ -16,6 +16,7 @@ interface MultiSelectProps {
   selected: string[];
   onChange: (selected: string[]) => void;
   placeholder?: string;
+  logoOnly?: boolean; // When true, show only logos without text labels
 }
 
 export function MultiSelect({
@@ -23,6 +24,7 @@ export function MultiSelect({
   selected,
   onChange,
   placeholder = "Select...",
+  logoOnly = false,
 }: MultiSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -64,11 +66,15 @@ export function MultiSelect({
       return (
         <span className="flex items-center gap-2">
           {option.icon ? (
-            <img src={option.icon} alt="" className="h-4 w-4 object-contain" />
+            <img
+              src={option.icon}
+              alt={option.label}
+              className={logoOnly ? "h-5 w-auto max-w-[100px] object-contain" : "h-4 w-4 object-contain"}
+            />
           ) : option.emoji ? (
             <span className="text-sm">{option.emoji}</span>
           ) : null}
-          {option.label}
+          {!logoOnly && option.label}
         </span>
       );
     }
@@ -136,11 +142,15 @@ export function MultiSelect({
                     {isSelected && <Check className="h-3 w-3" />}
                   </div>
                   {option.icon ? (
-                    <img src={option.icon} alt="" className="h-5 w-5 object-contain" />
+                    <img
+                      src={option.icon}
+                      alt={option.label}
+                      className={logoOnly ? "h-6 w-auto max-w-[120px] object-contain" : "h-5 w-5 object-contain"}
+                    />
                   ) : option.emoji ? (
                     <span className="text-base">{option.emoji}</span>
                   ) : null}
-                  <span>{option.label}</span>
+                  {!logoOnly && <span>{option.label}</span>}
                 </button>
               );
             })}
