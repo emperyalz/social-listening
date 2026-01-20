@@ -64,7 +64,7 @@ export const translations: Translations = {
   "settings.lightMode": { en: "Light Mode", es: "Modo Claro", pt: "Modo Claro" },
   "settings.darkMode": { en: "Dark Mode", es: "Modo Oscuro", pt: "Modo Escuro" },
   "settings.apiConfiguration": { en: "API Configuration", es: "Configuración de API", pt: "Configuração de API" },
-  "settings.scrapingSchedule": { en: "Scraping Schedule", es: "Programación de Scraping", pt: "Agenda­mento de Scraping" },
+  "settings.scrapingSchedule": { en: "Scraping Schedule", es: "Programación de Scraping", pt: "Agendamento de Scraping" },
   "settings.dataRetention": { en: "Data Retention", es: "Retención de Datos", pt: "Retenção de Dados" },
   "settings.dangerZone": { en: "Danger Zone", es: "Zona de Peligro", pt: "Zona de Perigo" },
   
@@ -81,6 +81,15 @@ export const translations: Translations = {
   // Sidebar footer
   "sidebar.realEstateIntelligence": { en: "Real Estate Intelligence", es: "Inteligencia Inmobiliaria", pt: "Inteligência Imobiliária" },
   "sidebar.panamaCityMarket": { en: "Panama City Market", es: "Mercado de Ciudad de Panamá", pt: "Mercado da Cidade do Panamá" },
+};
+
+// Default translation function for SSR
+const defaultT = (key: string): string => {
+  const translation = translations[key];
+  if (!translation) {
+    return key;
+  }
+  return translation.en || key;
 };
 
 interface LanguageContextType {
@@ -128,8 +137,13 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
 export function useLanguage() {
   const context = useContext(LanguageContext);
+  // Return safe defaults if context is undefined (SSR or outside provider)
   if (context === undefined) {
-    throw new Error("useLanguage must be used within a LanguageProvider");
+    return {
+      language: "en" as Language,
+      setLanguage: () => {},
+      t: defaultT,
+    };
   }
   return context;
 }
