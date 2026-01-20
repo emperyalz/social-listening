@@ -216,23 +216,19 @@ function JobsContent() {
 
           return (
             <Card key={platform}>
-              <CardHeader className="pb-4 pt-8">
-                {/* Large horizontal logo for scraper cards - contained within card */}
-                <div className="flex justify-center items-center" style={{ height: '100px', overflow: 'hidden' }}>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2">
                   {logoUrl ? (
                     <img
                       src={logoUrl}
                       alt={displayName}
-                      style={{
-                        height: '80px',
-                        maxWidth: '200px',
-                        objectFit: 'contain'
-                      }}
+                      className="h-6 w-auto object-contain"
                     />
                   ) : (
-                    <span style={{ fontSize: '72px', lineHeight: 1 }}>{emoji}</span>
+                    <span className="text-xl">{emoji}</span>
                   )}
-                </div>
+                  {displayName}
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="mb-4 text-sm text-muted-foreground text-center">
