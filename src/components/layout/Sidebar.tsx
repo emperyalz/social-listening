@@ -20,6 +20,7 @@ import {
   Heart,
   Zap,
   UserCircle,
+  FolderKanban,
 } from "lucide-react";
 
 const navigation = [
@@ -54,6 +55,7 @@ const navigation = [
       { name: "Markets", href: "/markets", icon: Building2 },
       { name: "Jobs", href: "/jobs", icon: Activity },
       { name: "Platforms", href: "/platforms", icon: Palette },
+      { name: "Projects", href: "/projects", icon: FolderKanban },
       { name: "Profile", href: "/profile", icon: UserCircle },
       { name: "Settings", href: "/settings", icon: Settings },
     ]
