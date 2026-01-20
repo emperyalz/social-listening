@@ -331,7 +331,7 @@ export const getAudienceSentiment = query({
     }> = {};
     
     commentSentiments.forEach((comment) => {
-      const username = comment.username || "Anonymous";
+      const username = comment.authorUsername || "Anonymous";
       if (!commenterStats[username]) {
         commenterStats[username] = { 
           username, 
@@ -367,7 +367,7 @@ export const getAudienceSentiment = query({
       .slice(0, 10)
       .map((c) => ({
         text: c.text.slice(0, 200),
-        username: c.username,
+        username: c.authorUsername,
         postedAt: c.postedAt,
         likes: c.likesCount || 0,
       }));
@@ -378,7 +378,7 @@ export const getAudienceSentiment = query({
       .slice(0, 10)
       .map((c) => ({
         text: c.text.slice(0, 200),
-        username: c.username,
+        username: c.authorUsername,
         postedAt: c.postedAt,
         sentiment: c.sentiment.label,
       }));
@@ -390,7 +390,7 @@ export const getAudienceSentiment = query({
       .slice(0, 10)
       .map((c) => ({
         text: c.text.slice(0, 200),
-        username: c.username,
+        username: c.authorUsername,
         postedAt: c.postedAt,
         likes: c.likesCount || 0,
         negativeWords: c.sentiment.negativeWords,
