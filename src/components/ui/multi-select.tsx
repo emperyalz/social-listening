@@ -70,11 +70,11 @@ export function MultiSelect({
               src={option.icon}
               alt={option.label}
               style={logoOnly
-                ? { transform: 'scale(2)', transformOrigin: 'left center' }
+                ? { height: '40px', maxWidth: '140px', objectFit: 'contain' }
                 : { height: '16px', width: '16px', objectFit: 'contain' }}
             />
           ) : option.emoji ? (
-            <span style={logoOnly ? { fontSize: '48px' } : { fontSize: '14px' }}>{option.emoji}</span>
+            <span style={logoOnly ? { fontSize: '32px' } : { fontSize: '14px' }}>{option.emoji}</span>
           ) : null}
           {!logoOnly && option.label}
         </span>
@@ -91,7 +91,7 @@ export function MultiSelect({
           variant="outline"
           onClick={() => setIsOpen(!isOpen)}
           className="justify-between bg-white"
-          style={logoOnly ? { minWidth: '280px', height: '80px', padding: '12px 16px' } : { minWidth: '180px' }}
+          style={logoOnly ? { minWidth: '200px', height: '56px', padding: '8px 12px' } : { minWidth: '180px' }}
         >
           <span className="truncate">{getDisplayContent()}</span>
           <ChevronDown className="ml-2 h-4 w-4 shrink-0" />
@@ -102,7 +102,7 @@ export function MultiSelect({
             size="icon"
             onClick={clearIndividual}
             className="text-muted-foreground hover:text-foreground"
-            style={logoOnly ? { height: '80px', width: '48px' } : { height: '40px', width: '40px' }}
+            style={logoOnly ? { height: '56px', width: '40px' } : { height: '40px', width: '40px' }}
           >
             <X className="h-4 w-4" />
           </Button>
@@ -113,9 +113,9 @@ export function MultiSelect({
       {isOpen && (
         <div
           className="absolute z-50 mt-2 rounded-md border border-gray-200 bg-white shadow-lg"
-          style={logoOnly ? { minWidth: '320px' } : { width: '100%', minWidth: '240px' }}
+          style={logoOnly ? { minWidth: '240px' } : { width: '100%', minWidth: '240px' }}
         >
-          <div className="overflow-y-auto bg-white" style={{ maxHeight: '600px', padding: '12px' }}>
+          <div className="overflow-y-auto bg-white" style={{ maxHeight: '400px', padding: '8px' }}>
             {/* Clear Selection Option */}
             {selected.length > 0 && (
               <>
@@ -130,7 +130,7 @@ export function MultiSelect({
               </>
             )}
 
-            {/* Options - MASSIVE LOGOS */}
+            {/* Options with logos */}
             {options.map((option) => {
               const isSelected = selected.includes(option.value);
               return (
@@ -138,28 +138,28 @@ export function MultiSelect({
                   key={option.value}
                   onClick={() => toggleOption(option.value)}
                   className="w-full flex items-center rounded-sm bg-white hover:bg-gray-100"
-                  style={logoOnly ? { padding: '20px 16px', gap: '16px' } : { padding: '6px 8px', gap: '8px', fontSize: '14px' }}
+                  style={logoOnly ? { padding: '12px 10px', gap: '12px' } : { padding: '6px 8px', gap: '8px', fontSize: '14px' }}
                 >
                   <div
                     className="flex items-center justify-center rounded border shrink-0"
                     style={{
-                      width: logoOnly ? '28px' : '16px',
-                      height: logoOnly ? '28px' : '16px',
+                      width: logoOnly ? '20px' : '16px',
+                      height: logoOnly ? '20px' : '16px',
                       ...(isSelected ? { borderColor: 'hsl(var(--primary))', backgroundColor: 'hsl(var(--primary))', color: 'white' } : { borderColor: '#d1d5db', backgroundColor: 'white' })
                     }}
                   >
-                    {isSelected && <Check style={{ width: logoOnly ? '20px' : '12px', height: logoOnly ? '20px' : '12px' }} />}
+                    {isSelected && <Check style={{ width: logoOnly ? '14px' : '12px', height: logoOnly ? '14px' : '12px' }} />}
                   </div>
                   {option.icon ? (
                     <img
                       src={option.icon}
                       alt={option.label}
                       style={logoOnly
-                        ? { transform: 'scale(2.5)', transformOrigin: 'left center', marginRight: '60px' }
+                        ? { height: '36px', maxWidth: '120px', objectFit: 'contain' }
                         : { height: '20px', width: '20px', objectFit: 'contain' }}
                     />
                   ) : option.emoji ? (
-                    <span style={{ fontSize: logoOnly ? '55px' : '16px' }}>{option.emoji}</span>
+                    <span style={{ fontSize: logoOnly ? '28px' : '16px' }}>{option.emoji}</span>
                   ) : null}
                   {!logoOnly && <span>{option.label}</span>}
                 </button>
