@@ -12,17 +12,49 @@ import {
   Activity,
   Building2,
   Palette,
+  Target,
+  DollarSign,
+  Mic2,
+  FlaskConical,
+  Heart,
+  Zap,
 } from "lucide-react";
 
 const navigation = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Competitors", href: "/competitors", icon: Users },
-  { name: "Insights", href: "/insights", icon: TrendingUp },
-  { name: "Posts", href: "/posts", icon: FileText },
-  { name: "Markets", href: "/markets", icon: Building2 },
-  { name: "Jobs", href: "/jobs", icon: Activity },
-  { name: "Platforms", href: "/platforms", icon: Palette },
-  { name: "Settings", href: "/settings", icon: Settings },
+  { 
+    name: "Overview", 
+    items: [
+      { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+      { name: "Command Center", href: "/command-center", icon: Zap },
+    ]
+  },
+  {
+    name: "Intelligence Modules",
+    items: [
+      { name: "Commercial Intent", href: "/commercial-intent", icon: DollarSign },
+      { name: "Resonance Audit", href: "/resonance-audit", icon: Target },
+      { name: "Brand Voice", href: "/brand-voice", icon: Mic2 },
+      { name: "Content Engineering", href: "/content-engineering", icon: FlaskConical },
+      { name: "Audience Sentiment", href: "/audience-sentiment", icon: Heart },
+    ]
+  },
+  {
+    name: "Data & Analysis",
+    items: [
+      { name: "Competitors", href: "/competitors", icon: Users },
+      { name: "Insights", href: "/insights", icon: TrendingUp },
+      { name: "Posts", href: "/posts", icon: FileText },
+    ]
+  },
+  {
+    name: "Configuration",
+    items: [
+      { name: "Markets", href: "/markets", icon: Building2 },
+      { name: "Jobs", href: "/jobs", icon: Activity },
+      { name: "Platforms", href: "/platforms", icon: Palette },
+      { name: "Settings", href: "/settings", icon: Settings },
+    ]
+  },
 ];
 
 export function Sidebar() {
@@ -38,25 +70,34 @@ export function Sidebar() {
           <span className="text-lg font-semibold">SocialListen</span>
         </Link>
       </div>
-      <nav className="flex-1 space-y-1 p-4">
-        {navigation.map((item) => {
-          const isActive = pathname.startsWith(item.href);
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )}
-            >
-              <item.icon className="h-5 w-5" />
-              {item.name}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 space-y-6 overflow-y-auto p-4">
+        {navigation.map((section) => (
+          <div key={section.name}>
+            <h3 className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {section.name}
+            </h3>
+            <div className="space-y-1">
+              {section.items.map((item) => {
+                const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                      isActive
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    {item.name}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
       <div className="border-t p-4">
         <div className="rounded-lg bg-muted p-4">
