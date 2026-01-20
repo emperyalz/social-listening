@@ -19,6 +19,7 @@ import {
   FlaskConical,
   Heart,
   Zap,
+  UserCircle,
 } from "lucide-react";
 
 const navigation = [
@@ -53,6 +54,7 @@ const navigation = [
       { name: "Markets", href: "/markets", icon: Building2 },
       { name: "Jobs", href: "/jobs", icon: Activity },
       { name: "Platforms", href: "/platforms", icon: Palette },
+      { name: "Profile", href: "/profile", icon: UserCircle },
       { name: "Settings", href: "/settings", icon: Settings },
     ]
   },
@@ -91,8 +93,8 @@ export function Sidebar() {
                     className={cn(
                       "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                       isActive
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        ? "bg-[#28A963] text-white"
+                        : "text-muted-foreground hover:bg-[#28A963]/10 hover:text-[#28A963]"
                     )}
                   >
                     <item.icon className="h-4 w-4" />
