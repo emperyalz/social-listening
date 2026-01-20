@@ -21,7 +21,7 @@ const CONTENT_FORMATS = {
 };
 
 // Common emojis for detection (without unicode flag)
-const COMMON_EMOJIS = ["😀", "😃", "😄", "😁", "😊", "🙂", "😍", "🥰", "😘", "🤩", "🔥", "❤️", "💕", "✨", "💯", "👏", "🙌", "👍", "👎", "🎉", "🎊", "💪", "🏠", "🏡", "🌴", "🌊", "☀️", "🌅", "📸", "🎥", "📹", "▶️", "👆", "👉", "👇", "👈", "⬆️", "➡️", "⬇️", "⬅️", "🔗", "📍", "📌", "💰", "💵", "🏆", "⭐", "🌟", "✅", "❌", "⚠️", "📢", "🔔", "💡", "🎯", "🚀", "💎", "🔑", "🏖️", "🌺", "🌸"];
+const COMMON_EMOJIS = ["😀", "😃", "😄", "😁", "😊", "🙂", "😍", "🥰", "😘", "🤩", "🔥", "❤️", "💕", "✨", "💯", "👏", "🙌", "👍", "👎", "��", "🎊", "💪", "🏠", "🏡", "🌴", "🌊", "☀️", "🌅", "📸", "🎥", "📹", "▶️", "👆", "👉", "👇", "👈", "⬆️", "➡️", "⬇️", "⬅️", "🔗", "📍", "📌", "💰", "💵", "🏆", "⭐", "🌟", "✅", "❌", "⚠️", "📢", "🔔", "💡", "🎯", "🚀", "💎", "🔑", "🏖️", "🌺", "🌸"];
 
 // Hook patterns - avoid /u flag for ES5 compatibility
 const HOOK_PATTERNS = {
@@ -36,7 +36,6 @@ const HOOK_PATTERNS = {
 
 // Check if caption starts with an emoji
 function startsWithEmoji(text: string): boolean {
-  const firstChar = text.trim().charAt(0);
   return COMMON_EMOJIS.some((emoji) => text.trim().startsWith(emoji));
 }
 
@@ -193,14 +192,23 @@ export const getContentAnalysis = query({
         const account = accountMap.get(post.accountId);
         const engagement = (snapshot?.likesCount || 0) + (snapshot?.commentsCount || 0);
         
+        // Get account snapshot for follower count
+        const accountSnapshot = account ? await ctx.db
+          .query("accountSnapshots")
+          .withIndex("by_account", (q) => q.eq("accountId", account._id))
+          .order("desc")
+          .first() : null;
+        
+        const followerCount = accountSnapshot?.followersCount || 0;
+        
         return {
           ...post,
           account,
           likes: snapshot?.likesCount || 0,
           comments: snapshot?.commentsCount || 0,
           engagement,
-          engagementRate: account?.followerCount 
-            ? ((engagement / account.followerCount) * 100).toFixed(2)
+          engagementRate: followerCount > 0
+            ? ((engagement / followerCount) * 100).toFixed(2)
             : "0",
         };
       })
