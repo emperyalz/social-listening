@@ -20,17 +20,25 @@ const CONTENT_FORMATS = {
   storytelling: ["story", "journey", "experience", "adventure", "remember", "once upon"],
 };
 
-// Hook patterns
+// Common emojis for detection (without unicode flag)
+const COMMON_EMOJIS = ["😀", "😃", "😄", "😁", "😊", "🙂", "😍", "🥰", "😘", "🤩", "🔥", "❤️", "💕", "✨", "💯", "👏", "🙌", "👍", "👎", "🎉", "🎊", "💪", "🏠", "🏡", "🌴", "🌊", "☀️", "🌅", "📸", "🎥", "📹", "▶️", "👆", "👉", "👇", "👈", "⬆️", "➡️", "⬇️", "⬅️", "🔗", "📍", "📌", "💰", "💵", "🏆", "⭐", "🌟", "✅", "❌", "⚠️", "📢", "🔔", "💡", "🎯", "🚀", "💎", "🔑", "🏖️", "🌺", "🌸"];
+
+// Hook patterns - avoid /u flag for ES5 compatibility
 const HOOK_PATTERNS = {
   question: { regex: /^[^.!]*\?/, weight: 1.2, label: "Opens with Question" },
   number: { regex: /^[\d]+|^(one|two|three|four|five|six|seven|eight|nine|ten)/i, weight: 1.1, label: "Number Hook" },
   how: { regex: /^how\s/i, weight: 1.15, label: "How-to Hook" },
   why: { regex: /^why\s/i, weight: 1.1, label: "Why Hook" },
   this: { regex: /^this\s/i, weight: 1.05, label: "This Hook" },
-  emoji: { regex: /^[\u{1F300}-\u{1F9FF}]/u, weight: 1.0, label: "Emoji Lead" },
   urgent: { regex: /^(stop|wait|breaking|urgent|important)/i, weight: 1.25, label: "Urgency Hook" },
   personal: { regex: /^(i|my|we|our)\s/i, weight: 1.1, label: "Personal Hook" },
 };
+
+// Check if caption starts with an emoji
+function startsWithEmoji(text: string): boolean {
+  const firstChar = text.trim().charAt(0);
+  return COMMON_EMOJIS.some((emoji) => text.trim().startsWith(emoji));
+}
 
 // CTA patterns
 const CTA_PATTERNS = [
@@ -47,6 +55,16 @@ const CTA_PATTERNS = [
   { pattern: "subscribe", label: "Subscribe CTA" },
   { pattern: "book", label: "Booking CTA" },
 ];
+
+// Count emojis without unicode flag
+function countEmojis(text: string): number {
+  let count = 0;
+  for (const emoji of COMMON_EMOJIS) {
+    const matches = text.split(emoji).length - 1;
+    count += matches;
+  }
+  return count;
+}
 
 // Analyze content structure
 function analyzeContentStructure(caption: string): {
@@ -77,11 +95,19 @@ function analyzeContentStructure(caption: string): {
   // Detect hook type
   let hookType: string | null = null;
   let hookStrength = 1.0;
-  for (const [type, config] of Object.entries(HOOK_PATTERNS)) {
-    if (config.regex.test(caption.trim())) {
-      hookType = config.label;
-      hookStrength = config.weight;
-      break;
+  
+  // Check for emoji lead first
+  if (startsWithEmoji(caption)) {
+    hookType = "Emoji Lead";
+    hookStrength = 1.0;
+  } else {
+    // Check other hook patterns
+    for (const [, config] of Object.entries(HOOK_PATTERNS)) {
+      if (config.regex.test(caption.trim())) {
+        hookType = config.label;
+        hookStrength = config.weight;
+        break;
+      }
     }
   }
   
@@ -96,7 +122,7 @@ function analyzeContentStructure(caption: string): {
   // Count elements
   const hashtagCount = (caption.match(/#\w+/g) || []).length;
   const mentionCount = (caption.match(/@\w+/g) || []).length;
-  const emojiCount = (caption.match(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu) || []).length;
+  const emojiCount = countEmojis(caption);
   const wordCount = caption.split(/\s+/).filter((w) => w.length > 0).length;
   const lineCount = caption.split(/\n/).filter((l) => l.trim().length > 0).length;
   const hasListFormat = /(\n[-•*]|\n\d+\.)/.test(caption);
