@@ -69,7 +69,9 @@ export function MultiSelect({
             <img
               src={option.icon}
               alt={option.label}
-              style={logoOnly ? { height: '50px', width: 'auto', maxWidth: '220px', objectFit: 'contain' } : { height: '16px', width: '16px', objectFit: 'contain' }}
+              style={logoOnly
+                ? { transform: 'scale(2)', transformOrigin: 'left center' }
+                : { height: '16px', width: '16px', objectFit: 'contain' }}
             />
           ) : option.emoji ? (
             <span style={logoOnly ? { fontSize: '48px' } : { fontSize: '14px' }}>{option.emoji}</span>
@@ -152,7 +154,9 @@ export function MultiSelect({
                     <img
                       src={option.icon}
                       alt={option.label}
-                      style={logoOnly ? { height: '55px', width: 'auto', maxWidth: '240px', objectFit: 'contain' } : { height: '20px', width: '20px', objectFit: 'contain' }}
+                      style={logoOnly
+                        ? { transform: 'scale(2.5)', transformOrigin: 'left center', marginRight: '60px' }
+                        : { height: '20px', width: '20px', objectFit: 'contain' }}
                     />
                   ) : option.emoji ? (
                     <span style={{ fontSize: logoOnly ? '55px' : '16px' }}>{option.emoji}</span>
