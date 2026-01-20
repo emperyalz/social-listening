@@ -114,7 +114,7 @@ function AlignmentScoreHero({
   return (
     <GlassCard
       className="p-8"
-      gradient={`linear-gradient(135deg, ${score >= 80 ? 'rgba(16, 185, 129, 0.15)' : score >= 60 ? 'rgba(245, 158, 11, 0.15)' : 'rgba(239, 68, 68, 0.15)'} 0%, rgba(15, 23, 42, 0.9) 50%)`}
+      gradient={`linear-gradient(135deg, ${overallScore >= 80 ? 'rgba(16, 185, 129, 0.15)' : overallScore >= 60 ? 'rgba(245, 158, 11, 0.15)' : 'rgba(239, 68, 68, 0.15)'} 0%, rgba(15, 23, 42, 0.9) 50%)`}
     >
       <div className="flex items-start justify-between">
         <div>
