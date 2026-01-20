@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
@@ -62,12 +63,16 @@ export function Sidebar() {
 
   return (
     <div className="flex h-screen w-64 flex-col border-r bg-card">
-      <div className="flex h-16 items-center border-b px-6">
+      <div className="flex h-16 items-center border-b px-4">
         <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            📊
-          </div>
-          <span className="text-lg font-semibold">SocialListen</span>
+          <Image
+            src="/ascoltare-logo.svg"
+            alt="Ascoltare"
+            width={180}
+            height={40}
+            className="h-10 w-auto"
+            priority
+          />
         </Link>
       </div>
       <nav className="flex-1 space-y-6 overflow-y-auto p-4">
