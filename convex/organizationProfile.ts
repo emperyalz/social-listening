@@ -34,11 +34,50 @@ export const getOrganizationProfile = query({
         )
       : [];
 
+    // Get full competitor data for selected global competitors
+    const selectedCompetitorIds = profile.selectedCompetitorIds || [];
+    const selectedCompetitors = await Promise.all(
+      selectedCompetitorIds.map(async (competitorId) => {
+        const competitor = await ctx.db.get(competitorId);
+        if (!competitor) return null;
+
+        // Get market info
+        const market = await ctx.db.get(competitor.marketId);
+
+        // Get linked accounts
+        const accounts = await ctx.db
+          .query("accounts")
+          .withIndex("by_competitor", (q) => q.eq("competitorId", competitor._id))
+          .collect();
+
+        // Get display avatar URL
+        let displayAvatarUrl: string | undefined;
+        if (competitor.displayAvatarAccountId) {
+          const selectedAccount = accounts.find(a => a._id === competitor.displayAvatarAccountId);
+          displayAvatarUrl = selectedAccount?.avatarUrl;
+        } else if (accounts.length > 0) {
+          const accountWithAvatar = accounts.find(a => a.avatarUrl);
+          displayAvatarUrl = accountWithAvatar?.avatarUrl;
+        }
+
+        return {
+          ...competitor,
+          market,
+          accounts,
+          displayAvatarUrl,
+        };
+      })
+    );
+
+    // Filter out null values (deleted competitors)
+    const validCompetitors = selectedCompetitors.filter(c => c !== null);
+
     return {
       ...profile,
       avatarUrl,
       bannerUrl,
       brandDocuments: brandDocumentsWithUrls,
+      selectedCompetitors: validCompetitors,
     };
   },
 });
@@ -68,26 +107,12 @@ export const saveOrganizationProfile = mutation({
         })
       )
     ),
-    globalCompetitors: v.optional(
-      v.array(
-        v.object({
-          name: v.string(),
-          platforms: v.array(
-            v.union(
-              v.literal("instagram"),
-              v.literal("youtube"),
-              v.literal("tiktok")
-            )
-          ),
-        })
-      )
-    ),
   },
   handler: async (ctx, args) => {
     const existingProfile = await ctx.db.query("organizationProfile").first();
 
     if (existingProfile) {
-      // Update existing profile
+      // Update existing profile (don't overwrite selectedCompetitorIds)
       await ctx.db.patch(existingProfile._id, {
         ...args,
         updatedAt: Date.now(),
@@ -101,6 +126,66 @@ export const saveOrganizationProfile = mutation({
         updatedAt: Date.now(),
       });
       return profileId;
+    }
+  },
+});
+
+// Add a competitor to the selected global competitors
+export const addGlobalCompetitor = mutation({
+  args: {
+    competitorId: v.id("competitors"),
+  },
+  handler: async (ctx, args) => {
+    const existingProfile = await ctx.db.query("organizationProfile").first();
+
+    if (existingProfile) {
+      const currentIds = existingProfile.selectedCompetitorIds || [];
+
+      // Don't add duplicates
+      if (currentIds.includes(args.competitorId)) {
+        return existingProfile._id;
+      }
+
+      // Limit to 5 global competitors
+      if (currentIds.length >= 5) {
+        throw new Error("Maximum of 5 global competitors allowed");
+      }
+
+      await ctx.db.patch(existingProfile._id, {
+        selectedCompetitorIds: [...currentIds, args.competitorId],
+        updatedAt: Date.now(),
+      });
+      return existingProfile._id;
+    } else {
+      // Create new profile with competitor
+      const profileId = await ctx.db.insert("organizationProfile", {
+        companyName: "",
+        selectedCompetitorIds: [args.competitorId],
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      return profileId;
+    }
+  },
+});
+
+// Remove a competitor from the selected global competitors
+export const removeGlobalCompetitor = mutation({
+  args: {
+    competitorId: v.id("competitors"),
+  },
+  handler: async (ctx, args) => {
+    const existingProfile = await ctx.db.query("organizationProfile").first();
+
+    if (existingProfile && existingProfile.selectedCompetitorIds) {
+      const updatedIds = existingProfile.selectedCompetitorIds.filter(
+        (id) => id !== args.competitorId
+      );
+
+      await ctx.db.patch(existingProfile._id, {
+        selectedCompetitorIds: updatedIds,
+        updatedAt: Date.now(),
+      });
     }
   },
 });
