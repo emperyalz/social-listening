@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import { useTheme } from "@/context/ThemeContext";
 import {
   BarChart,
   Bar,
@@ -69,23 +70,30 @@ interface GlassCardProps {
 }
 
 function GlassCard({ children, className = "", gradient }: GlassCardProps) {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
+  const defaultGradient = isDark
+    ? "radial-gradient(ellipse at top left, rgba(6, 182, 212, 0.1) 0%, transparent 50%)"
+    : "radial-gradient(ellipse at top left, rgba(6, 182, 212, 0.08) 0%, transparent 50%)";
+
   return (
     <div
       className={`
         relative overflow-hidden rounded-2xl
-        border border-slate-700/50
-        shadow-xl shadow-black/20
+        border border-border
+        shadow-xl
+        bg-card
         ${className}
       `}
       style={{
-        background: gradient || "linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.6) 100%)",
         backdropFilter: "blur(12px)",
       }}
     >
       <div
         className="absolute inset-0 opacity-30 pointer-events-none"
         style={{
-          background: "radial-gradient(ellipse at top left, rgba(6, 182, 212, 0.1) 0%, transparent 50%)",
+          background: gradient || defaultGradient,
         }}
       />
       <div className="relative z-10">{children}</div>
@@ -113,9 +121,9 @@ function SentimentScoreHero({
   negativePercent,
 }: SentimentHeroProps) {
   const getScoreColor = (s: number) => {
-    if (s >= 60) return "text-emerald-400";
-    if (s >= 40) return "text-amber-400";
-    return "text-red-400";
+    if (s >= 60) return "text-emerald-500";
+    if (s >= 40) return "text-amber-500";
+    return "text-red-500";
   };
 
   const getGradient = (s: number) => {
@@ -127,7 +135,7 @@ function SentimentScoreHero({
   return (
     <GlassCard
       className="p-8"
-      gradient={`linear-gradient(135deg, ${getGradient(score)} 0%, rgba(15, 23, 42, 0.9) 50%)`}
+      gradient={`radial-gradient(ellipse at top left, ${getGradient(score)} 0%, transparent 50%)`}
     >
       <div className="flex items-start justify-between">
         <div>
@@ -140,28 +148,28 @@ function SentimentScoreHero({
           <div className={`text-6xl font-bold ${getScoreColor(score)} mb-2`}>
             {score}
           </div>
-          <p className="text-slate-400 text-sm mb-6">
+          <p className="text-muted-foreground text-sm mb-6">
             Overall sentiment score from {formatNumber(totalComments)} comments
           </p>
-          
+
           <div className="grid grid-cols-3 gap-6">
             <div>
-              <span className="text-slate-400 block text-sm">Mood</span>
+              <span className="text-muted-foreground block text-sm">Mood</span>
               <span className={`font-bold text-xl ${getScoreColor(score)}`}>{label}</span>
             </div>
             <div>
-              <span className="text-slate-400 block text-sm">Positive</span>
-              <span className="font-bold text-xl text-emerald-400">{positivePercent}%</span>
+              <span className="text-muted-foreground block text-sm">Positive</span>
+              <span className="font-bold text-xl text-emerald-500">{positivePercent}%</span>
             </div>
             <div>
-              <span className="text-slate-400 block text-sm">Negative</span>
-              <span className="font-bold text-xl text-red-400">{negativePercent}%</span>
+              <span className="text-muted-foreground block text-sm">Negative</span>
+              <span className="font-bold text-xl text-red-500">{negativePercent}%</span>
             </div>
           </div>
         </div>
-        
+
         <div className="relative">
-          <div className="w-32 h-32 rounded-full border-4 border-slate-700 flex items-center justify-center relative">
+          <div className="w-32 h-32 rounded-full border-4 border-border flex items-center justify-center relative">
             <svg className="absolute inset-0 w-full h-full -rotate-90">
               <circle
                 cx="64"
@@ -170,7 +178,7 @@ function SentimentScoreHero({
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="8"
-                className="text-slate-800"
+                className="text-muted"
               />
               <circle
                 cx="64"
@@ -205,6 +213,9 @@ interface SentimentDistribution {
 }
 
 function SentimentDistributionChart({ data }: { data: SentimentDistribution }) {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
   const pieData = [
     { name: "Positive", value: data.positive.count, color: SENTIMENT_COLORS.positive },
     { name: "Neutral", value: data.neutral.count, color: SENTIMENT_COLORS.neutral },
@@ -213,11 +224,11 @@ function SentimentDistributionChart({ data }: { data: SentimentDistribution }) {
 
   return (
     <GlassCard className="p-6">
-      <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+      <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
         <span className="text-cyan-400">🎭</span>
         SENTIMENT DISTRIBUTION
       </h3>
-      
+
       <div className="h-[200px]">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
@@ -236,31 +247,32 @@ function SentimentDistributionChart({ data }: { data: SentimentDistribution }) {
             </Pie>
             <Tooltip
               contentStyle={{
-                backgroundColor: "rgba(15, 23, 42, 0.95)",
-                border: "1px solid rgba(71, 85, 105, 0.5)",
+                backgroundColor: isDark ? "rgba(15, 23, 42, 0.95)" : "rgba(255, 255, 255, 0.95)",
+                border: isDark ? "1px solid rgba(71, 85, 105, 0.5)" : "1px solid rgba(226, 232, 240, 0.8)",
                 borderRadius: "12px",
+                color: isDark ? "#fff" : "#1e293b",
               }}
               formatter={(value: number, name: string) => [formatNumber(value), name]}
             />
           </PieChart>
         </ResponsiveContainer>
       </div>
-      
+
       <div className="grid grid-cols-3 gap-4 mt-4">
         <div className="text-center">
           <div className="w-3 h-3 rounded bg-emerald-500 mx-auto mb-1" />
-          <span className="text-emerald-400 font-bold">{data.positive.percentage}%</span>
-          <span className="text-slate-500 text-xs block">Positive</span>
+          <span className="text-emerald-500 font-bold">{data.positive.percentage}%</span>
+          <span className="text-muted-foreground text-xs block">Positive</span>
         </div>
         <div className="text-center">
           <div className="w-3 h-3 rounded bg-slate-500 mx-auto mb-1" />
-          <span className="text-slate-400 font-bold">{data.neutral.percentage}%</span>
-          <span className="text-slate-500 text-xs block">Neutral</span>
+          <span className="text-muted-foreground font-bold">{data.neutral.percentage}%</span>
+          <span className="text-muted-foreground text-xs block">Neutral</span>
         </div>
         <div className="text-center">
           <div className="w-3 h-3 rounded bg-red-500 mx-auto mb-1" />
-          <span className="text-red-400 font-bold">{data.negative.percentage}%</span>
-          <span className="text-slate-500 text-xs block">Negative</span>
+          <span className="text-red-500 font-bold">{data.negative.percentage}%</span>
+          <span className="text-muted-foreground text-xs block">Negative</span>
         </div>
       </div>
     </GlassCard>
@@ -283,25 +295,25 @@ function EngagementBreakdown({ data }: { data: EngagementType[] }) {
 
   return (
     <GlassCard className="p-6">
-      <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+      <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
         <span className="text-violet-400">💬</span>
         ENGAGEMENT TYPES
       </h3>
-      
+
       <div className="space-y-4">
         {data.slice(0, 7).map((item) => (
           <div key={item.type}>
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
                 <span>{ENGAGEMENT_TYPE_EMOJI[item.type] || "💬"}</span>
-                <span className="text-white font-medium capitalize">{item.type}</span>
+                <span className="text-foreground font-medium capitalize">{item.type}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-violet-400 font-medium">{item.percentage}%</span>
-                <span className="text-slate-500 text-sm">({formatNumber(item.count)})</span>
+                <span className="text-muted-foreground text-sm">({formatNumber(item.count)})</span>
               </div>
             </div>
-            <div className="h-2 bg-slate-800/50 rounded-full overflow-hidden">
+            <div className="h-2 bg-muted/50 rounded-full overflow-hidden">
               <div
                 className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-violet-500 to-purple-500"
                 style={{ width: `${(item.count / maxCount) * 100}%` }}
@@ -330,28 +342,28 @@ function TopSentimentWords({ data }: { data: SentimentWord[] }) {
 
   return (
     <GlassCard className="p-6">
-      <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+      <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
         <span className="text-amber-400">🔤</span>
         TOP SENTIMENT WORDS
       </h3>
-      
+
       <div className="grid grid-cols-2 gap-6">
         <div>
-          <h4 className="text-emerald-400 text-sm font-medium mb-3 flex items-center gap-1">
+          <h4 className="text-emerald-500 text-sm font-medium mb-3 flex items-center gap-1">
             <span>😊</span> Positive
           </h4>
           <div className="flex flex-wrap gap-2">
             {positiveWords.map((word) => (
               <span
                 key={word.word}
-                className="px-3 py-1 bg-emerald-500/20 text-emerald-300 rounded-full text-sm"
+                className="px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-full text-sm"
               >
                 {word.word} <span className="text-emerald-500">({word.count})</span>
               </span>
             ))}
           </div>
         </div>
-        
+
         <div>
           <h4 className="text-red-400 text-sm font-medium mb-3 flex items-center gap-1">
             <span>😔</span> Negative
@@ -360,7 +372,7 @@ function TopSentimentWords({ data }: { data: SentimentWord[] }) {
             {negativeWords.map((word) => (
               <span
                 key={word.word}
-                className="px-3 py-1 bg-red-500/20 text-red-300 rounded-full text-sm"
+                className="px-3 py-1 bg-red-500/20 text-red-400 rounded-full text-sm"
               >
                 {word.word} <span className="text-red-500">({word.count})</span>
               </span>
@@ -393,28 +405,28 @@ function PlatformSentimentChart({ data }: { data: PlatformSentiment[] }) {
 
   return (
     <GlassCard className="p-6">
-      <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+      <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
         <span className="text-indigo-400">📱</span>
         SENTIMENT BY PLATFORM
       </h3>
-      
+
       {data.length === 0 ? (
-        <div className="text-center py-8 text-slate-500">
+        <div className="text-center py-8 text-muted-foreground">
           <p>No platform data available</p>
         </div>
       ) : (
         <div className="space-y-4">
           {data.map((platform) => (
-            <div key={platform.platform} className="p-4 bg-slate-800/30 rounded-xl">
+            <div key={platform.platform} className="p-4 bg-muted/30 rounded-xl">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <span className="text-2xl">{platformEmoji[platform.platform] || "📱"}</span>
-                  <span className="text-white font-medium capitalize">{platform.platform}</span>
+                  <span className="text-foreground font-medium capitalize">{platform.platform}</span>
                 </div>
-                <span className="text-slate-400 text-sm">{formatNumber(platform.total)} comments</span>
+                <span className="text-muted-foreground text-sm">{formatNumber(platform.total)} comments</span>
               </div>
-              
-              <div className="h-4 bg-slate-800/50 rounded-full overflow-hidden flex">
+
+              <div className="h-4 bg-muted/50 rounded-full overflow-hidden flex">
                 <div
                   className="h-full bg-emerald-500 transition-all"
                   style={{ width: `${platform.positive}%` }}
@@ -428,11 +440,11 @@ function PlatformSentimentChart({ data }: { data: PlatformSentiment[] }) {
                   style={{ width: `${platform.negative}%` }}
                 />
               </div>
-              
+
               <div className="flex justify-between mt-2 text-xs">
-                <span className="text-emerald-400">{platform.positive}% 👍</span>
-                <span className="text-slate-400">{platform.neutral}% 😐</span>
-                <span className="text-red-400">{platform.negative}% 👎</span>
+                <span className="text-emerald-500">{platform.positive}% 👍</span>
+                <span className="text-muted-foreground">{platform.neutral}% 😐</span>
+                <span className="text-red-500">{platform.negative}% 👎</span>
               </div>
             </div>
           ))}
@@ -457,30 +469,30 @@ interface Commenter {
 function TopCommenters({ data }: { data: Commenter[] }) {
   return (
     <GlassCard className="p-6">
-      <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+      <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
         <span className="text-pink-400">👥</span>
         MOST ENGAGED COMMENTERS
       </h3>
-      
+
       <div className="space-y-3">
         {data.slice(0, 8).map((commenter, index) => (
           <div
             key={commenter.username}
-            className="flex items-center justify-between p-3 bg-slate-800/30 rounded-xl"
+            className="flex items-center justify-between p-3 bg-muted/30 rounded-xl"
           >
             <div className="flex items-center gap-3">
               <span className="text-lg">{index < 3 ? ["🥇", "🥈", "🥉"][index] : `#${index + 1}`}</span>
               <div>
-                <span className="text-white font-medium">@{commenter.username}</span>
-                <div className="text-xs text-slate-500">{commenter.comments} comments</div>
+                <span className="text-foreground font-medium">@{commenter.username}</span>
+                <div className="text-xs text-muted-foreground">{commenter.comments} comments</div>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-slate-400 text-sm">❤️ {formatNumber(commenter.totalLikes)}</span>
+              <span className="text-muted-foreground text-sm">❤️ {formatNumber(commenter.totalLikes)}</span>
               <span className={`text-sm px-2 py-0.5 rounded ${
-                commenter.sentimentLabel === "positive" ? "bg-emerald-500/20 text-emerald-400" :
-                commenter.sentimentLabel === "negative" ? "bg-red-500/20 text-red-400" :
-                "bg-slate-700 text-slate-400"
+                commenter.sentimentLabel === "positive" ? "bg-emerald-500/20 text-emerald-500" :
+                commenter.sentimentLabel === "negative" ? "bg-red-500/20 text-red-500" :
+                "bg-muted text-muted-foreground"
               }`}>
                 {commenter.sentimentLabel === "positive" ? "😊" : commenter.sentimentLabel === "negative" ? "😔" : "😐"}
               </span>
@@ -525,11 +537,11 @@ function AttentionRequiredSection({ data }: { data: AttentionRequired }) {
 
   return (
     <GlassCard className="p-6">
-      <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+      <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
         <span className="text-amber-400">🔔</span>
         ATTENTION REQUIRED
       </h3>
-      
+
       <div className="flex gap-2 mb-4">
         {tabs.map((tab) => (
           <button
@@ -537,13 +549,13 @@ function AttentionRequiredSection({ data }: { data: AttentionRequired }) {
             onClick={() => setActiveTab(tab.id)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
               activeTab === tab.id
-                ? `bg-${tab.color}-500/20 text-${tab.color}-400 border border-${tab.color}-500/30`
-                : "bg-slate-800/50 text-slate-400 hover:bg-slate-700/50"
+                ? `border`
+                : "bg-muted/50 text-muted-foreground hover:bg-muted"
             }`}
             style={{
-              backgroundColor: activeTab === tab.id 
-                ? tab.color === "indigo" ? "rgba(99, 102, 241, 0.2)" 
-                  : tab.color === "emerald" ? "rgba(16, 185, 129, 0.2)" 
+              backgroundColor: activeTab === tab.id
+                ? tab.color === "indigo" ? "rgba(99, 102, 241, 0.2)"
+                  : tab.color === "emerald" ? "rgba(16, 185, 129, 0.2)"
                   : "rgba(239, 68, 68, 0.2)"
                 : undefined,
               color: activeTab === tab.id
@@ -551,6 +563,11 @@ function AttentionRequiredSection({ data }: { data: AttentionRequired }) {
                   : tab.color === "emerald" ? "#34d399"
                   : "#f87171"
                 : undefined,
+              borderColor: activeTab === tab.id
+                ? tab.color === "indigo" ? "rgba(99, 102, 241, 0.3)"
+                  : tab.color === "emerald" ? "rgba(16, 185, 129, 0.3)"
+                  : "rgba(239, 68, 68, 0.3)"
+                : "transparent",
             }}
           >
             <span className="mr-1">{tab.emoji}</span>
@@ -558,10 +575,10 @@ function AttentionRequiredSection({ data }: { data: AttentionRequired }) {
           </button>
         ))}
       </div>
-      
+
       <div className="space-y-3 max-h-[300px] overflow-y-auto">
         {activeItems.length === 0 ? (
-          <div className="text-center py-8 text-slate-500">
+          <div className="text-center py-8 text-muted-foreground">
             <span className="text-3xl block mb-2">✅</span>
             <p>No items requiring attention</p>
           </div>
@@ -570,17 +587,17 @@ function AttentionRequiredSection({ data }: { data: AttentionRequired }) {
             <div
               key={index}
               className={`p-4 rounded-xl border ${
-                activeTab === "negative" 
-                  ? "border-red-500/30 bg-red-500/10" 
+                activeTab === "negative"
+                  ? "border-red-500/30 bg-red-500/10"
                   : activeTab === "purchase"
                   ? "border-emerald-500/30 bg-emerald-500/10"
                   : "border-indigo-500/30 bg-indigo-500/10"
               }`}
             >
-              <p className="text-white text-sm mb-2">{item.text}</p>
+              <p className="text-foreground text-sm mb-2">{item.text}</p>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-400">@{item.username || "Anonymous"}</span>
-                <span className="text-slate-500">{timeAgo(item.postedAt)}</span>
+                <span className="text-muted-foreground">@{item.username || "Anonymous"}</span>
+                <span className="text-muted-foreground">{timeAgo(item.postedAt)}</span>
               </div>
               {item.negativeWords && item.negativeWords.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1">
@@ -612,39 +629,42 @@ interface TrendData {
 }
 
 function SentimentTrendsChart({ data }: { data: TrendData[] }) {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   const filteredData = data.filter((d) => d.total > 0);
 
   return (
     <GlassCard className="p-6">
-      <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+      <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
         <span className="text-cyan-400">📈</span>
         SENTIMENT TREND
       </h3>
-      
+
       <div className="h-[250px]">
         {filteredData.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-slate-500">
+          <div className="flex items-center justify-center h-full text-muted-foreground">
             <p>No trend data available</p>
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={filteredData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+              <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#334155" : "#e2e8f0"} />
               <XAxis
                 dataKey="date"
-                stroke="#64748b"
+                stroke={isDark ? "#64748b" : "#94a3b8"}
                 fontSize={10}
                 tickFormatter={(value) => {
                   const date = new Date(value);
                   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
                 }}
               />
-              <YAxis stroke="#64748b" fontSize={11} domain={[0, 100]} />
+              <YAxis stroke={isDark ? "#64748b" : "#94a3b8"} fontSize={11} domain={[0, 100]} />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "rgba(15, 23, 42, 0.95)",
-                  border: "1px solid rgba(71, 85, 105, 0.5)",
+                  backgroundColor: isDark ? "rgba(15, 23, 42, 0.95)" : "rgba(255, 255, 255, 0.95)",
+                  border: isDark ? "1px solid rgba(71, 85, 105, 0.5)" : "1px solid rgba(226, 232, 240, 0.8)",
                   borderRadius: "12px",
+                  color: isDark ? "#fff" : "#1e293b",
                 }}
                 labelFormatter={(value) => new Date(value).toLocaleDateString()}
               />
@@ -680,26 +700,26 @@ function SentimentTrendsChart({ data }: { data: TrendData[] }) {
 // ============================================
 
 function AudienceSentimentContent() {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   const [days, setDays] = useState(30);
-  
-  // Fetch data from Convex
+
   const sentimentData = useQuery(api.audienceSentiment.getAudienceSentiment, { days });
   const trendsData = useQuery(api.audienceSentiment.getSentimentTrends, { days });
-  
+
   if (!sentimentData) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-950">
+      <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-slate-400">Analyzing Audience Sentiment...</p>
+          <p className="text-muted-foreground">Analyzing Audience Sentiment...</p>
         </div>
       </div>
     );
   }
-  
+
   return (
-    <div className="min-h-screen bg-slate-950 text-white p-4 md:p-6 lg:p-8">
-      {/* Header */}
+    <div className="min-h-screen bg-background text-foreground p-4 md:p-6 lg:p-8">
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
           <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse" />
@@ -710,16 +730,15 @@ function AudienceSentimentContent() {
             <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">
               Audience & Sentiment Deep Dive
             </h1>
-            <p className="text-slate-400 mt-1">Understand how your audience feels about your content</p>
+            <p className="text-muted-foreground mt-1">Understand how your audience feels about your content</p>
           </div>
-          
-          {/* Controls */}
+
           <div className="flex items-center gap-2">
-            <label className="text-slate-400 text-sm">Period:</label>
+            <label className="text-muted-foreground text-sm">Period:</label>
             <select
               value={days}
               onChange={(e) => setDays(Number(e.target.value))}
-              className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white"
+              className="bg-muted border border-border rounded-lg px-3 py-1.5 text-sm text-foreground"
             >
               <option value={7}>7 days</option>
               <option value={14}>14 days</option>
@@ -730,8 +749,7 @@ function AudienceSentimentContent() {
           </div>
         </div>
       </div>
-      
-      {/* Sentiment Hero */}
+
       <section className="mb-8">
         <SentimentScoreHero
           score={sentimentData.summary.overallSentimentScore}
@@ -741,47 +759,42 @@ function AudienceSentimentContent() {
           negativePercent={sentimentData.summary.negativePercentage}
         />
       </section>
-      
-      {/* Distribution & Engagement */}
+
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <SentimentDistributionChart data={sentimentData.sentimentDistribution} />
         <EngagementBreakdown data={sentimentData.engagementBreakdown} />
       </section>
-      
-      {/* Words & Platforms */}
+
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <TopSentimentWords data={sentimentData.topSentimentWords} />
         <PlatformSentimentChart data={sentimentData.platformBreakdown} />
       </section>
-      
-      {/* Commenters & Attention */}
+
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <TopCommenters data={sentimentData.topCommenters} />
         <AttentionRequiredSection data={sentimentData.attentionRequired} />
       </section>
-      
-      {/* Trends */}
+
       <section className="mb-8">
         <SentimentTrendsChart data={trendsData || []} />
       </section>
-      
-      {/* Footer */}
-      <section className="pt-6 border-t border-slate-800">
-        <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-slate-500">
+
+      <section className="pt-6 border-t border-border">
+        <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex flex-wrap items-center gap-4 md:gap-6">
             <span>
-              <strong className="text-slate-300">{formatNumber(sentimentData.summary.totalComments)}</strong>{" "}
+              <strong className="text-foreground">{formatNumber(sentimentData.summary.totalComments)}</strong>{" "}
               comments analyzed
             </span>
             <span>
-              <strong className="text-slate-300">{sentimentData.summary.totalPostsAnalyzed}</strong>{" "}
+              <strong className="text-foreground">{sentimentData.summary.totalPostsAnalyzed}</strong>{" "}
               posts
             </span>
             <span>
-              Score: <strong className="text-slate-300">{sentimentData.summary.overallSentimentScore}/100</strong>
+              Score: <strong className="text-foreground">{sentimentData.summary.overallSentimentScore}/100</strong>
             </span>
             <span>
-              Period: <strong className="text-slate-300">{sentimentData.periodDays} days</strong>
+              Period: <strong className="text-foreground">{sentimentData.periodDays} days</strong>
             </span>
           </div>
           <span>Last updated: {new Date().toLocaleTimeString()}</span>
@@ -795,10 +808,10 @@ export default function AudienceSentimentPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex items-center justify-center min-h-screen bg-slate-950">
+        <div className="flex items-center justify-center min-h-screen bg-background">
           <div className="text-center">
             <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-slate-400">Loading Sentiment Analysis...</p>
+            <p className="text-muted-foreground">Loading Sentiment Analysis...</p>
           </div>
         </div>
       }
