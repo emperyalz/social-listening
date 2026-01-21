@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react"
 import { useQuery, useMutation } from "convex/react"
-import { api } from "../../../../convex/_generated/api"
+import { api } from "@convex/_generated/api"
 import { Sidebar } from "@/components/layout/sidebar"
 import Image from "next/image"
 import {
