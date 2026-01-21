@@ -1,295 +1,169 @@
 "use client";
 
+import { Suspense, useState } from "react";
 import { useTheme } from "@/contexts/ThemeContext";
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
-export default function ResonanceAuditPage() {
+const DEMO_AUDIT_DATA = {
+  summary: { overallAlignmentScore: 78, messagingMatchScore: 82, alignedConcepts: 12, alignmentErrors: 3, alignmentWarnings: 5, totalPostsAnalyzed: 156, totalCommentsAnalyzed: 4892 },
+  hexGrid: [
+    { concept: "Lujo", inStrategy: true, captionPresence: 45, commentPresence: 38, status: "aligned" },
+    { concept: "Inversion", inStrategy: true, captionPresence: 52, commentPresence: 61, status: "aligned" },
+    { concept: "Ubicacion", inStrategy: true, captionPresence: 67, commentPresence: 89, status: "aligned" },
+    { concept: "Calidad", inStrategy: true, captionPresence: 41, commentPresence: 32, status: "aligned" },
+    { concept: "Modernidad", inStrategy: true, captionPresence: 38, commentPresence: 28, status: "warning" },
+    { concept: "Sostenibilidad", inStrategy: true, captionPresence: 12, commentPresence: 8, status: "error" },
+    { concept: "Precio", inStrategy: false, captionPresence: 8, commentPresence: 124, status: "warning" },
+  ],
+  segmentGapAnalysis: [
+    { segment: "Inversionistas", isTargeted: true, presence: 234, status: "on-target" },
+    { segment: "Familias Jovenes", isTargeted: true, presence: 189, status: "on-target" },
+    { segment: "Profesionales", isTargeted: true, presence: 156, status: "on-target" },
+    { segment: "Extranjeros", isTargeted: true, presence: 67, status: "under-target" },
+    { segment: "Jubilados", isTargeted: false, presence: 98, status: "over-performing" },
+  ],
+  contentThemes: [
+    { theme: "Proyectos", score: 156, percentage: 32 },
+    { theme: "Lifestyle", score: 98, percentage: 20 },
+    { theme: "Ubicacion", score: 87, percentage: 18 },
+    { theme: "Financiero", score: 78, percentage: 16 },
+    { theme: "Comunidad", score: 67, percentage: 14 },
+  ],
+  alignmentIssues: [
+    { type: "Gap", concept: "Sostenibilidad", message: "Tu estrategia menciona sostenibilidad pero solo 2% de tu contenido lo refleja.", severity: "high" },
+    { type: "No Estrategico", concept: "Precio", message: "Alta mencion de precio en comentarios pero no esta en tu estrategia.", severity: "medium" },
+  ],
+  periodDays: 30,
+};
+
+const DEMO_TREND_DATA = [
+  { date: "2025-12-26", alignmentScore: 76 }, { date: "2025-12-27", alignmentScore: 78 },
+  { date: "2025-12-28", alignmentScore: 79 }, { date: "2025-12-30", alignmentScore: 80 },
+  { date: "2026-01-02", alignmentScore: 78 }, { date: "2026-01-04", alignmentScore: 82 },
+];
+
+const STATUS_COLORS = { aligned: "#10b981", error: "#ef4444", warning: "#f59e0b" };
+const SEGMENT_STATUS_COLORS = { "on-target": "#10b981", "under-target": "#ef4444", "over-performing": "#f59e0b" };
+
+function GlassCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   const { theme } = useTheme();
-
-  // Demo data for Grupo Horizonte - Colombian Real Estate
-  const strategyAlignmentScore = 78;
-  
-  const alignmentGrid = [
-    { pillar: "Innovación", content: 85, strategy: 90, gap: -5 },
-    { pillar: "Confianza", content: 72, strategy: 85, gap: -13 },
-    { pillar: "Sostenibilidad", content: 68, strategy: 75, gap: -7 },
-    { pillar: "Comunidad", content: 82, strategy: 80, gap: 2 },
-    { pillar: "Calidad", content: 79, strategy: 88, gap: -9 },
-  ];
-
-  const segmentAnalysis = [
-    { 
-      segment: "Familias Jóvenes", 
-      resonance: 82, 
-      engagement: "Alto",
-      topContent: "Tours virtuales de apartamentos",
-      recommendation: "Aumentar contenido sobre financiación"
-    },
-    { 
-      segment: "Inversionistas", 
-      resonance: 75, 
-      engagement: "Medio",
-      topContent: "Análisis de valorización",
-      recommendation: "Más datos de ROI y rendimientos"
-    },
-    { 
-      segment: "Primera Vivienda", 
-      resonance: 88, 
-      engagement: "Muy Alto",
-      topContent: "Guías de subsidios VIS",
-      recommendation: "Continuar educación financiera"
-    },
-    { 
-      segment: "Compradores Premium", 
-      resonance: 65, 
-      engagement: "Bajo",
-      topContent: "Proyectos exclusivos",
-      recommendation: "Contenido más aspiracional"
-    },
-  ];
-
-  const contentResonanceByType = [
-    { type: "Videos de Proyectos", score: 86 },
-    { type: "Testimoniales", score: 79 },
-    { type: "Infografías Financieras", score: 74 },
-    { type: "Posts Educativos", score: 71 },
-    { type: "Promociones", score: 62 },
-  ];
-
+  const isDark = theme === "dark";
   return (
-    <div className="min-h-screen bg-background text-foreground p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Auditoría de Resonancia</h1>
-          <p className="text-muted-foreground">
-            Análisis de alineación entre contenido y estrategia de marca - Grupo Horizonte
-          </p>
-        </div>
-
-        {/* Main Score Card */}
-        <div className="bg-card border border-border rounded-xl p-6 mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold mb-1">Puntuación de Alineación Estratégica</h2>
-              <p className="text-sm text-muted-foreground">
-                Qué tan bien tu contenido refleja los pilares de marca
-              </p>
-            </div>
-            <div className="text-right">
-              <div className="text-5xl font-bold text-blue-500">{strategyAlignmentScore}%</div>
-              <div className="text-sm text-muted-foreground mt-1">+3% vs mes anterior</div>
-            </div>
-          </div>
-          
-          {/* Progress bar */}
-          <div className="mt-4 h-3 bg-muted rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-500"
-              style={{ width: `${strategyAlignmentScore}%` }}
-            />
-          </div>
-          
-          <div className="mt-3 flex justify-between text-xs text-muted-foreground">
-            <span>0% - Desalineado</span>
-            <span>50% - Parcial</span>
-            <span>100% - Alineación Total</span>
-          </div>
-        </div>
-
-        {/* Alignment Grid */}
-        <div className="bg-card border border-border rounded-xl p-6 mb-6">
-          <h2 className="text-lg font-semibold mb-4">Matriz de Alineación por Pilar</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-3 px-4 font-medium">Pilar de Marca</th>
-                  <th className="text-center py-3 px-4 font-medium">Contenido Actual</th>
-                  <th className="text-center py-3 px-4 font-medium">Meta Estratégica</th>
-                  <th className="text-center py-3 px-4 font-medium">Brecha</th>
-                  <th className="text-left py-3 px-4 font-medium">Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {alignmentGrid.map((item, index) => (
-                  <tr key={index} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
-                    <td className="py-3 px-4 font-medium">{item.pillar}</td>
-                    <td className="py-3 px-4 text-center">
-                      <span className="inline-flex items-center justify-center w-12 h-8 bg-blue-500/10 text-blue-500 rounded font-semibold">
-                        {item.content}%
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <span className="inline-flex items-center justify-center w-12 h-8 bg-muted text-muted-foreground rounded font-semibold">
-                        {item.strategy}%
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <span className={`inline-flex items-center justify-center w-12 h-8 rounded font-semibold ${
-                        item.gap >= 0 
-                          ? 'bg-green-500/10 text-green-500' 
-                          : 'bg-amber-500/10 text-amber-500'
-                      }`}>
-                        {item.gap > 0 ? '+' : ''}{item.gap}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      {item.gap >= 0 ? (
-                        <span className="inline-flex items-center gap-1 text-green-500 text-sm">
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                          </svg>
-                          Alineado
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-amber-500 text-sm">
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                          </svg>
-                          Optimizar
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Two Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* Segment Analysis */}
-          <div className="bg-card border border-border rounded-xl p-6">
-            <h2 className="text-lg font-semibold mb-4">Análisis por Segmento</h2>
-            <div className="space-y-4">
-              {segmentAnalysis.map((segment, index) => (
-                <div key={index} className="bg-muted/30 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-medium">{segment.segment}</h3>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs px-2 py-1 rounded-full ${
-                        segment.engagement === 'Muy Alto' ? 'bg-green-500/10 text-green-500' :
-                        segment.engagement === 'Alto' ? 'bg-blue-500/10 text-blue-500' :
-                        segment.engagement === 'Medio' ? 'bg-amber-500/10 text-amber-500' :
-                        'bg-red-500/10 text-red-500'
-                      }`}>
-                        {segment.engagement}
-                      </span>
-                      <span className="text-lg font-bold text-blue-500">{segment.resonance}%</span>
-                    </div>
-                  </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden mb-3">
-                    <div 
-                      className="h-full bg-blue-500 rounded-full"
-                      style={{ width: `${segment.resonance}%` }}
-                    />
-                  </div>
-                  <div className="text-sm">
-                    <p className="text-muted-foreground mb-1">
-                      <span className="font-medium text-foreground">Top contenido:</span> {segment.topContent}
-                    </p>
-                    <p className="text-muted-foreground">
-                      <span className="font-medium text-foreground">Recomendación:</span> {segment.recommendation}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Content Resonance by Type */}
-          <div className="bg-card border border-border rounded-xl p-6">
-            <h2 className="text-lg font-semibold mb-4">Resonancia por Tipo de Contenido</h2>
-            <div className="space-y-4">
-              {contentResonanceByType.map((item, index) => (
-                <div key={index}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">{item.type}</span>
-                    <span className="text-sm font-bold">{item.score}%</span>
-                  </div>
-                  <div className="h-3 bg-muted rounded-full overflow-hidden">
-                    <div 
-                      className={`h-full rounded-full transition-all duration-500 ${
-                        item.score >= 80 ? 'bg-green-500' :
-                        item.score >= 70 ? 'bg-blue-500' :
-                        item.score >= 60 ? 'bg-amber-500' :
-                        'bg-red-500'
-                      }`}
-                      style={{ width: `${item.score}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Key Insights */}
-            <div className="mt-6 pt-6 border-t border-border">
-              <h3 className="font-semibold mb-3">Insights Clave</h3>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li className="flex items-start gap-2">
-                  <svg className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                  Los videos de proyectos tienen la mayor resonancia con audiencias
-                </li>
-                <li className="flex items-start gap-2">
-                  <svg className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                  </svg>
-                  Las promociones necesitan mejor alineación con valores de marca
-                </li>
-                <li className="flex items-start gap-2">
-                  <svg className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                  </svg>
-                  El segmento de primera vivienda muestra excelente engagement
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        {/* Recommendations */}
-        <div className="bg-card border border-border rounded-xl p-6">
-          <h2 className="text-lg font-semibold mb-4">Recomendaciones de Optimización</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-muted/30 rounded-lg p-4">
-              <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center mb-3">
-                <svg className="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                </svg>
-              </div>
-              <h3 className="font-semibold mb-2">Fortalecer Confianza</h3>
-              <p className="text-sm text-muted-foreground">
-                Aumentar testimoniales de clientes satisfechos y certificaciones de calidad
-              </p>
-            </div>
-            <div className="bg-muted/30 rounded-lg p-4">
-              <div className="w-10 h-10 bg-green-500/10 rounded-lg flex items-center justify-center mb-3">
-                <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" />
-                </svg>
-              </div>
-              <h3 className="font-semibold mb-2">Contenido Sostenible</h3>
-              <p className="text-sm text-muted-foreground">
-                Destacar prácticas de construcción sostenible y eficiencia energética
-              </p>
-            </div>
-            <div className="bg-muted/30 rounded-lg p-4">
-              <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center mb-3">
-                <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-              </div>
-              <h3 className="font-semibold mb-2">Segmento Premium</h3>
-              <p className="text-sm text-muted-foreground">
-                Crear contenido exclusivo para compradores de alto valor
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className={`relative overflow-hidden rounded-2xl border border-border shadow-xl bg-card ${className}`} style={{ backdropFilter: "blur(12px)" }}>
+      <div className="absolute inset-0 opacity-30 pointer-events-none" style={{ background: isDark ? "radial-gradient(ellipse at top left, rgba(239, 68, 68, 0.1) 0%, transparent 50%)" : "radial-gradient(ellipse at top left, rgba(239, 68, 68, 0.08) 0%, transparent 50%)" }} />
+      <div className="relative z-10">{children}</div>
     </div>
   );
+}
+
+function ResonanceAuditContent() {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+  const auditData = DEMO_AUDIT_DATA;
+  const trendData = DEMO_TREND_DATA;
+  const getScoreColor = (score: number) => score >= 80 ? "text-emerald-500" : score >= 60 ? "text-amber-500" : "text-red-500";
+
+  return (
+    <div className="min-h-screen bg-background text-foreground p-4 md:p-6 lg:p-8">
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-2"><div className="w-2 h-2 bg-red-400 rounded-full animate-pulse" /><span className="text-red-400 text-sm font-medium">Analisis de Resonancia Activo</span></div>
+        <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-red-400 to-amber-400 bg-clip-text text-transparent">Auditoria de Resonancia</h1>
+        <p className="text-muted-foreground mt-1">Estrategia vs Realidad - Mide tu alineacion de marca</p>
+      </div>
+
+      <GlassCard className="p-8 mb-8">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-2"><span className="text-3xl">🎯</span><span className="text-red-400 text-sm font-semibold uppercase tracking-wider">Alineacion Estrategia-Realidad</span></div>
+            <div className={`text-6xl font-bold ${getScoreColor(auditData.summary.overallAlignmentScore)} mb-2`}>{auditData.summary.overallAlignmentScore}%</div>
+            <p className="text-muted-foreground text-sm mb-6">Que tan bien tu contenido coincide con tu estrategia</p>
+            <div className="grid grid-cols-4 gap-6">
+              <div><span className="text-muted-foreground block text-sm">Match Mensajes</span><span className={`font-bold text-xl ${getScoreColor(auditData.summary.messagingMatchScore)}`}>{auditData.summary.messagingMatchScore}%</span></div>
+              <div><span className="text-muted-foreground block text-sm">Alineados</span><span className="font-bold text-xl text-emerald-500">{auditData.summary.alignedConcepts}</span></div>
+              <div><span className="text-muted-foreground block text-sm">Errores</span><span className="font-bold text-xl text-red-500">{auditData.summary.alignmentErrors}</span></div>
+              <div><span className="text-muted-foreground block text-sm">Advertencias</span><span className="font-bold text-xl text-amber-500">{auditData.summary.alignmentWarnings}</span></div>
+            </div>
+          </div>
+          <div className="w-32 h-32 rounded-full border-4 border-border flex items-center justify-center"><span className="text-4xl">🛡️</span></div>
+        </div>
+      </GlassCard>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <GlassCard className="p-6">
+          <h3 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2"><span className="text-red-400">⬢</span>GRID DE ESTRATEGIA</h3>
+          <div className="grid grid-cols-3 gap-4">
+            {auditData.hexGrid.map((item) => (
+              <div key={item.concept} className={`p-4 rounded-xl border-2 transition-all ${item.status === 'aligned' ? 'border-emerald-500/50 bg-emerald-500/10' : item.status === 'error' ? 'border-red-500/50 bg-red-500/10' : 'border-amber-500/50 bg-amber-500/10'}`}>
+                <div className="text-center">
+                  <span className="text-2xl mb-2 block">{item.status === 'aligned' ? '✅' : item.status === 'error' ? '❌' : '⚠️'}</span>
+                  <span className="text-foreground font-medium block mb-1">{item.concept}</span>
+                  <div className="text-xs text-muted-foreground"><span>Cap: {item.captionPresence}</span> | <span>Com: {item.commentPresence}</span></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </GlassCard>
+
+        <GlassCard className="p-6">
+          <h3 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2"><span className="text-amber-400">🎯</span>ANALISIS DE GAPS POR SEGMENTO</h3>
+          <div className="space-y-4">
+            {auditData.segmentGapAnalysis.map((seg) => (
+              <div key={seg.segment}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">{seg.isTargeted && <span className="text-xs bg-indigo-500/30 text-indigo-300 px-2 py-0.5 rounded">OBJETIVO</span>}<span className="text-foreground font-medium">{seg.segment}</span></div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs px-2 py-0.5 rounded ${seg.status === 'on-target' ? 'bg-emerald-500/20 text-emerald-500' : seg.status === 'under-target' ? 'bg-red-500/20 text-red-500' : 'bg-amber-500/20 text-amber-500'}`}>{seg.status === 'on-target' ? 'EN OBJETIVO' : seg.status === 'under-target' ? 'BAJO' : 'SOBRE'}</span>
+                    <span className="text-muted-foreground text-sm">{seg.presence}</span>
+                  </div>
+                </div>
+                <div className="h-3 bg-muted/50 rounded-full overflow-hidden"><div className="h-full rounded-full" style={{ width: `${Math.max((seg.presence / 234) * 100, 5)}%`, backgroundColor: SEGMENT_STATUS_COLORS[seg.status as keyof typeof SEGMENT_STATUS_COLORS] }} /></div>
+              </div>
+            ))}
+          </div>
+        </GlassCard>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <GlassCard className="p-6">
+          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2"><span className="text-red-400">⚠️</span>PROBLEMAS DE ALINEACION</h3>
+          <div className="space-y-3">
+            {auditData.alignmentIssues.map((issue, i) => (
+              <div key={i} className={`p-4 rounded-xl border ${issue.severity === 'high' ? 'border-red-500/30 bg-red-500/10' : 'border-amber-500/30 bg-amber-500/10'}`}>
+                <div className="flex items-start gap-3">
+                  <span className="text-lg">{issue.severity === 'high' ? '🔴' : '🟡'}</span>
+                  <div><div className="flex items-center gap-2 mb-1"><span className="text-foreground font-medium">{issue.concept}</span><span className="text-xs text-muted-foreground">{issue.type}</span></div><p className="text-muted-foreground text-sm">{issue.message}</p></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </GlassCard>
+
+        <GlassCard className="p-6">
+          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2"><span className="text-emerald-500">📈</span>TENDENCIA DE ALINEACION</h3>
+          <div className="h-[200px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={trendData}>
+                <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#334155" : "#e2e8f0"} />
+                <XAxis dataKey="date" stroke={isDark ? "#64748b" : "#94a3b8"} fontSize={11} tickFormatter={(v) => new Date(v).toLocaleDateString("es-CO", { month: "short", day: "numeric" })} />
+                <YAxis stroke={isDark ? "#64748b" : "#94a3b8"} fontSize={11} domain={[0, 100]} />
+                <Tooltip contentStyle={{ backgroundColor: isDark ? "rgba(15, 23, 42, 0.95)" : "rgba(255, 255, 255, 0.95)", borderRadius: "12px", color: isDark ? "#fff" : "#1e293b" }} />
+                <Line type="monotone" dataKey="alignmentScore" stroke="#10b981" strokeWidth={3} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </GlassCard>
+      </div>
+
+      <section className="pt-6 border-t border-border">
+        <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-4"><span><strong className="text-foreground">{auditData.summary.totalPostsAnalyzed}</strong> posts</span><span><strong className="text-foreground">{auditData.summary.totalCommentsAnalyzed}</strong> comentarios</span><span>Periodo: <strong className="text-foreground">{auditData.periodDays} dias</strong></span></div>
+          <span>Actualizado: {new Date().toLocaleTimeString("es-CO")}</span>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+export default function ResonanceAuditPage() {
+  return (<Suspense fallback={<div className="flex items-center justify-center min-h-screen bg-background"><div className="text-center"><div className="w-12 h-12 border-4 border-red-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" /><p className="text-muted-foreground">Cargando...</p></div></div>}><ResonanceAuditContent /></Suspense>);
 }
