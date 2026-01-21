@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import {
@@ -76,23 +77,44 @@ export function Sidebar() {
       <div className="flex items-center justify-between p-4 border-b border-gray-800">
         {!collapsed && (
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-[#28A963] flex items-center justify-center">
-              <span className="text-white font-bold text-lg">A</span>
-            </div>
-            <span className="font-semibold text-lg">Ascoltare</span>
+            <Image
+              src="/orwell-logo-white.svg"
+              alt="Orwell"
+              width={140}
+              height={32}
+              className="h-8 w-auto"
+              priority
+            />
           </div>
         )}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="p-1.5 rounded-md hover:bg-gray-800 transition-colors"
-        >
-          {collapsed ? (
-            <ChevronRight className="h-5 w-5" />
-          ) : (
+        {collapsed && (
+          <div className="flex items-center justify-center w-full">
+            <div className="w-8 h-8 rounded-lg bg-[#28A963] flex items-center justify-center">
+              <span className="text-white font-bold text-lg">O</span>
+            </div>
+          </div>
+        )}
+        {!collapsed && (
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="p-1.5 rounded-md hover:bg-gray-800 transition-colors"
+          >
             <ChevronLeft className="h-5 w-5" />
-          )}
-        </button>
+          </button>
+        )}
       </div>
+
+      {/* Expand button when collapsed */}
+      {collapsed && (
+        <div className="flex justify-center p-2 border-b border-gray-800">
+          <button
+            onClick={() => setCollapsed(false)}
+            className="p-1.5 rounded-md hover:bg-gray-800 transition-colors"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        </div>
+      )}
 
       {/* Navigation */}
       <nav className="p-2 space-y-1">
