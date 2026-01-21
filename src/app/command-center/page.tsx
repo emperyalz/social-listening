@@ -13,8 +13,9 @@ import {
 import { useTheme } from "@/contexts/ThemeContext";
 
 // ============================================
-// DEMO DATA FOR GRUPO HORIZONTE
+// DEMO DATA - Hardcoded for Grupo Horizonte
 // ============================================
+
 const DEMO_STATS = {
   accountsTracked: 12,
   recentPostsCount: 47,
@@ -26,11 +27,41 @@ const DEMO_STATS = {
 };
 
 const DEMO_COMPETITORS = [
-  { account: { platform: "instagram", username: "constructora_colpatria" }, followers: 185000, followerGrowth: 12500, followerGrowthRate: "7.2", engagementRate: "4.5" },
-  { account: { platform: "instagram", username: "amarilo_oficial" }, followers: 142000, followerGrowth: 8900, followerGrowthRate: "6.7", engagementRate: "5.2" },
-  { account: { platform: "tiktok", username: "grupo_horizonte" }, followers: 95000, followerGrowth: 15200, followerGrowthRate: "19.0", engagementRate: "8.1" },
-  { account: { platform: "youtube", username: "GrupoHorizonteTV" }, followers: 45000, followerGrowth: 3200, followerGrowthRate: "7.6", engagementRate: "6.2" },
-  { account: { platform: "instagram", username: "cusezar_colombia" }, followers: 78000, followerGrowth: 4100, followerGrowthRate: "5.5", engagementRate: "3.8" },
+  {
+    account: { username: "grupohorizonte", platform: "instagram" },
+    followers: 45000,
+    followerGrowth: 3200,
+    followerGrowthRate: "7.6",
+    engagementRate: "4.2",
+  },
+  {
+    account: { username: "horizonte_re", platform: "tiktok" },
+    followers: 28000,
+    followerGrowth: 4100,
+    followerGrowthRate: "17.1",
+    engagementRate: "6.8",
+  },
+  {
+    account: { username: "GrupoHorizonteTV", platform: "youtube" },
+    followers: 15000,
+    followerGrowth: 890,
+    followerGrowthRate: "6.3",
+    engagementRate: "3.1",
+  },
+  {
+    account: { username: "panama_realty", platform: "instagram" },
+    followers: 52000,
+    followerGrowth: 2800,
+    followerGrowthRate: "5.7",
+    engagementRate: "3.9",
+  },
+  {
+    account: { username: "lux_panama", platform: "instagram" },
+    followers: 38000,
+    followerGrowth: 1900,
+    followerGrowthRate: "5.3",
+    engagementRate: "4.5",
+  },
 ];
 
 // Platform colors for the growth chart
@@ -565,57 +596,61 @@ function CommandCenterContent() {
     if (viewsPerPost > 1000) return "Moderate";
     return "Building";
   }, [stats]);
-  const revenueRisk = 18400;
+  const revenueRisk = 4200;
 
   // Generate alerts from competitor data
   const alerts = useMemo<AlertItem[]>(() => {
-    const generatedAlerts: AlertItem[] = [
-      {
-        id: "viral-1",
-        type: "viral",
-        platform: "tiktok",
-        title: "Torre Esmeralda post gaining traction",
-        description: "+340% engagement in 2 hours on property tour reel",
-        metric: "+12.5K views",
-      },
-      {
-        id: "opp-1",
-        type: "opportunity",
-        platform: "instagram",
-        title: "@maria_inversor asking about Vista del Mar",
-        description: "High-intent comment on 3BR unit pricing - respond within 1hr",
-        metric: "Est. Value: $245,000",
-      },
-      {
+    const generatedAlerts: AlertItem[] = [];
+
+    competitors.slice(0, 5).forEach((comp, index) => {
+      const growthRate = parseFloat(comp.followerGrowthRate);
+      if (growthRate > 10) {
+        generatedAlerts.push({
+          id: `viral-${index}`,
+          type: "viral",
+          platform: comp.account.platform as "instagram" | "tiktok" | "youtube",
+          title: `@${comp.account.username} hitting velocity`,
+          description: `+${growthRate.toFixed(1)}% follower growth this period`,
+          metric: `+${formatLargeNumber(comp.followerGrowth)} followers`,
+        });
+      }
+    });
+
+    competitors.slice(0, 3).forEach((comp, index) => {
+      const engagement = parseFloat(comp.engagementRate);
+      if (engagement > 5) {
+        generatedAlerts.push({
+          id: `opp-${index}`,
+          type: "opportunity",
+          platform: comp.account.platform as "instagram" | "tiktok" | "youtube",
+          title: `High engagement on @${comp.account.username}`,
+          description: `${engagement.toFixed(1)}% engagement rate - study their content`,
+        });
+      }
+    });
+
+    // Add a sample risk alert
+    if (generatedAlerts.length > 0) {
+      generatedAlerts.push({
         id: "risk-1",
         type: "risk",
-        platform: "instagram",
-        title: "Negative comment on Proyecto Marina",
-        description: "Customer complaint about delivery delays - requires response",
-        metric: "+50 likes on comment",
-      },
-      {
-        id: "viral-2",
-        type: "viral",
         platform: "youtube",
-        title: "Amarilo's new campaign detected",
-        description: "Competitor launched luxury apartment video series",
-        metric: "+45K views in 24hrs",
-      },
-      {
-        id: "opp-2",
-        type: "opportunity",
-        platform: "tiktok",
-        title: "Trending hashtag #InversionColombia",
-        description: "High engagement opportunity - create content within 6hrs",
-        metric: "2.1M hashtag views",
-      },
-    ];
-    return generatedAlerts;
-  }, []);
+        title: "Critical comment on recent video",
+        description: "Negative sentiment detected requiring response",
+        metric: "+50 likes on comment",
+      });
+    }
+
+    return generatedAlerts.slice(0, 6);
+  }, [competitors]);
 
   // Growth trend data
   const growthData = useMemo<GrowthDataPoint[]>(() => {
+    const platformTotals: Record<string, number> = { instagram: 0, tiktok: 0, youtube: 0 };
+    competitors.forEach((comp) => {
+      platformTotals[comp.account.platform] += comp.followers;
+    });
+
     const dates: GrowthDataPoint[] = [];
     const today = new Date();
 
@@ -624,18 +659,17 @@ function CommandCenterContent() {
       date.setDate(date.getDate() - i);
       const dateStr = date.toISOString().split("T")[0];
       const factor = 1 - (i * 0.008);
-      const noise = () => (Math.random() - 0.5) * 5000;
 
       dates.push({
         date: dateStr,
-        instagram: Math.round(185000 * factor + noise()),
-        tiktok: Math.round(95000 * factor + noise()),
-        youtube: Math.round(45000 * factor + noise()),
+        instagram: Math.round((platformTotals.instagram || 50000) * factor),
+        tiktok: Math.round((platformTotals.tiktok || 30000) * factor),
+        youtube: Math.round((platformTotals.youtube || 20000) * factor),
       });
     }
 
     return dates;
-  }, []);
+  }, [competitors]);
 
   // Sparkline data
   const reachSparkline = useMemo(() => {
@@ -647,8 +681,8 @@ function CommandCenterContent() {
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
-          <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-          <span className="text-emerald-600 dark:text-emerald-400 text-sm font-medium">
+          <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+          <span className="text-amber-600 dark:text-amber-400 text-sm font-medium">
             Demo Mode - Grupo Horizonte
           </span>
         </div>
@@ -674,7 +708,7 @@ function CommandCenterContent() {
           <MacroKPICard
             title="Engagement Rate"
             value={`${engagementRate.toFixed(2)}%`}
-            change={0.4}
+            change={-0.3}
             changeLabel="vs last month"
             icon={<span className="text-amber-500 text-xl">📊</span>}
           />
@@ -695,25 +729,24 @@ function CommandCenterContent() {
             title="Market Integrity"
             score={marketIntegrity}
             maxScore={100}
-            subtitle="Brand perception strong and consistent"
+            subtitle="Audience Quality Optimal"
             icon={<span className="text-blue-500 text-xl">🛡️</span>}
             status="optimal"
             accentColor="#3b82f6"
           />
           <HealthCard
             title="Viral Velocity"
-            score={65}
-            maxScore={100}
-            subtitle="Content spread at moderate pace"
+            score={viralVelocity}
+            subtitle="DNA Formula Active"
             icon={<span className="text-emerald-500 text-xl">⚡</span>}
-            status="warning"
+            status={viralVelocity === "High Acceleration" ? "optimal" : "warning"}
             accentColor="#10b981"
           />
           <HealthCard
             title="Revenue Risk"
             score={formatCurrency(revenueRisk)}
-            subtitle="28 Unanswered Leads"
-            icon={<span className="text-red-500 text-xl">💰</span>}
+            subtitle={`${Math.round(revenueRisk / 280)} Unanswered Leads`}
+            icon={<span className="text-red-500 text-xl">⚠️</span>}
             status="critical"
             accentColor="#ef4444"
           />
