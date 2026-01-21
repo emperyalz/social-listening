@@ -6,7 +6,7 @@ import { api } from "../../../convex/_generated/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MultiSelect } from "@/components/ui/multi-select";
-import { ExternalLink, X, Heart, MessageCircle, Eye, Play, Clock, ChevronLeft, ChevronRight, Maximize2, Volume2, VolumeX } from "lucide-react";
+import { ExternalLink, X, Heart, MessageCircle, Eye, Play, Clock, ChevronLeft, ChevronRight, Maximize2, Volume2, VolumeX, Loader2 } from "lucide-react";
 import { Id } from "../../../convex/_generated/dataModel";
 import { useFilterParams } from "@/hooks/useFilterParams";
 import { usePlatformLogos, type PlatformId } from "@/hooks/usePlatformLogos";
@@ -147,7 +147,7 @@ function MediaPlayerModal({
       const embedUrl = getInstagramEmbedUrl();
       if (embedUrl) {
         return (
-          <div className="flex flex-col items-center justify-center w-full h-full bg-white overflow-hidden">
+          <div className="flex flex-col items-center justify-center w-full h-full bg-background overflow-hidden">
             <iframe
               src={embedUrl}
               className="w-full border-0"
@@ -170,7 +170,7 @@ function MediaPlayerModal({
       return (
         <div className="flex flex-col items-center justify-center w-full h-full">
           <div className="text-center mb-6">
-            <p className="text-gray-500 mb-4">Unable to load embed preview</p>
+            <p className="text-muted-foreground mb-4">Unable to load embed preview</p>
           </div>
           <a
             href={post.postUrl}
@@ -228,7 +228,7 @@ function MediaPlayerModal({
     }
 
     return (
-      <div className="flex flex-col items-center justify-center text-gray-400">
+      <div className="flex flex-col items-center justify-center text-muted-foreground">
         <Play className="h-16 w-16 mb-4" />
         <p>Media not available for preview</p>
         {post.postUrl && (
@@ -304,10 +304,10 @@ function MediaPlayerModal({
         </div>
 
         {/* Post Info Sidebar */}
-        <div className="w-full lg:w-96 bg-white lg:rounded-r-lg overflow-y-auto">
+        <div className="w-full lg:w-96 bg-card lg:rounded-r-lg overflow-y-auto">
           <div className="p-6 space-y-4">
             {/* Account info */}
-            <div className="flex items-center gap-3 pb-4 border-b">
+            <div className="flex items-center gap-3 pb-4 border-b border-border">
               <div className={`h-10 w-10 rounded-full flex items-center justify-center text-white ${
                 platform === 'instagram' ? 'bg-gradient-to-br from-purple-500 to-pink-500' :
                 platform === 'tiktok' ? 'bg-black' :
@@ -316,26 +316,26 @@ function MediaPlayerModal({
                 {account?.username?.[0]?.toUpperCase() || "?"}
               </div>
               <div>
-                <p className="font-semibold">@{account?.username}</p>
+                <p className="font-semibold text-foreground">@{account?.username}</p>
                 <p className="text-sm text-muted-foreground capitalize">{platform}</p>
               </div>
             </div>
 
             {/* Engagement stats */}
             {post.engagement && (
-              <div className="flex items-center gap-6 py-4 border-b">
+              <div className="flex items-center gap-6 py-4 border-b border-border">
                 <div className="flex items-center gap-2">
                   <Heart className="h-5 w-5 text-red-500" />
-                  <span className="font-medium">{formatNumber(post.engagement.likesCount)}</span>
+                  <span className="font-medium text-foreground">{formatNumber(post.engagement.likesCount)}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <MessageCircle className="h-5 w-5 text-blue-500" />
-                  <span className="font-medium">{formatNumber(post.engagement.commentsCount)}</span>
+                  <span className="font-medium text-foreground">{formatNumber(post.engagement.commentsCount)}</span>
                 </div>
                 {post.engagement.viewsCount !== undefined && post.engagement.viewsCount > 0 && (
                   <div className="flex items-center gap-2">
                     <Eye className="h-5 w-5 text-green-500" />
-                    <span className="font-medium">{formatNumber(post.engagement.viewsCount)}</span>
+                    <span className="font-medium text-foreground">{formatNumber(post.engagement.viewsCount)}</span>
                   </div>
                 )}
               </div>
@@ -343,14 +343,14 @@ function MediaPlayerModal({
 
             {/* Caption */}
             <div className="py-2">
-              <p className="text-sm whitespace-pre-wrap">{post.caption || "No caption"}</p>
+              <p className="text-sm whitespace-pre-wrap text-foreground">{post.caption || "No caption"}</p>
             </div>
 
             {/* Hashtags */}
             {post.hashtags && post.hashtags.length > 0 && (
               <div className="flex flex-wrap gap-2 py-2">
                 {post.hashtags.map((tag: string, i: number) => (
-                  <span key={i} className="text-sm text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+                  <span key={i} className="text-sm text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-full">
                     #{tag}
                   </span>
                 ))}
@@ -358,7 +358,7 @@ function MediaPlayerModal({
             )}
 
             {/* Post date and type */}
-            <div className="text-sm text-muted-foreground py-2 border-t">
+            <div className="text-sm text-muted-foreground py-2 border-t border-border">
               <p>Posted: {new Date(post.postedAt).toLocaleDateString("en-US", {
                 month: "long",
                 day: "numeric",
@@ -557,7 +557,7 @@ function PostsContent() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Posts</h1>
+          <h1 className="text-3xl font-bold text-foreground">Posts</h1>
           <p className="text-muted-foreground">
             Browse and analyze competitor content
           </p>
@@ -565,9 +565,9 @@ function PostsContent() {
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card className="bg-card">
         <CardHeader>
-          <CardTitle className="text-lg">Filters</CardTitle>
+          <CardTitle className="text-lg text-foreground">Filters</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap items-center gap-3">
@@ -596,31 +596,31 @@ function PostsContent() {
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/30 border-blue-200 dark:border-blue-800">
           <CardContent className="pt-6">
             <div>
               <p className="text-sm font-medium text-muted-foreground">Total Posts</p>
-              <p className="text-3xl font-bold">{sortedPosts.length}</p>
+              <p className="text-3xl font-bold text-foreground">{sortedPosts.length}</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-green-50 to-green-100">
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800">
           <CardContent className="pt-6">
             <div>
               <p className="text-sm font-medium text-muted-foreground">This Week</p>
-              <p className="text-3xl font-bold">
+              <p className="text-3xl font-bold text-foreground">
                 {sortedPosts.filter((p: PostType) => p.postedAt > Date.now() - 7 * 24 * 60 * 60 * 1000).length}
               </p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100">
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/50 dark:to-purple-900/30 border-purple-200 dark:border-purple-800">
           <CardContent className="pt-6">
             <div>
               <p className="text-sm font-medium text-muted-foreground">This Month</p>
-              <p className="text-3xl font-bold">
+              <p className="text-3xl font-bold text-foreground">
                 {sortedPosts.filter((p: PostType) => p.postedAt > Date.now() - 30 * 24 * 60 * 60 * 1000).length}
               </p>
             </div>
@@ -649,10 +649,10 @@ function PostsContent() {
             const engagement = post.engagement;
             const thumbnailUrl = getThumbnailUrl(post, account?.platform);
             return (
-              <Card key={post._id} className="overflow-hidden hover:shadow-lg transition-shadow group">
+              <Card key={post._id} className="overflow-hidden hover:shadow-lg transition-shadow group bg-card">
                 {/* Thumbnail - clickable to open modal */}
                 <div
-                  className="relative aspect-square bg-gray-100 overflow-hidden cursor-pointer"
+                  className="relative aspect-square bg-muted overflow-hidden cursor-pointer"
                   onClick={() => setSelectedPostIndex(index)}
                 >
                   {thumbnailUrl ? (
@@ -750,18 +750,18 @@ function PostsContent() {
                 <CardContent className="p-4 space-y-3">
                   {/* Username and date */}
                   <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-gray-900">@{account?.username}</span>
+                    <span className="font-medium text-foreground">@{account?.username}</span>
                     <span className="text-muted-foreground">{formatDate(post.postedAt)}</span>
                   </div>
 
                   {/* Caption */}
-                  <p className="text-sm text-gray-600 line-clamp-2 min-h-[2.5rem]">
+                  <p className="text-sm text-muted-foreground line-clamp-2 min-h-[2.5rem]">
                     {post.caption || "No caption"}
                   </p>
 
                   {/* Engagement Stats */}
                   {engagement && (
-                    <div className="flex items-center gap-4 text-sm text-gray-500 pt-2 border-t">
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground pt-2 border-t border-border">
                       <div className="flex items-center gap-1" title="Likes">
                         <Heart className="h-4 w-4 text-red-500" />
                         <span>{formatNumber(engagement.likesCount)}</span>
@@ -783,12 +783,12 @@ function PostsContent() {
                   {post.hashtags && post.hashtags.length > 0 && (
                     <div className="flex flex-wrap gap-1 pt-1">
                       {post.hashtags.slice(0, 3).map((tag: string, i: number) => (
-                        <span key={i} className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                        <span key={i} className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-full">
                           #{tag}
                         </span>
                       ))}
                       {post.hashtags.length > 3 && (
-                        <span className="text-xs text-gray-400">+{post.hashtags.length - 3} more</span>
+                        <span className="text-xs text-muted-foreground">+{post.hashtags.length - 3} more</span>
                       )}
                     </div>
                   )}
@@ -811,7 +811,7 @@ function PostsContent() {
           })
         ) : (
           <div className="col-span-full">
-            <Card>
+            <Card className="bg-card">
               <CardContent className="py-12 text-center">
                 <p className="text-muted-foreground">
                   No posts match the current filters
@@ -827,7 +827,7 @@ function PostsContent() {
 
 export default function PostsPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>}>
       <PostsContent />
     </Suspense>
   );
