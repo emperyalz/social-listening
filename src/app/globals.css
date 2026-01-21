@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Demo Mode: Grupo Horizonte - Last Updated: 2026-01-21 */
+
 @layer base {
   :root {
     --background: 0 0% 100%;
