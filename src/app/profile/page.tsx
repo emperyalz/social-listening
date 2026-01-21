@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import { Id } from "../../../convex/_generated/dataModel";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +24,7 @@ import {
   Loader2,
   Facebook,
   ExternalLink,
+  ChevronDown,
 } from "lucide-react";
 
 // TikTok Icon Component
@@ -68,9 +70,13 @@ export default function ProfilePage() {
   const saveBannerMutation = useMutation(api.organizationProfile.saveBanner);
   const addBrandDocumentMutation = useMutation(api.organizationProfile.addBrandDocument);
   const removeBrandDocumentMutation = useMutation(api.organizationProfile.removeBrandDocument);
+  
+  // Competitor selection mutations
+  const addGlobalCompetitor = useMutation(api.organizationProfile.addGlobalCompetitor);
+  const removeGlobalCompetitor = useMutation(api.organizationProfile.removeGlobalCompetitor);
 
-  // Get competitors from the database
-  const competitors = useQuery(api.competitors.list, { isActive: true });
+  // Get all competitors from the database (for selection dropdown)
+  const allCompetitors = useQuery(api.competitors.list, { isActive: true });
 
   // Local state for form fields
   const [companyName, setCompanyName] = useState("");
@@ -89,6 +95,11 @@ export default function ProfilePage() {
   // Social connections - now with editable URLs
   const [socialConnections, setSocialConnections] = useState<SocialConnection[]>([]);
   const [showAddPlatform, setShowAddPlatform] = useState(false);
+  
+  // Competitor selection state
+  const [showAddCompetitor, setShowAddCompetitor] = useState(false);
+  const [isAddingCompetitor, setIsAddingCompetitor] = useState(false);
+  const [isRemovingCompetitor, setIsRemovingCompetitor] = useState<string | null>(null);
 
   // Loading states
   const [isSaving, setIsSaving] = useState(false);
@@ -149,7 +160,6 @@ export default function ProfilePage() {
         hqLocation: hqLocation || undefined,
         websiteUrl: websiteUrl || undefined,
         socialConnections: connectionsToSave.length > 0 ? connectionsToSave : undefined,
-        // Note: globalCompetitors not saved here - they come from competitors table
       });
     } catch (error) {
       console.error("Error saving profile:", error);
@@ -288,6 +298,35 @@ export default function ProfilePage() {
     }]);
     setShowAddPlatform(false);
   };
+
+  // Competitor selection handlers
+  const handleAddCompetitor = async (competitorId: Id<"competitors">) => {
+    setIsAddingCompetitor(true);
+    try {
+      await addGlobalCompetitor({ competitorId });
+      setShowAddCompetitor(false);
+    } catch (error) {
+      console.error("Error adding competitor:", error);
+    } finally {
+      setIsAddingCompetitor(false);
+    }
+  };
+
+  const handleRemoveCompetitor = async (competitorId: Id<"competitors">) => {
+    setIsRemovingCompetitor(competitorId);
+    try {
+      await removeGlobalCompetitor({ competitorId });
+    } catch (error) {
+      console.error("Error removing competitor:", error);
+    } finally {
+      setIsRemovingCompetitor(null);
+    }
+  };
+
+  // Get competitors that are not yet selected
+  const availableCompetitors = allCompetitors?.filter(
+    c => !profile?.selectedCompetitors?.some(sc => sc._id === c._id)
+  ) || [];
 
   const getPlatformIcon = (platform: PlatformType, className: string = "h-5 w-5") => {
     switch (platform) {
@@ -717,7 +756,7 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
-      {/* Section D: Global Competitors - FROM DATABASE */}
+      {/* Section D: Global Competitors - HANDPICKED FROM DATABASE */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -727,7 +766,7 @@ export default function ProfilePage() {
               </div>
               <div>
                 <CardTitle>Global Competitors</CardTitle>
-                <CardDescription>Competitors from your database for market share analysis</CardDescription>
+                <CardDescription>Select up to 5 key competitors for market share analysis</CardDescription>
               </div>
             </div>
             <Button variant="outline" size="sm" asChild>
@@ -739,19 +778,16 @@ export default function ProfilePage() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {competitors === undefined ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-[#28A963]" />
-            </div>
-          ) : competitors && competitors.length > 0 ? (
+          {/* Selected Competitors */}
+          {profile?.selectedCompetitors && profile.selectedCompetitors.length > 0 ? (
             <div className="space-y-2">
-              {competitors.slice(0, 5).map((competitor, index) => (
+              {profile.selectedCompetitors.map((competitor, index) => (
                 <div
                   key={competitor._id}
                   className="flex items-center justify-between rounded-md border bg-background px-4 py-3"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs font-medium">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#28A963]/10 text-xs font-medium text-[#28A963]">
                       {index + 1}
                     </span>
                     <div className="flex items-center gap-3">
@@ -791,30 +827,104 @@ export default function ProfilePage() {
                     <span className="text-xs text-muted-foreground ml-2">
                       {competitor.accounts?.length || 0} accounts
                     </span>
+                    {/* Remove button */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive ml-2"
+                      onClick={() => handleRemoveCompetitor(competitor._id)}
+                      disabled={isRemovingCompetitor === competitor._id}
+                    >
+                      {isRemovingCompetitor === competitor._id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <X className="h-4 w-4" />
+                      )}
+                    </Button>
                   </div>
                 </div>
               ))}
-              {competitors.length > 5 && (
-                <p className="text-xs text-muted-foreground text-center py-2">
-                  + {competitors.length - 5} more competitors
-                </p>
-              )}
             </div>
           ) : (
-            <div className="text-center py-8">
-              <Building2 className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground mb-3">No competitors added yet</p>
-              <Button variant="outline" size="sm" asChild>
-                <a href="/competitors">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Competitors
-                </a>
-              </Button>
+            <div className="text-center py-6 border rounded-md bg-muted/30">
+              <Building2 className="h-10 w-10 text-muted-foreground/30 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">No global competitors selected</p>
+              <p className="text-xs text-muted-foreground mt-1">Add competitors from the dropdown below</p>
             </div>
           )}
 
+          {/* Add Competitor Button/Dropdown */}
+          {(profile?.selectedCompetitors?.length || 0) < 5 && (
+            <div className="relative">
+              <button
+                onClick={() => setShowAddCompetitor(!showAddCompetitor)}
+                disabled={isAddingCompetitor || availableCompetitors.length === 0}
+                className="w-full flex items-center justify-center gap-2 rounded-md border-2 border-dashed border-muted-foreground/25 bg-transparent px-4 py-3 text-sm text-muted-foreground hover:border-[#28A963]/50 hover:text-[#28A963] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isAddingCompetitor ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Plus className="h-4 w-4" />
+                )}
+                Add Competitor
+                <ChevronDown className={`h-4 w-4 transition-transform ${showAddCompetitor ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* Competitor selector dropdown */}
+              {showAddCompetitor && availableCompetitors.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-2 rounded-lg border bg-card shadow-lg z-50 max-h-64 overflow-y-auto">
+                  <div className="p-2">
+                    <p className="text-xs text-muted-foreground px-2 py-1 mb-1">
+                      Select a competitor to add ({5 - (profile?.selectedCompetitors?.length || 0)} slots remaining):
+                    </p>
+                    {availableCompetitors.map((competitor) => (
+                      <button
+                        key={competitor._id}
+                        onClick={() => handleAddCompetitor(competitor._id)}
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors"
+                      >
+                        {competitor.displayAvatarUrl ? (
+                          <img
+                            src={competitor.displayAvatarUrl}
+                            alt={competitor.name}
+                            className="h-6 w-6 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center">
+                            <Building2 className="h-3 w-3 text-muted-foreground" />
+                          </div>
+                        )}
+                        <div className="text-left">
+                          <span className="font-medium">{competitor.name}</span>
+                          <p className="text-xs text-muted-foreground">
+                            {competitor.market?.name || "Unknown"} • {competitor.type}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {showAddCompetitor && availableCompetitors.length === 0 && (
+                <div className="absolute top-full left-0 right-0 mt-2 rounded-lg border bg-card shadow-lg z-50 p-4 text-center">
+                  <p className="text-sm text-muted-foreground">All competitors have been selected</p>
+                  <Button variant="link" size="sm" asChild className="mt-2">
+                    <a href="/competitors">Add more competitors</a>
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {(profile?.selectedCompetitors?.length || 0) >= 5 && (
+            <p className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-900/20 p-3 rounded-md">
+              Maximum of 5 global competitors reached. Remove one to add another.
+            </p>
+          )}
+
           <p className="text-xs text-muted-foreground">
-            These competitors are managed in the Competitors page and used in the Resonance Audit and Commercial Intent modules for comparative analysis.
+            These competitors are used in the Resonance Audit and Commercial Intent modules for comparative analysis. Select your most direct competitors for better insights.
           </p>
         </CardContent>
       </Card>
