@@ -19,9 +19,10 @@ import {
   Save,
   Image as ImageIcon,
   MapPin,
-  Pencil,
   Youtube,
   Loader2,
+  Facebook,
+  ExternalLink,
 } from "lucide-react";
 
 // TikTok Icon Component
@@ -31,17 +32,32 @@ const TikTokIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
+// Twitter/X Icon
+const TwitterIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+  </svg>
+);
+
+type PlatformType = "instagram" | "youtube" | "tiktok" | "linkedin" | "facebook" | "twitter";
+
 interface SocialConnection {
   platform: string;
   handle: string;
+  url: string;
   connected: boolean;
-  icon: "instagram" | "youtube" | "tiktok" | "linkedin" | "facebook" | "twitter";
+  icon: PlatformType;
 }
 
-interface Competitor {
-  name: string;
-  platforms: ("instagram" | "youtube" | "tiktok")[];
-}
+// Available platforms that can be added
+const AVAILABLE_PLATFORMS: { id: PlatformType; name: string; urlPrefix: string; placeholder: string }[] = [
+  { id: "instagram", name: "Instagram", urlPrefix: "https://instagram.com/", placeholder: "@username or full URL" },
+  { id: "youtube", name: "YouTube", urlPrefix: "https://youtube.com/", placeholder: "@channel or full URL" },
+  { id: "tiktok", name: "TikTok", urlPrefix: "https://tiktok.com/", placeholder: "@username or full URL" },
+  { id: "linkedin", name: "LinkedIn", urlPrefix: "https://linkedin.com/", placeholder: "company/name or full URL" },
+  { id: "facebook", name: "Facebook", urlPrefix: "https://facebook.com/", placeholder: "page name or full URL" },
+  { id: "twitter", name: "X (Twitter)", urlPrefix: "https://x.com/", placeholder: "@username or full URL" },
+];
 
 export default function ProfilePage() {
   // Convex queries and mutations
@@ -52,6 +68,9 @@ export default function ProfilePage() {
   const saveBannerMutation = useMutation(api.organizationProfile.saveBanner);
   const addBrandDocumentMutation = useMutation(api.organizationProfile.addBrandDocument);
   const removeBrandDocumentMutation = useMutation(api.organizationProfile.removeBrandDocument);
+
+  // Get competitors from the database
+  const competitors = useQuery(api.competitors.list, { isActive: true });
 
   // Local state for form fields
   const [companyName, setCompanyName] = useState("");
@@ -67,17 +86,9 @@ export default function ProfilePage() {
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const brandDocsInputRef = useRef<HTMLInputElement>(null);
 
-  // Social connections
-  const [socialConnections, setSocialConnections] = useState<SocialConnection[]>([
-    { platform: "Instagram", handle: "", connected: false, icon: "instagram" },
-    { platform: "YouTube", handle: "", connected: false, icon: "youtube" },
-    { platform: "TikTok", handle: "", connected: false, icon: "tiktok" },
-  ]);
-
-  // Competitors
-  const [competitors, setCompetitors] = useState<Competitor[]>([]);
-  const [newCompetitor, setNewCompetitor] = useState("");
-  const [editingCompetitor, setEditingCompetitor] = useState<number | null>(null);
+  // Social connections - now with editable URLs
+  const [socialConnections, setSocialConnections] = useState<SocialConnection[]>([]);
+  const [showAddPlatform, setShowAddPlatform] = useState(false);
 
   // Loading states
   const [isSaving, setIsSaving] = useState(false);
@@ -102,14 +113,19 @@ export default function ProfilePage() {
         setBannerPreview(profile.bannerUrl);
       }
 
-      // Load social connections
+      // Load social connections with URLs
       if (profile.socialConnections && profile.socialConnections.length > 0) {
-        setSocialConnections(profile.socialConnections);
-      }
-
-      // Load competitors
-      if (profile.globalCompetitors && profile.globalCompetitors.length > 0) {
-        setCompetitors(profile.globalCompetitors);
+        setSocialConnections(profile.socialConnections.map(conn => ({
+          ...conn,
+          url: conn.handle || "", // Use handle as URL
+        })));
+      } else {
+        // Default platforms
+        setSocialConnections([
+          { platform: "Instagram", handle: "", url: "", connected: false, icon: "instagram" },
+          { platform: "YouTube", handle: "", url: "", connected: false, icon: "youtube" },
+          { platform: "TikTok", handle: "", url: "", connected: false, icon: "tiktok" },
+        ]);
       }
     }
   }, [profile]);
@@ -118,16 +134,23 @@ export default function ProfilePage() {
   const handleSaveProfile = async () => {
     setIsSaving(true);
     try {
+      // Convert social connections to the format expected by Convex
+      const connectionsToSave = socialConnections.map(conn => ({
+        platform: conn.platform,
+        handle: conn.url, // Store the URL in handle field
+        connected: conn.connected,
+        icon: conn.icon,
+      }));
+
       await saveProfile({
         companyName,
         legalName: legalName || undefined,
         taxId: taxId || undefined,
         hqLocation: hqLocation || undefined,
         websiteUrl: websiteUrl || undefined,
-        socialConnections: socialConnections.length > 0 ? socialConnections : undefined,
-        globalCompetitors: competitors.length > 0 ? competitors : undefined,
+        socialConnections: connectionsToSave.length > 0 ? connectionsToSave : undefined,
+        // Note: globalCompetitors not saved here - they come from competitors table
       });
-      // Show success feedback (could add toast notification here)
     } catch (error) {
       console.error("Error saving profile:", error);
     } finally {
@@ -142,14 +165,12 @@ export default function ProfilePage() {
 
     setIsUploadingAvatar(true);
     try {
-      // Show local preview immediately
       const reader = new FileReader();
       reader.onloadend = () => {
         setAvatarPreview(reader.result as string);
       };
       reader.readAsDataURL(file);
 
-      // Upload to Convex storage
       const uploadUrl = await generateUploadUrl();
       const result = await fetch(uploadUrl, {
         method: "POST",
@@ -157,8 +178,6 @@ export default function ProfilePage() {
         body: file,
       });
       const { storageId } = await result.json();
-
-      // Save the storage ID to the profile
       await saveAvatarMutation({ storageId });
     } catch (error) {
       console.error("Error uploading avatar:", error);
@@ -174,14 +193,12 @@ export default function ProfilePage() {
 
     setIsUploadingBanner(true);
     try {
-      // Show local preview immediately
       const reader = new FileReader();
       reader.onloadend = () => {
         setBannerPreview(reader.result as string);
       };
       reader.readAsDataURL(file);
 
-      // Upload to Convex storage
       const uploadUrl = await generateUploadUrl();
       const result = await fetch(uploadUrl, {
         method: "POST",
@@ -189,8 +206,6 @@ export default function ProfilePage() {
         body: file,
       });
       const { storageId } = await result.json();
-
-      // Save the storage ID to the profile
       await saveBannerMutation({ storageId });
     } catch (error) {
       console.error("Error uploading banner:", error);
@@ -206,7 +221,6 @@ export default function ProfilePage() {
 
     setIsUploadingDoc(true);
     try {
-      // Upload to Convex storage
       const uploadUrl = await generateUploadUrl();
       const result = await fetch(uploadUrl, {
         method: "POST",
@@ -214,8 +228,6 @@ export default function ProfilePage() {
         body: file,
       });
       const { storageId } = await result.json();
-
-      // Add the document to the profile
       await addBrandDocumentMutation({
         name: file.name,
         storageId
@@ -240,15 +252,11 @@ export default function ProfilePage() {
     brandDocsInputRef.current?.click();
   };
 
-  const handleAddCompetitor = () => {
-    if (newCompetitor.trim() && competitors.length < 5) {
-      setCompetitors([...competitors, { name: newCompetitor.trim(), platforms: ["instagram"] }]);
-      setNewCompetitor("");
-    }
-  };
-
-  const handleRemoveCompetitor = (index: number) => {
-    setCompetitors(competitors.filter((_, i) => i !== index));
+  // Social connection handlers
+  const updateSocialUrl = (index: number, url: string) => {
+    setSocialConnections(socialConnections.map((conn, i) =>
+      i === index ? { ...conn, url, handle: url } : conn
+    ));
   };
 
   const toggleConnection = (index: number) => {
@@ -257,38 +265,52 @@ export default function ProfilePage() {
     ));
   };
 
-  const updateSocialHandle = (index: number, handle: string) => {
-    setSocialConnections(socialConnections.map((conn, i) =>
-      i === index ? { ...conn, handle } : conn
-    ));
+  const removeSocialConnection = (index: number) => {
+    setSocialConnections(socialConnections.filter((_, i) => i !== index));
   };
 
-  const toggleCompetitorPlatform = (compIndex: number, platform: "instagram" | "youtube" | "tiktok") => {
-    setCompetitors(competitors.map((comp, i) => {
-      if (i === compIndex) {
-        const hasPlat = comp.platforms.includes(platform);
-        return {
-          ...comp,
-          platforms: hasPlat
-            ? comp.platforms.filter(p => p !== platform)
-            : [...comp.platforms, platform]
-        };
-      }
-      return comp;
-    }));
+  const addPlatform = (platformId: PlatformType) => {
+    const platform = AVAILABLE_PLATFORMS.find(p => p.id === platformId);
+    if (!platform) return;
+
+    // Check if already added
+    if (socialConnections.some(c => c.icon === platformId)) {
+      setShowAddPlatform(false);
+      return;
+    }
+
+    setSocialConnections([...socialConnections, {
+      platform: platform.name,
+      handle: "",
+      url: "",
+      connected: false,
+      icon: platformId,
+    }]);
+    setShowAddPlatform(false);
   };
 
-  const getPlatformIcon = (platform: string, className: string = "h-4 w-4") => {
+  const getPlatformIcon = (platform: PlatformType, className: string = "h-5 w-5") => {
     switch (platform) {
       case "instagram":
         return <Instagram className={`${className} text-pink-500`} />;
       case "youtube":
         return <Youtube className={`${className} text-red-500`} />;
       case "tiktok":
-        return <TikTokIcon className={`${className} text-foreground`} />;
+        return <TikTokIcon className={`${className}`} />;
+      case "linkedin":
+        return <Linkedin className={`${className} text-blue-600`} />;
+      case "facebook":
+        return <Facebook className={`${className} text-blue-500`} />;
+      case "twitter":
+        return <TwitterIcon className={`${className}`} />;
       default:
-        return null;
+        return <Globe className={`${className} text-muted-foreground`} />;
     }
+  };
+
+  const getPlaceholder = (icon: PlatformType) => {
+    const platform = AVAILABLE_PLATFORMS.find(p => p.id === icon);
+    return platform?.placeholder || "Enter URL or handle";
   };
 
   // Show loading state while fetching profile
@@ -402,7 +424,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Branding Images - Split into Avatar and Banner */}
+          {/* Branding Images */}
           <div>
             <label className="text-sm font-medium mb-3 block">Branding Images</label>
             <div className="grid grid-cols-2 gap-4">
@@ -437,9 +459,7 @@ export default function ProfilePage() {
                       )}
                       Upload
                     </Button>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      512x512px recommended
-                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">512x512px recommended</p>
                   </div>
                 </div>
                 <input
@@ -497,7 +517,7 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
-      {/* Section B: Brand Intelligence (AI Knowledge Base) */}
+      {/* Section B: Brand Intelligence */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
@@ -511,7 +531,6 @@ export default function ProfilePage() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Upload Zone - Now Clickable */}
           <div
             onClick={handleDragDropClick}
             className="rounded-lg border-2 border-dashed border-muted-foreground/25 bg-muted/30 p-8 text-center hover:border-[#28A963]/50 hover:bg-muted/50 transition-colors cursor-pointer"
@@ -525,9 +544,7 @@ export default function ProfilePage() {
             <p className="text-sm text-muted-foreground mt-1">
               Drag & Drop or click to upload Brandbooks, Tone Guides, and Style Documents
             </p>
-            <p className="text-xs text-muted-foreground mt-2">
-              Supported: PDF, DOCX • Max 10MB per file
-            </p>
+            <p className="text-xs text-muted-foreground mt-2">Supported: PDF, DOCX • Max 10MB per file</p>
           </div>
           <input
             ref={brandDocsInputRef}
@@ -537,7 +554,6 @@ export default function ProfilePage() {
             onChange={handleBrandDocsUpload}
           />
 
-          {/* Uploaded Files - From Database */}
           <div className="space-y-2">
             <p className="text-sm font-medium">Uploaded Documents</p>
             {profile?.brandDocuments && profile.brandDocuments.length > 0 ? (
@@ -581,9 +597,7 @@ export default function ProfilePage() {
                 </div>
               ))
             ) : (
-              <p className="text-sm text-muted-foreground py-4 text-center">
-                No documents uploaded yet
-              </p>
+              <p className="text-sm text-muted-foreground py-4 text-center">No documents uploaded yet</p>
             )}
           </div>
 
@@ -593,7 +607,7 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
-      {/* Section C: Social Connections */}
+      {/* Section C: Social Connections - NOW WITH EDITABLE URLS */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
@@ -610,182 +624,197 @@ export default function ProfilePage() {
           {socialConnections.map((connection, index) => (
             <div
               key={index}
-              className="flex items-center justify-between rounded-md border bg-background px-4 py-3"
+              className="flex items-center gap-3 rounded-md border bg-background px-4 py-3"
             >
-              <div className="flex items-center gap-3 flex-1">
-                {connection.icon === "instagram" && (
-                  <Instagram className="h-5 w-5 text-pink-500" />
-                )}
-                {connection.icon === "youtube" && (
-                  <Youtube className="h-5 w-5 text-red-500" />
-                )}
-                {connection.icon === "tiktok" && (
-                  <TikTokIcon className="h-5 w-5" />
-                )}
-                {connection.icon === "linkedin" && (
-                  <Linkedin className="h-5 w-5 text-blue-600" />
-                )}
-                <div className="flex-1">
-                  <p className="font-medium text-sm">{connection.platform}</p>
-                  <input
-                    type="text"
-                    value={connection.handle}
-                    onChange={(e) => updateSocialHandle(index, e.target.value)}
-                    placeholder={`@your${connection.platform.toLowerCase()}handle`}
-                    className="text-xs text-muted-foreground bg-transparent border-none outline-none w-full"
-                  />
-                </div>
+              <div className="flex-shrink-0">
+                {getPlatformIcon(connection.icon)}
               </div>
-              {connection.connected ? (
-                <button
-                  onClick={() => toggleConnection(index)}
-                  className="flex items-center gap-1.5 rounded-full bg-[#28A963]/10 px-3 py-1 text-xs font-medium text-[#28A963] hover:bg-[#28A963]/20 transition-colors cursor-pointer"
-                >
-                  <Check className="h-3 w-3" />
-                  Connected
-                </button>
-              ) : (
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm">{connection.platform}</p>
+                <input
+                  type="text"
+                  value={connection.url}
+                  onChange={(e) => updateSocialUrl(index, e.target.value)}
+                  placeholder={getPlaceholder(connection.icon)}
+                  className="w-full mt-1 text-sm bg-muted/50 border border-input rounded px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#28A963]/50"
+                />
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {connection.url && (
+                  <a
+                    href={connection.url.startsWith("http") ? connection.url : `https://${connection.url}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-1 hover:bg-muted rounded transition-colors"
+                    title="Open in new tab"
+                  >
+                    <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                  </a>
+                )}
+                {connection.connected ? (
+                  <button
+                    onClick={() => toggleConnection(index)}
+                    className="flex items-center gap-1.5 rounded-full bg-[#28A963]/10 px-3 py-1 text-xs font-medium text-[#28A963] hover:bg-[#28A963]/20 transition-colors"
+                  >
+                    <Check className="h-3 w-3" />
+                    Connected
+                  </button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => toggleConnection(index)}
+                  >
+                    Connect
+                  </Button>
+                )}
                 <Button
+                  variant="ghost"
                   size="sm"
-                  variant="outline"
-                  onClick={() => toggleConnection(index)}
+                  className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                  onClick={() => removeSocialConnection(index)}
                 >
-                  Connect
+                  <X className="h-4 w-4" />
                 </Button>
-              )}
+              </div>
             </div>
           ))}
 
           {/* Add Platform Button */}
-          <button
-            className="w-full flex items-center justify-center gap-2 rounded-md border-2 border-dashed border-muted-foreground/25 bg-transparent px-4 py-3 text-sm text-muted-foreground hover:border-[#28A963]/50 hover:text-[#28A963] transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            Add Platform
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowAddPlatform(!showAddPlatform)}
+              className="w-full flex items-center justify-center gap-2 rounded-md border-2 border-dashed border-muted-foreground/25 bg-transparent px-4 py-3 text-sm text-muted-foreground hover:border-[#28A963]/50 hover:text-[#28A963] transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              Add Platform
+            </button>
+
+            {/* Platform selector dropdown */}
+            {showAddPlatform && (
+              <div className="absolute top-full left-0 right-0 mt-2 rounded-lg border bg-card shadow-lg z-50 p-2">
+                <p className="text-xs text-muted-foreground px-2 py-1 mb-1">Select a platform to add:</p>
+                {AVAILABLE_PLATFORMS.filter(p => !socialConnections.some(c => c.icon === p.id)).map((platform) => (
+                  <button
+                    key={platform.id}
+                    onClick={() => addPlatform(platform.id)}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors"
+                  >
+                    {getPlatformIcon(platform.id)}
+                    <span>{platform.name}</span>
+                  </button>
+                ))}
+                {AVAILABLE_PLATFORMS.filter(p => !socialConnections.some(c => c.icon === p.id)).length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-2">All platforms already added</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            Enter the full URL or handle for each platform. These are your organization's official social media accounts.
+          </p>
         </CardContent>
       </Card>
 
-      {/* Section D: Global Competitors */}
+      {/* Section D: Global Competitors - FROM DATABASE */}
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#28A963]/10">
-              <Building2 className="h-5 w-5 text-[#28A963]" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#28A963]/10">
+                <Building2 className="h-5 w-5 text-[#28A963]" />
+              </div>
+              <div>
+                <CardTitle>Global Competitors</CardTitle>
+                <CardDescription>Competitors from your database for market share analysis</CardDescription>
+              </div>
             </div>
-            <div>
-              <CardTitle>Global Competitors</CardTitle>
-              <CardDescription>Top 3-5 rival developers for market share analysis</CardDescription>
-            </div>
+            <Button variant="outline" size="sm" asChild>
+              <a href="/competitors">
+                Manage Competitors
+                <ExternalLink className="h-4 w-4 ml-2" />
+              </a>
+            </Button>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            {competitors.length > 0 ? (
-              competitors.map((competitor, index) => (
+          {competitors === undefined ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-[#28A963]" />
+            </div>
+          ) : competitors && competitors.length > 0 ? (
+            <div className="space-y-2">
+              {competitors.slice(0, 5).map((competitor, index) => (
                 <div
-                  key={index}
+                  key={competitor._id}
                   className="flex items-center justify-between rounded-md border bg-background px-4 py-3"
                 >
                   <div className="flex items-center gap-3">
                     <span className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs font-medium">
                       {index + 1}
                     </span>
-                    <span className="text-sm font-medium">{competitor.name}</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {/* Platform icons being monitored */}
-                    <div className="flex items-center gap-1.5">
-                      {competitor.platforms.map((platform) => (
-                        <span key={platform} className="opacity-80">
-                          {getPlatformIcon(platform, "h-4 w-4")}
-                        </span>
-                      ))}
+                    <div className="flex items-center gap-3">
+                      {competitor.displayAvatarUrl ? (
+                        <img
+                          src={competitor.displayAvatarUrl}
+                          alt={competitor.name}
+                          className="h-8 w-8 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+                          <Building2 className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div>
+                        <span className="text-sm font-medium">{competitor.name}</span>
+                        <p className="text-xs text-muted-foreground">
+                          {competitor.market?.name || "Unknown market"} • {competitor.type}
+                        </p>
+                      </div>
                     </div>
-                    {/* Edit Button */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setEditingCompetitor(editingCompetitor === index ? null : index)}
-                      className="h-8 w-8 p-0 text-muted-foreground hover:text-[#28A963]"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    {/* Remove Button */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemoveCompetitor(index)}
-                      className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {/* Platform icons from social handles */}
+                    <div className="flex items-center gap-1.5">
+                      {competitor.socialHandles?.instagram && (
+                        <Instagram className="h-4 w-4 text-pink-500 opacity-80" />
+                      )}
+                      {competitor.socialHandles?.youtube && (
+                        <Youtube className="h-4 w-4 text-red-500 opacity-80" />
+                      )}
+                      {competitor.socialHandles?.tiktok && (
+                        <TikTokIcon className="h-4 w-4 opacity-80" />
+                      )}
+                    </div>
+                    {/* Account count */}
+                    <span className="text-xs text-muted-foreground ml-2">
+                      {competitor.accounts?.length || 0} accounts
+                    </span>
                   </div>
                 </div>
-              ))
-            ) : (
-              <p className="text-sm text-muted-foreground py-4 text-center">
-                No competitors added yet
-              </p>
-            )}
-
-            {/* Expanded Edit Panel */}
-            {editingCompetitor !== null && competitors[editingCompetitor] && (
-              <div className="rounded-md border bg-muted/30 p-4 space-y-3">
-                <p className="text-sm font-medium">Edit: {competitors[editingCompetitor]?.name}</p>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-2">Platforms to Monitor:</p>
-                  <div className="flex gap-2">
-                    {(["instagram", "youtube", "tiktok"] as const).map((platform) => {
-                      const isActive = competitors[editingCompetitor]?.platforms.includes(platform);
-                      return (
-                        <button
-                          key={platform}
-                          onClick={() => toggleCompetitorPlatform(editingCompetitor, platform)}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-sm transition-colors ${
-                            isActive
-                              ? "bg-[#28A963]/10 border-[#28A963]/30 text-[#28A963]"
-                              : "bg-background border-input text-muted-foreground hover:border-[#28A963]/30"
-                          }`}
-                        >
-                          {getPlatformIcon(platform, "h-4 w-4")}
-                          <span className="capitalize">{platform}</span>
-                          {isActive && <Check className="h-3 w-3" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setEditingCompetitor(null)}
-                >
-                  Done
-                </Button>
-              </div>
-            )}
-          </div>
-
-          {competitors.length < 5 && (
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={newCompetitor}
-                onChange={(e) => setNewCompetitor(e.target.value)}
-                placeholder="Add competitor name..."
-                className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#28A963]/50"
-                onKeyDown={(e) => e.key === "Enter" && handleAddCompetitor()}
-              />
-              <Button onClick={handleAddCompetitor} variant="outline">
-                <Plus className="h-4 w-4 mr-1" />
-                Add
+              ))}
+              {competitors.length > 5 && (
+                <p className="text-xs text-muted-foreground text-center py-2">
+                  + {competitors.length - 5} more competitors
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <Building2 className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+              <p className="text-sm text-muted-foreground mb-3">No competitors added yet</p>
+              <Button variant="outline" size="sm" asChild>
+                <a href="/competitors">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Competitors
+                </a>
               </Button>
             </div>
           )}
 
           <p className="text-xs text-muted-foreground">
-            These competitors will be used in the Resonance Audit and Commercial Intent modules for comparative analysis.
+            These competitors are managed in the Competitors page and used in the Resonance Audit and Commercial Intent modules for comparative analysis.
           </p>
         </CardContent>
       </Card>
