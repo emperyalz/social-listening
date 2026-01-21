@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +21,7 @@ import {
   MapPin,
   Pencil,
   Youtube,
+  Loader2,
 } from "lucide-react";
 
 // TikTok Icon Component
@@ -32,7 +35,7 @@ interface SocialConnection {
   platform: string;
   handle: string;
   connected: boolean;
-  icon: "instagram" | "youtube" | "tiktok" | "linkedin";
+  icon: "instagram" | "youtube" | "tiktok" | "linkedin" | "facebook" | "twitter";
 }
 
 interface Competitor {
@@ -41,38 +44,201 @@ interface Competitor {
 }
 
 export default function ProfilePage() {
-  const [companyName, setCompanyName] = useState("DM Real Estate Panama");
-  const [legalName, setLegalName] = useState("DM Real Estate Development S.A.");
-  const [taxId, setTaxId] = useState("155-5555-123456");
-  const [hqLocation, setHqLocation] = useState("Panama City, Panama");
-  const [websiteUrl, setWebsiteUrl] = useState("https://dmrealestatepanama.com");
-  
-  // Avatar and Banner uploads
+  // Convex queries and mutations
+  const profile = useQuery(api.organizationProfile.getOrganizationProfile);
+  const saveProfile = useMutation(api.organizationProfile.saveOrganizationProfile);
+  const generateUploadUrl = useMutation(api.organizationProfile.generateUploadUrl);
+  const saveAvatarMutation = useMutation(api.organizationProfile.saveAvatar);
+  const saveBannerMutation = useMutation(api.organizationProfile.saveBanner);
+  const addBrandDocumentMutation = useMutation(api.organizationProfile.addBrandDocument);
+  const removeBrandDocumentMutation = useMutation(api.organizationProfile.removeBrandDocument);
+
+  // Local state for form fields
+  const [companyName, setCompanyName] = useState("");
+  const [legalName, setLegalName] = useState("");
+  const [taxId, setTaxId] = useState("");
+  const [hqLocation, setHqLocation] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
+
+  // Avatar and Banner
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const brandDocsInputRef = useRef<HTMLInputElement>(null);
 
-  const [uploadedFiles, setUploadedFiles] = useState([
-    { name: "2024_Brand_Guidelines.pdf", status: "verified" },
-    { name: "Tone_of_Voice_Guide.docx", status: "verified" },
-  ]);
-
+  // Social connections
   const [socialConnections, setSocialConnections] = useState<SocialConnection[]>([
-    { platform: "Instagram", handle: "@dmrealestatepanama", connected: true, icon: "instagram" },
-    { platform: "YouTube", handle: "DM Real Estate Panama", connected: false, icon: "youtube" },
-    { platform: "TikTok", handle: "@dmrealestatepanama", connected: false, icon: "tiktok" },
+    { platform: "Instagram", handle: "", connected: false, icon: "instagram" },
+    { platform: "YouTube", handle: "", connected: false, icon: "youtube" },
+    { platform: "TikTok", handle: "", connected: false, icon: "tiktok" },
   ]);
 
-  const [competitors, setCompetitors] = useState<Competitor[]>([
-    { name: "Grupo Provivienda", platforms: ["instagram", "tiktok"] },
-    { name: "Empresas Bern", platforms: ["instagram", "youtube"] },
-    { name: "Price Smart Homes", platforms: ["instagram", "youtube", "tiktok"] },
-  ]);
-
+  // Competitors
+  const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [newCompetitor, setNewCompetitor] = useState("");
   const [editingCompetitor, setEditingCompetitor] = useState<number | null>(null);
+
+  // Loading states
+  const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isUploadingBanner, setIsUploadingBanner] = useState(false);
+  const [isUploadingDoc, setIsUploadingDoc] = useState(false);
+
+  // Load data from Convex when profile is fetched
+  useEffect(() => {
+    if (profile) {
+      setCompanyName(profile.companyName || "");
+      setLegalName(profile.legalName || "");
+      setTaxId(profile.taxId || "");
+      setHqLocation(profile.hqLocation || "");
+      setWebsiteUrl(profile.websiteUrl || "");
+
+      // Set avatar and banner previews from storage URLs
+      if (profile.avatarUrl) {
+        setAvatarPreview(profile.avatarUrl);
+      }
+      if (profile.bannerUrl) {
+        setBannerPreview(profile.bannerUrl);
+      }
+
+      // Load social connections
+      if (profile.socialConnections && profile.socialConnections.length > 0) {
+        setSocialConnections(profile.socialConnections);
+      }
+
+      // Load competitors
+      if (profile.globalCompetitors && profile.globalCompetitors.length > 0) {
+        setCompetitors(profile.globalCompetitors);
+      }
+    }
+  }, [profile]);
+
+  // Save all profile data
+  const handleSaveProfile = async () => {
+    setIsSaving(true);
+    try {
+      await saveProfile({
+        companyName,
+        legalName: legalName || undefined,
+        taxId: taxId || undefined,
+        hqLocation: hqLocation || undefined,
+        websiteUrl: websiteUrl || undefined,
+        socialConnections: socialConnections.length > 0 ? socialConnections : undefined,
+        globalCompetitors: competitors.length > 0 ? competitors : undefined,
+      });
+      // Show success feedback (could add toast notification here)
+    } catch (error) {
+      console.error("Error saving profile:", error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Handle avatar upload to Convex storage
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingAvatar(true);
+    try {
+      // Show local preview immediately
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      // Upload to Convex storage
+      const uploadUrl = await generateUploadUrl();
+      const result = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      const { storageId } = await result.json();
+
+      // Save the storage ID to the profile
+      await saveAvatarMutation({ storageId });
+    } catch (error) {
+      console.error("Error uploading avatar:", error);
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
+  // Handle banner upload to Convex storage
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingBanner(true);
+    try {
+      // Show local preview immediately
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setBannerPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      // Upload to Convex storage
+      const uploadUrl = await generateUploadUrl();
+      const result = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      const { storageId } = await result.json();
+
+      // Save the storage ID to the profile
+      await saveBannerMutation({ storageId });
+    } catch (error) {
+      console.error("Error uploading banner:", error);
+    } finally {
+      setIsUploadingBanner(false);
+    }
+  };
+
+  // Handle brand document upload
+  const handleBrandDocsUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingDoc(true);
+    try {
+      // Upload to Convex storage
+      const uploadUrl = await generateUploadUrl();
+      const result = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      const { storageId } = await result.json();
+
+      // Add the document to the profile
+      await addBrandDocumentMutation({
+        name: file.name,
+        storageId
+      });
+    } catch (error) {
+      console.error("Error uploading document:", error);
+    } finally {
+      setIsUploadingDoc(false);
+    }
+  };
+
+  // Handle document removal
+  const handleRemoveDocument = async (storageId: string) => {
+    try {
+      await removeBrandDocumentMutation({ storageId: storageId as any });
+    } catch (error) {
+      console.error("Error removing document:", error);
+    }
+  };
+
+  const handleDragDropClick = () => {
+    brandDocsInputRef.current?.click();
+  };
 
   const handleAddCompetitor = () => {
     if (newCompetitor.trim() && competitors.length < 5) {
@@ -86,43 +252,15 @@ export default function ProfilePage() {
   };
 
   const toggleConnection = (index: number) => {
-    setSocialConnections(socialConnections.map((conn, i) => 
+    setSocialConnections(socialConnections.map((conn, i) =>
       i === index ? { ...conn, connected: !conn.connected } : conn
     ));
   };
 
-  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatarPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setBannerPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleBrandDocsUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Simulate upload - add to list with verified status
-      setUploadedFiles([...uploadedFiles, { name: file.name, status: "verified" }]);
-    }
-  };
-
-  const handleDragDropClick = () => {
-    brandDocsInputRef.current?.click();
+  const updateSocialHandle = (index: number, handle: string) => {
+    setSocialConnections(socialConnections.map((conn, i) =>
+      i === index ? { ...conn, handle } : conn
+    ));
   };
 
   const toggleCompetitorPlatform = (compIndex: number, platform: "instagram" | "youtube" | "tiktok") => {
@@ -131,7 +269,7 @@ export default function ProfilePage() {
         const hasPlat = comp.platforms.includes(platform);
         return {
           ...comp,
-          platforms: hasPlat 
+          platforms: hasPlat
             ? comp.platforms.filter(p => p !== platform)
             : [...comp.platforms, platform]
         };
@@ -153,6 +291,15 @@ export default function ProfilePage() {
     }
   };
 
+  // Show loading state while fetching profile
+  if (profile === undefined) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-[#28A963]" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 max-w-4xl">
       {/* Header */}
@@ -163,9 +310,17 @@ export default function ProfilePage() {
             Manage your corporate identity and AI context sources
           </p>
         </div>
-        <Button className="bg-[#28A963] hover:bg-[#229954]">
-          <Save className="h-4 w-4 mr-2" />
-          Save Changes
+        <Button
+          className="bg-[#28A963] hover:bg-[#229954]"
+          onClick={handleSaveProfile}
+          disabled={isSaving}
+        >
+          {isSaving ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <Save className="h-4 w-4 mr-2" />
+          )}
+          {isSaving ? "Saving..." : "Save Changes"}
         </Button>
       </div>
 
@@ -191,6 +346,7 @@ export default function ProfilePage() {
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
                 className="mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#28A963]/50"
+                placeholder="Enter company name"
               />
             </div>
             <div>
@@ -200,6 +356,7 @@ export default function ProfilePage() {
                 value={legalName}
                 onChange={(e) => setLegalName(e.target.value)}
                 className="mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#28A963]/50"
+                placeholder="Enter legal name"
               />
             </div>
             <div>
@@ -209,6 +366,7 @@ export default function ProfilePage() {
                 value={taxId}
                 onChange={(e) => setTaxId(e.target.value)}
                 className="mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#28A963]/50"
+                placeholder="Enter tax ID"
               />
             </div>
             <div>
@@ -219,10 +377,11 @@ export default function ProfilePage() {
                   value={hqLocation}
                   onChange={(e) => setHqLocation(e.target.value)}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#28A963]/50"
+                  placeholder="Enter location"
                 />
-                <button 
+                <button
                   className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded transition-colors"
-                  title="Set on Map"
+                  title="Set on Map (Google Maps API required)"
                 >
                   <MapPin className="h-4 w-4 text-[#28A963]" />
                 </button>
@@ -238,6 +397,7 @@ export default function ProfilePage() {
                 value={websiteUrl}
                 onChange={(e) => setWebsiteUrl(e.target.value)}
                 className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#28A963]/50"
+                placeholder="https://example.com"
               />
             </div>
           </div>
@@ -251,23 +411,30 @@ export default function ProfilePage() {
                 <p className="text-sm font-medium mb-2">Profile Avatar</p>
                 <p className="text-xs text-muted-foreground mb-3">Square format, used for thumbnails</p>
                 <div className="flex items-center gap-4">
-                  <div 
-                    onClick={() => avatarInputRef.current?.click()}
+                  <div
+                    onClick={() => !isUploadingAvatar && avatarInputRef.current?.click()}
                     className="flex h-20 w-20 items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/25 bg-muted/50 cursor-pointer hover:border-[#28A963]/50 transition-colors overflow-hidden"
                   >
-                    {avatarPreview ? (
+                    {isUploadingAvatar ? (
+                      <Loader2 className="h-6 w-6 animate-spin text-[#28A963]" />
+                    ) : avatarPreview ? (
                       <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
                     ) : (
                       <ImageIcon className="h-8 w-8 text-muted-foreground/50" />
                     )}
                   </div>
                   <div className="flex-1">
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="sm"
                       onClick={() => avatarInputRef.current?.click()}
+                      disabled={isUploadingAvatar}
                     >
-                      <Upload className="h-4 w-4 mr-2" />
+                      {isUploadingAvatar ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Upload className="h-4 w-4 mr-2" />
+                      )}
                       Upload
                     </Button>
                     <p className="mt-1 text-xs text-muted-foreground">
@@ -288,11 +455,13 @@ export default function ProfilePage() {
               <div className="rounded-lg border border-dashed border-muted-foreground/25 p-4">
                 <p className="text-sm font-medium mb-2">Profile Banner</p>
                 <p className="text-xs text-muted-foreground mb-3">Wide format, used for headers</p>
-                <div 
-                  onClick={() => bannerInputRef.current?.click()}
+                <div
+                  onClick={() => !isUploadingBanner && bannerInputRef.current?.click()}
                   className="flex h-20 w-full items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/25 bg-muted/50 cursor-pointer hover:border-[#28A963]/50 transition-colors overflow-hidden"
                 >
-                  {bannerPreview ? (
+                  {isUploadingBanner ? (
+                    <Loader2 className="h-6 w-6 animate-spin text-[#28A963]" />
+                  ) : bannerPreview ? (
                     <img src={bannerPreview} alt="Banner" className="w-full h-full object-cover" />
                   ) : (
                     <div className="text-center">
@@ -301,13 +470,18 @@ export default function ProfilePage() {
                     </div>
                   )}
                 </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   className="mt-3"
                   onClick={() => bannerInputRef.current?.click()}
+                  disabled={isUploadingBanner}
                 >
-                  <Upload className="h-4 w-4 mr-2" />
+                  {isUploadingBanner ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Upload className="h-4 w-4 mr-2" />
+                  )}
                   Upload Banner
                 </Button>
                 <input
@@ -338,12 +512,16 @@ export default function ProfilePage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Upload Zone - Now Clickable */}
-          <div 
+          <div
             onClick={handleDragDropClick}
             className="rounded-lg border-2 border-dashed border-muted-foreground/25 bg-muted/30 p-8 text-center hover:border-[#28A963]/50 hover:bg-muted/50 transition-colors cursor-pointer"
           >
-            <Upload className="mx-auto h-10 w-10 text-muted-foreground/50 mb-3" />
-            <p className="font-medium">Upload Brand Assets</p>
+            {isUploadingDoc ? (
+              <Loader2 className="mx-auto h-10 w-10 animate-spin text-[#28A963] mb-3" />
+            ) : (
+              <Upload className="mx-auto h-10 w-10 text-muted-foreground/50 mb-3" />
+            )}
+            <p className="font-medium">{isUploadingDoc ? "Uploading..." : "Upload Brand Assets"}</p>
             <p className="text-sm text-muted-foreground mt-1">
               Drag & Drop or click to upload Brandbooks, Tone Guides, and Style Documents
             </p>
@@ -359,36 +537,54 @@ export default function ProfilePage() {
             onChange={handleBrandDocsUpload}
           />
 
-          {/* Uploaded Files */}
+          {/* Uploaded Files - From Database */}
           <div className="space-y-2">
             <p className="text-sm font-medium">Uploaded Documents</p>
-            {uploadedFiles.map((file, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between rounded-md border bg-background px-3 py-2"
-              >
-                <div className="flex items-center gap-3">
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">{file.name}</span>
+            {profile?.brandDocuments && profile.brandDocuments.length > 0 ? (
+              profile.brandDocuments.map((doc, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between rounded-md border bg-background px-3 py-2"
+                >
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">{doc.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {doc.status === "verified" && (
+                      <span className="flex items-center gap-1 text-xs text-[#28A963]">
+                        <Check className="h-3 w-3" />
+                        Verified
+                      </span>
+                    )}
+                    {doc.status === "pending" && (
+                      <span className="flex items-center gap-1 text-xs text-amber-500">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        Processing
+                      </span>
+                    )}
+                    {doc.status === "error" && (
+                      <span className="flex items-center gap-1 text-xs text-destructive">
+                        <X className="h-3 w-3" />
+                        Error
+                      </span>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                      onClick={() => handleRemoveDocument(doc.storageId)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {file.status === "verified" && (
-                    <span className="flex items-center gap-1 text-xs text-[#28A963]">
-                      <Check className="h-3 w-3" />
-                      Verified
-                    </span>
-                  )}
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                    onClick={() => setUploadedFiles(uploadedFiles.filter((_, i) => i !== index))}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground py-4 text-center">
+                No documents uploaded yet
+              </p>
+            )}
           </div>
 
           <p className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-md">
@@ -416,7 +612,7 @@ export default function ProfilePage() {
               key={index}
               className="flex items-center justify-between rounded-md border bg-background px-4 py-3"
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-1">
                 {connection.icon === "instagram" && (
                   <Instagram className="h-5 w-5 text-pink-500" />
                 )}
@@ -429,9 +625,15 @@ export default function ProfilePage() {
                 {connection.icon === "linkedin" && (
                   <Linkedin className="h-5 w-5 text-blue-600" />
                 )}
-                <div>
+                <div className="flex-1">
                   <p className="font-medium text-sm">{connection.platform}</p>
-                  <p className="text-xs text-muted-foreground">{connection.handle}</p>
+                  <input
+                    type="text"
+                    value={connection.handle}
+                    onChange={(e) => updateSocialHandle(index, e.target.value)}
+                    placeholder={`@your${connection.platform.toLowerCase()}handle`}
+                    className="text-xs text-muted-foreground bg-transparent border-none outline-none w-full"
+                  />
                 </div>
               </div>
               {connection.connected ? (
@@ -443,8 +645,8 @@ export default function ProfilePage() {
                   Connected
                 </button>
               ) : (
-                <Button 
-                  size="sm" 
+                <Button
+                  size="sm"
                   variant="outline"
                   onClick={() => toggleConnection(index)}
                 >
@@ -479,50 +681,56 @@ export default function ProfilePage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            {competitors.map((competitor, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between rounded-md border bg-background px-4 py-3"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs font-medium">
-                    {index + 1}
-                  </span>
-                  <span className="text-sm font-medium">{competitor.name}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  {/* Platform icons being monitored */}
-                  <div className="flex items-center gap-1.5">
-                    {competitor.platforms.map((platform) => (
-                      <span key={platform} className="opacity-80">
-                        {getPlatformIcon(platform, "h-4 w-4")}
-                      </span>
-                    ))}
+            {competitors.length > 0 ? (
+              competitors.map((competitor, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between rounded-md border bg-background px-4 py-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs font-medium">
+                      {index + 1}
+                    </span>
+                    <span className="text-sm font-medium">{competitor.name}</span>
                   </div>
-                  {/* Edit Button */}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setEditingCompetitor(editingCompetitor === index ? null : index)}
-                    className="h-8 w-8 p-0 text-muted-foreground hover:text-[#28A963]"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  {/* Remove Button */}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRemoveCompetitor(index)}
-                    className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-3">
+                    {/* Platform icons being monitored */}
+                    <div className="flex items-center gap-1.5">
+                      {competitor.platforms.map((platform) => (
+                        <span key={platform} className="opacity-80">
+                          {getPlatformIcon(platform, "h-4 w-4")}
+                        </span>
+                      ))}
+                    </div>
+                    {/* Edit Button */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setEditingCompetitor(editingCompetitor === index ? null : index)}
+                      className="h-8 w-8 p-0 text-muted-foreground hover:text-[#28A963]"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    {/* Remove Button */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveCompetitor(index)}
+                      className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            ))}
-            
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground py-4 text-center">
+                No competitors added yet
+              </p>
+            )}
+
             {/* Expanded Edit Panel */}
-            {editingCompetitor !== null && (
+            {editingCompetitor !== null && competitors[editingCompetitor] && (
               <div className="rounded-md border bg-muted/30 p-4 space-y-3">
                 <p className="text-sm font-medium">Edit: {competitors[editingCompetitor]?.name}</p>
                 <div>
@@ -535,8 +743,8 @@ export default function ProfilePage() {
                           key={platform}
                           onClick={() => toggleCompetitorPlatform(editingCompetitor, platform)}
                           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-sm transition-colors ${
-                            isActive 
-                              ? "bg-[#28A963]/10 border-[#28A963]/30 text-[#28A963]" 
+                            isActive
+                              ? "bg-[#28A963]/10 border-[#28A963]/30 text-[#28A963]"
                               : "bg-background border-input text-muted-foreground hover:border-[#28A963]/30"
                           }`}
                         >
@@ -548,8 +756,8 @@ export default function ProfilePage() {
                     })}
                   </div>
                 </div>
-                <Button 
-                  size="sm" 
+                <Button
+                  size="sm"
                   variant="outline"
                   onClick={() => setEditingCompetitor(null)}
                 >
