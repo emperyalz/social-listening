@@ -1,12 +1,25 @@
-"use client";
+"use client"
 
-import { Suspense, useState, useMemo } from "react";
-import { useQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
-import { useTheme } from "@/contexts/ThemeContext";
+import { GlassCard } from "@/components/ui/glass-card"
+import { Progress } from "@/components/ui/progress"
+import { formatNumber, formatCurrency } from "@/lib/utils"
 import {
-  BarChart,
-  Bar,
+  DollarSign,
+  TrendingUp,
+  Users,
+  Target,
+  Flame,
+  MessageCircle,
+  ArrowRight,
+  ExternalLink,
+  Instagram,
+  Youtube,
+  MapPin,
+  Clock,
+  Star,
+  Sparkles,
+} from "lucide-react"
+import {
   LineChart,
   Line,
   XAxis,
@@ -14,658 +27,523 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
   PieChart,
   Pie,
   Cell,
-} from "recharts";
+  FunnelChart,
+  Funnel,
+  LabelList,
+} from "recharts"
 
-// ============================================
-// CONSTANTS & UTILITIES
-// ============================================
+// TikTok Icon Component
+const TikTokIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
+  </svg>
+)
 
-const PLATFORM_COLORS = {
-  instagram: "#E1306C",
-  tiktok: "#00F2EA",
-  youtube: "#FF0000",
-};
-
-const PLATFORM_EMOJI: Record<string, string> = {
-  instagram: "📸",
-  tiktok: "🎵",
-  youtube: "📺",
-};
-
-const TIER_COLORS = {
-  interest: "#6366f1",
-  inquiry: "#f59e0b",
-  highIntent: "#10b981",
-};
-
-const TIER_LABELS = {
-  interest: "Interest",
-  inquiry: "Inquiry",
-  highIntent: "High Intent",
-};
-
-function formatCurrency(num: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(num);
-}
-
-function formatNumber(num: number): string {
-  if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + "M";
-  if (num >= 1_000) return (num / 1_000).toFixed(1) + "K";
-  return num.toString();
-}
-
-function timeAgo(timestamp: number): string {
-  const seconds = Math.floor((Date.now() - timestamp) / 1000);
-  if (seconds < 60) return "just now";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
-
-// ============================================
-// GLASSMORPHISM CARD COMPONENT
-// ============================================
-
-interface GlassCardProps {
-  children: React.ReactNode;
-  className?: string;
-  gradient?: string;
-  accentColor?: string;
-}
-
-function GlassCard({ children, className = "", gradient, accentColor }: GlassCardProps) {
-  const { theme } = useTheme();
-  const isDark = theme === "dark";
-
-  const defaultGradient = isDark
-    ? "radial-gradient(ellipse at top left, rgba(16, 185, 129, 0.1) 0%, transparent 50%)"
-    : "radial-gradient(ellipse at top left, rgba(16, 185, 129, 0.08) 0%, transparent 50%)";
-
-  return (
-    <div
-      className={`
-        relative overflow-hidden rounded-2xl
-        border border-border
-        shadow-xl
-        bg-card
-        ${className}
-      `}
-      style={{
-        backdropFilter: "blur(12px)",
-      }}
-    >
-      <div
-        className="absolute inset-0 opacity-30 pointer-events-none"
-        style={{
-          background: gradient || defaultGradient,
-        }}
-      />
-      <div className="relative z-10">{children}</div>
-    </div>
-  );
-}
-
-// ============================================
-// OPPORTUNITY VALUE CARD
-// ============================================
-
-interface OpportunityValueProps {
-  value: number;
-  highIntentLeads: number;
-  aov: number;
-  conversionPotential: string;
-}
-
-function OpportunityValueCard({ value, highIntentLeads, aov, conversionPotential }: OpportunityValueProps) {
-  const { theme } = useTheme();
-  const isDark = theme === "dark";
-
-  return (
-    <GlassCard
-      className="p-8"
-      gradient={isDark
-        ? "radial-gradient(ellipse at top left, rgba(16, 185, 129, 0.15) 0%, transparent 50%)"
-        : "radial-gradient(ellipse at top left, rgba(16, 185, 129, 0.1) 0%, transparent 50%)"
-      }
-    >
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-3xl">💰</span>
-            <span className="text-emerald-500 text-sm font-semibold uppercase tracking-wider">
-              Estimated Opportunity Value
-            </span>
-          </div>
-          <div className="text-5xl font-bold text-foreground mb-4">
-            {formatCurrency(value)}
-          </div>
-          <div className="grid grid-cols-3 gap-6 text-sm">
-            <div>
-              <span className="text-muted-foreground block">Hot Leads</span>
-              <span className="text-foreground font-semibold text-lg">{highIntentLeads}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground block">Avg Order Value</span>
-              <span className="text-foreground font-semibold text-lg">{formatCurrency(aov)}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground block">Conversion Rate</span>
-              <span className="text-emerald-500 font-semibold text-lg">{conversionPotential}%</span>
-            </div>
-          </div>
-        </div>
-        <div className="text-right">
-          <div className="w-24 h-24 rounded-full bg-emerald-500/20 flex items-center justify-center">
-            <span className="text-5xl">🎯</span>
-          </div>
-        </div>
-      </div>
-    </GlassCard>
-  );
-}
-
-// ============================================
-// SALES FUNNEL VISUALIZATION
-// ============================================
-
-interface FunnelData {
-  total: number;
-  interest: { count: number; percentage: number };
-  inquiry: { count: number; percentage: number };
-  highIntent: { count: number; percentage: number };
-}
-
-function SalesFunnel({ data }: { data: FunnelData }) {
-  const funnelStages = [
-    { key: "interest", label: "Interest (Tier 1)", description: "General positive engagement", color: TIER_COLORS.interest, icon: "💬" },
-    { key: "inquiry", label: "Inquiry (Tier 2)", description: "Questions & consideration", color: TIER_COLORS.inquiry, icon: "❓" },
-    { key: "highIntent", label: "High Intent (Tier 3)", description: "Ready to purchase", color: TIER_COLORS.highIntent, icon: "💰" },
-  ];
-
-  return (
-    <GlassCard className="p-6 h-full">
-      <h3 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2">
-        <span className="text-emerald-500">📊</span>
-        SOCIAL SALES FUNNEL
-      </h3>
-
-      <div className="space-y-4">
-        {funnelStages.map((stage, index) => {
-          const stageData = data[stage.key as keyof Omit<FunnelData, 'total'>];
-          const widthPercent = data.total > 0 ? (stageData.count / data.total) * 100 : 0;
-          const displayWidth = Math.max(widthPercent, 10);
-
-          return (
-            <div key={stage.key} className="relative">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">{stage.icon}</span>
-                  <div>
-                    <span className="text-foreground font-medium">{stage.label}</span>
-                    <span className="text-muted-foreground text-xs block">{stage.description}</span>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <span className="text-foreground font-bold text-lg">{formatNumber(stageData.count)}</span>
-                  <span className="text-muted-foreground text-sm ml-2">({stageData.percentage.toFixed(1)}%)</span>
-                </div>
-              </div>
-              <div className="h-10 bg-muted/50 rounded-xl overflow-hidden relative">
-                <div
-                  className="h-full rounded-xl transition-all duration-500 flex items-center justify-end pr-4"
-                  style={{
-                    width: `${displayWidth}%`,
-                    backgroundColor: stage.color,
-                    minWidth: '60px',
-                  }}
-                >
-                  {index < 2 && (
-                    <span className="text-white/70 text-xs">→</span>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="mt-6 pt-4 border-t border-border">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Total Comments Analyzed</span>
-          <span className="text-foreground font-semibold">{formatNumber(data.total)}</span>
-        </div>
-      </div>
-    </GlassCard>
-  );
-}
-
-// ============================================
-// HOT LEADS FEED
-// ============================================
-
-interface HotLead {
-  id: string;
-  text: string;
-  authorUsername: string;
-  authorDisplayName?: string;
-  likesCount: number;
-  postedAt: number;
-  matchedKeywords: string[];
-  postUrl?: string;
-  platform?: string;
-  accountUsername?: string;
-  commentId: string;
-}
-
-function HotLeadsFeed({ leads }: { leads: HotLead[] }) {
-  return (
-    <GlassCard className="p-6 h-full">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-          <span className="text-red-400">🔥</span>
-          HOT LEADS FEED
-        </h3>
-        <span className="text-xs bg-emerald-500/20 text-emerald-500 px-3 py-1 rounded-full">
-          Tier 3 Only
-        </span>
-      </div>
-
-      <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
-        {leads.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            <span className="text-4xl mb-3 block">🎯</span>
-            <p className="font-medium">No high-intent signals yet</p>
-            <p className="text-sm mt-1">Comments with purchase intent will appear here</p>
-          </div>
-        ) : (
-          leads.map((lead) => (
-            <div
-              key={lead.id}
-              className="p-4 rounded-xl bg-muted/30 border border-emerald-500/20 hover:border-emerald-500/40 transition-all cursor-pointer"
-            >
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
-                  <span className="text-lg">💵</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    {lead.platform && (
-                      <span className="text-sm">{PLATFORM_EMOJI[lead.platform]}</span>
-                    )}
-                    <span className="text-foreground font-medium">@{lead.authorUsername}</span>
-                    <span className="text-muted-foreground text-xs">{timeAgo(lead.postedAt)}</span>
-                  </div>
-                  <p className="text-muted-foreground text-sm mb-2 line-clamp-2">{lead.text}</p>
-                  <div className="flex flex-wrap gap-1 mb-2">
-                    {lead.matchedKeywords.slice(0, 3).map((kw, i) => (
-                      <span
-                        key={i}
-                        className="text-xs bg-emerald-500/20 text-emerald-500 px-2 py-0.5 rounded"
-                      >
-                        {kw}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    <span>❤️ {lead.likesCount}</span>
-                    {lead.accountUsername && (
-                      <span>on @{lead.accountUsername}</span>
-                    )}
-                    {lead.postUrl && (
-                      <a
-                        href={lead.postUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-emerald-500 hover:text-emerald-400"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        View Post →
-                      </a>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </GlassCard>
-  );
-}
-
-// ============================================
-// TRENDING KEYWORDS
-// ============================================
-
-function TrendingKeywords({ keywords }: { keywords: { keyword: string; count: number }[] }) {
-  const maxCount = keywords[0]?.count || 1;
-
-  return (
-    <GlassCard className="p-6">
-      <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-        <span className="text-amber-400">🔍</span>
-        TRENDING INTENT SIGNALS
-      </h3>
-
-      <div className="space-y-3">
-        {keywords.length === 0 ? (
-          <p className="text-muted-foreground text-center py-4">No trending keywords yet</p>
-        ) : (
-          keywords.map((item, index) => (
-            <div key={item.keyword} className="flex items-center gap-3">
-              <span className="text-muted-foreground text-sm w-6">{index + 1}.</span>
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-foreground font-medium">"{item.keyword}"</span>
-                  <span className="text-muted-foreground text-sm">{item.count}x</span>
-                </div>
-                <div className="h-2 bg-muted/50 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-amber-500 to-emerald-500 rounded-full"
-                    style={{ width: `${(item.count / maxCount) * 100}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </GlassCard>
-  );
-}
-
-// ============================================
-// PLATFORM BREAKDOWN
-// ============================================
-
-function PlatformBreakdown({ data }: { data: Record<string, { interest: number; inquiry: number; highIntent: number }> }) {
-  const { theme } = useTheme();
-  const isDark = theme === "dark";
-  const platforms = Object.entries(data);
-
-  if (platforms.length === 0) {
-    return (
-      <GlassCard className="p-6">
-        <h3 className="text-lg font-semibold text-foreground mb-4">Platform Breakdown</h3>
-        <p className="text-muted-foreground text-center py-4">No platform data available</p>
-      </GlassCard>
-    );
-  }
-
-  const chartData = platforms.map(([platform, counts]) => ({
-    platform: platform.charAt(0).toUpperCase() + platform.slice(1),
-    interest: counts.interest,
-    inquiry: counts.inquiry,
-    highIntent: counts.highIntent,
-  }));
-
-  return (
-    <GlassCard className="p-6">
-      <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-        <span className="text-indigo-400">📱</span>
-        PLATFORM INTENT BREAKDOWN
-      </h3>
-
-      <div className="h-[200px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} layout="vertical">
-            <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#334155" : "#e2e8f0"} />
-            <XAxis type="number" stroke={isDark ? "#64748b" : "#94a3b8"} fontSize={11} />
-            <YAxis type="category" dataKey="platform" stroke={isDark ? "#64748b" : "#94a3b8"} fontSize={11} width={80} />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: isDark ? "rgba(15, 23, 42, 0.95)" : "rgba(255, 255, 255, 0.95)",
-                border: isDark ? "1px solid rgba(71, 85, 105, 0.5)" : "1px solid rgba(226, 232, 240, 0.8)",
-                borderRadius: "12px",
-                color: isDark ? "#fff" : "#1e293b",
-              }}
-            />
-            <Bar dataKey="interest" name="Interest" stackId="a" fill={TIER_COLORS.interest} />
-            <Bar dataKey="inquiry" name="Inquiry" stackId="a" fill={TIER_COLORS.inquiry} />
-            <Bar dataKey="highIntent" name="High Intent" stackId="a" fill={TIER_COLORS.highIntent} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
-      <div className="flex justify-center gap-6 mt-4">
-        {Object.entries(TIER_LABELS).map(([key, label]) => (
-          <div key={key} className="flex items-center gap-2">
-            <div
-              className="w-3 h-3 rounded"
-              style={{ backgroundColor: TIER_COLORS[key as keyof typeof TIER_COLORS] }}
-            />
-            <span className="text-muted-foreground text-xs">{label}</span>
-          </div>
-        ))}
-      </div>
-    </GlassCard>
-  );
-}
-
-// ============================================
-// INTENT TRENDS CHART
-// ============================================
-
-function IntentTrendsChart({ data }: { data: { date: string; interest: number; inquiry: number; highIntent: number }[] }) {
-  const { theme } = useTheme();
-  const isDark = theme === "dark";
-
-  return (
-    <GlassCard className="p-6">
-      <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-        <span className="text-cyan-400">📈</span>
-        INTENT SIGNALS OVER TIME
-      </h3>
-
-      <div className="h-[250px]">
-        {data.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-muted-foreground">
-            <p>No trend data available</p>
-          </div>
-        ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#334155" : "#e2e8f0"} />
-              <XAxis
-                dataKey="date"
-                stroke={isDark ? "#64748b" : "#94a3b8"}
-                fontSize={11}
-                tickFormatter={(value) => {
-                  const date = new Date(value);
-                  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-                }}
-              />
-              <YAxis stroke={isDark ? "#64748b" : "#94a3b8"} fontSize={11} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: isDark ? "rgba(15, 23, 42, 0.95)" : "rgba(255, 255, 255, 0.95)",
-                  border: isDark ? "1px solid rgba(71, 85, 105, 0.5)" : "1px solid rgba(226, 232, 240, 0.8)",
-                  borderRadius: "12px",
-                  color: isDark ? "#fff" : "#1e293b",
-                }}
-                labelFormatter={(value) => new Date(value).toLocaleDateString()}
-              />
-              <Line
-                type="monotone"
-                dataKey="highIntent"
-                name="High Intent"
-                stroke={TIER_COLORS.highIntent}
-                strokeWidth={3}
-                dot={false}
-              />
-              <Line
-                type="monotone"
-                dataKey="inquiry"
-                name="Inquiry"
-                stroke={TIER_COLORS.inquiry}
-                strokeWidth={2}
-                dot={false}
-              />
-              <Line
-                type="monotone"
-                dataKey="interest"
-                name="Interest"
-                stroke={TIER_COLORS.interest}
-                strokeWidth={2}
-                dot={false}
-                strokeDasharray="5 5"
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        )}
-      </div>
-    </GlassCard>
-  );
-}
-
-// ============================================
-// MAIN COMPONENT
-// ============================================
-
-function CommercialIntentContent() {
-  const { theme } = useTheme();
-  const isDark = theme === "dark";
-  const [aov, setAov] = useState(150);
-  const [days, setDays] = useState(30);
-
-  const intentAnalysis = useQuery(api.commercialIntent.getCommercialIntentAnalysis, {
-    days,
-    averageOrderValue: aov,
-  });
-
-  const intentTrends = useQuery(api.commercialIntent.getIntentTrends, { days });
-
-  if (!intentAnalysis) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading Commercial Intelligence...</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-background text-foreground p-4 md:p-6 lg:p-8">
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-          <span className="text-emerald-500 text-sm font-medium">Sales Pipeline Active</span>
-        </div>
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-emerald-500 to-cyan-500 bg-clip-text text-transparent">
-              Commercial Intent Intelligence
-            </h1>
-            <p className="text-muted-foreground mt-1">The "Money" Module - Turn engagement into revenue</p>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <label className="text-muted-foreground text-sm">AOV:</label>
-              <select
-                value={aov}
-                onChange={(e) => setAov(Number(e.target.value))}
-                className="bg-muted border border-border rounded-lg px-3 py-1.5 text-sm text-foreground"
-              >
-                <option value={50}>$50</option>
-                <option value={100}>$100</option>
-                <option value={150}>$150</option>
-                <option value={250}>$250</option>
-                <option value={500}>$500</option>
-                <option value={1000}>$1,000</option>
-              </select>
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="text-muted-foreground text-sm">Period:</label>
-              <select
-                value={days}
-                onChange={(e) => setDays(Number(e.target.value))}
-                className="bg-muted border border-border rounded-lg px-3 py-1.5 text-sm text-foreground"
-              >
-                <option value={7}>7 days</option>
-                <option value={14}>14 days</option>
-                <option value={30}>30 days</option>
-                <option value={60}>60 days</option>
-                <option value={90}>90 days</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <section className="mb-8">
-        <OpportunityValueCard
-          value={intentAnalysis.summary.estimatedOpportunityValue}
-          highIntentLeads={intentAnalysis.summary.highIntentLeads}
-          aov={intentAnalysis.summary.averageOrderValue}
-          conversionPotential={intentAnalysis.summary.conversionPotential}
-        />
-      </section>
-
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <SalesFunnel data={intentAnalysis.funnel} />
-        <HotLeadsFeed leads={intentAnalysis.hotLeads as HotLead[]} />
-      </section>
-
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <TrendingKeywords keywords={intentAnalysis.trendingKeywords} />
-        <div className="lg:col-span-2">
-          <IntentTrendsChart data={intentTrends || []} />
-        </div>
-      </section>
-
-      <section className="mb-8">
-        <PlatformBreakdown data={intentAnalysis.platformBreakdown} />
-      </section>
-
-      <section className="pt-6 border-t border-border">
-        <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
-          <div className="flex flex-wrap items-center gap-4 md:gap-6">
-            <span>
-              <strong className="text-foreground">{formatNumber(intentAnalysis.summary.totalCommentsAnalyzed)}</strong>{" "}
-              comments analyzed
-            </span>
-            <span>
-              <strong className="text-emerald-500">{intentAnalysis.summary.highIntentLeads}</strong>{" "}
-              wallet-in-hand leads
-            </span>
-            <span>
-              Period: <strong className="text-foreground">{intentAnalysis.periodDays} days</strong>
-            </span>
-          </div>
-          <span>Last updated: {new Date().toLocaleTimeString()}</span>
-        </div>
-      </section>
-    </div>
-  );
+// Demo Data - Commercial Intent Intelligence for Grupo Horizonte
+const DEMO_DATA = {
+  moneyHeader: {
+    estimatedOpportunityValue: 2590000,
+    hotLeads: 14,
+    avgOrderValue: 185000,
+    conversionRate: 1.2,
+  },
+  salesFunnel: [
+    { name: "Tier 1 - Browsing", value: 1240, fill: "#3B82F6", percentage: 88.6 },
+    { name: "Tier 2 - Considering", value: 145, fill: "#8B5CF6", percentage: 10.4 },
+    { name: "Tier 3 - Ready to Buy", value: 14, fill: "#28A963", percentage: 1.0 },
+  ],
+  hotLeads: [
+    {
+      id: 1,
+      username: "@maria_inversor",
+      platform: "instagram",
+      avatar: "M",
+      intentSignal: "Preguntó precio específico para Vista del Mar 3BR",
+      engagementScore: 98,
+      timeAgo: "2h ago",
+      estimatedValue: 245000,
+      location: "Bogotá",
+    },
+    {
+      id: 2,
+      username: "@carlos_bienes",
+      platform: "instagram",
+      avatar: "C",
+      intentSignal: "Solicitó información sobre cuota inicial y financiamiento",
+      engagementScore: 94,
+      timeAgo: "5h ago",
+      estimatedValue: 195000,
+      location: "Medellín",
+    },
+    {
+      id: 3,
+      username: "@familia_rodriguez",
+      platform: "tiktok",
+      avatar: "F",
+      intentSignal: "Comentó 'Me interesa para inversión' en tour virtual",
+      engagementScore: 89,
+      timeAgo: "8h ago",
+      estimatedValue: 175000,
+      location: "Cali",
+    },
+  ],
+  trendingIntentSignals: [
+    { keyword: "Precio", count: 342, change: 28, color: "#28A963" },
+    { keyword: "Ubicación", count: 287, change: 15, color: "#3B82F6" },
+    { keyword: "Cuota Inicial", count: 198, change: 45, color: "#8B5CF6" },
+    { keyword: "Entrega 2026", count: 156, change: 32, color: "#F59E0B" },
+    { keyword: "Financiamiento", count: 134, change: 22, color: "#EC4899" },
+    { keyword: "Metros Cuadrados", count: 112, change: 8, color: "#06B6D4" },
+  ],
+  platformBreakdown: [
+    { name: "Instagram", value: 58, leads: 8, color: "#E1306C" },
+    { name: "TikTok", value: 28, leads: 4, color: "#00F2EA" },
+    { name: "YouTube", value: 14, leads: 2, color: "#FF0000" },
+  ],
+  intentTrends: [
+    { week: "W1", tier1: 980, tier2: 95, tier3: 8 },
+    { week: "W2", tier1: 1050, tier2: 108, tier3: 9 },
+    { week: "W3", tier1: 1120, tier2: 125, tier3: 11 },
+    { week: "W4", tier1: 1240, tier2: 145, tier3: 14 },
+  ],
+  projectInterest: [
+    { project: "Torre Esmeralda", interest: 32, value: 890000 },
+    { project: "Vista del Mar", interest: 28, value: 720000 },
+    { project: "Proyecto Marina", interest: 22, value: 540000 },
+    { project: "Jardines del Norte", interest: 18, value: 440000 },
+  ],
 }
 
 export default function CommercialIntentPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex items-center justify-center min-h-screen bg-background">
-          <div className="text-center">
-            <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-muted-foreground">Loading Commercial Intelligence...</p>
-          </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-white">Commercial Intent Intelligence</h1>
+          <p className="text-gray-400 mt-1">
+            Identify and track high-value purchase signals
+          </p>
         </div>
-      }
-    >
-      <CommercialIntentContent />
-    </Suspense>
-  );
+        <div className="flex items-center gap-3">
+          <select className="bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm">
+            <option>Last 30 Days</option>
+            <option>Last 7 Days</option>
+            <option>Last 90 Days</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Money Header KPIs */}
+      <div className="grid grid-cols-4 gap-4">
+        <GlassCard className="p-5 border-l-4 border-l-emerald-500">
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-xl bg-emerald-500/20">
+              <DollarSign className="h-6 w-6 text-emerald-400" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-400">Estimated Opportunity Value</p>
+              <p className="text-2xl font-bold text-white">
+                {formatCurrency(DEMO_DATA.moneyHeader.estimatedOpportunityValue)}
+              </p>
+            </div>
+          </div>
+        </GlassCard>
+
+        <GlassCard className="p-5 border-l-4 border-l-orange-500">
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-xl bg-orange-500/20">
+              <Flame className="h-6 w-6 text-orange-400" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-400">Hot Leads (Tier 3)</p>
+              <p className="text-2xl font-bold text-white">
+                {DEMO_DATA.moneyHeader.hotLeads}
+              </p>
+            </div>
+          </div>
+        </GlassCard>
+
+        <GlassCard className="p-5 border-l-4 border-l-blue-500">
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-xl bg-blue-500/20">
+              <Target className="h-6 w-6 text-blue-400" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-400">Average Order Value</p>
+              <p className="text-2xl font-bold text-white">
+                {formatCurrency(DEMO_DATA.moneyHeader.avgOrderValue)}
+              </p>
+            </div>
+          </div>
+        </GlassCard>
+
+        <GlassCard className="p-5 border-l-4 border-l-purple-500">
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-xl bg-purple-500/20">
+              <TrendingUp className="h-6 w-6 text-purple-400" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-400">Intent Conversion Rate</p>
+              <p className="text-2xl font-bold text-white">
+                {DEMO_DATA.moneyHeader.conversionRate}%
+              </p>
+            </div>
+          </div>
+        </GlassCard>
+      </div>
+
+      {/* Sales Funnel & Hot Leads */}
+      <div className="grid grid-cols-3 gap-6">
+        {/* Sales Funnel */}
+        <GlassCard className="p-6">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <Users className="h-5 w-5 text-[#28A963]" />
+            Intent Funnel
+          </h3>
+          <div className="space-y-4">
+            {DEMO_DATA.salesFunnel.map((tier, index) => (
+              <div key={tier.name} className="relative">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-gray-400">{tier.name}</span>
+                  <span className="text-sm font-medium text-white">
+                    {formatNumber(tier.value)}
+                  </span>
+                </div>
+                <div className="h-10 rounded-lg overflow-hidden bg-gray-800">
+                  <div
+                    className="h-full rounded-lg transition-all duration-500 flex items-center justify-center"
+                    style={{
+                      width: `${Math.max(tier.percentage * 1.1, 15)}%`,
+                      backgroundColor: tier.fill,
+                    }}
+                  >
+                    <span className="text-xs font-medium text-white">
+                      {tier.percentage}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-6 pt-4 border-t border-gray-800">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-400">Funnel Velocity</span>
+              <span className="text-emerald-400 flex items-center gap-1">
+                <TrendingUp className="h-4 w-4" />
+                +18% this month
+              </span>
+            </div>
+          </div>
+        </GlassCard>
+
+        {/* Hot Leads Feed */}
+        <GlassCard className="col-span-2 p-6">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <Flame className="h-5 w-5 text-orange-500" />
+            Hot Leads Feed
+            <span className="ml-2 px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400 text-xs">
+              {DEMO_DATA.hotLeads.length} Ready to Buy
+            </span>
+          </h3>
+          <div className="space-y-3">
+            {DEMO_DATA.hotLeads.map((lead) => (
+              <div
+                key={lead.id}
+                className="p-4 rounded-xl bg-gray-800/50 border border-gray-700/50 hover:border-orange-500/50 transition-all cursor-pointer"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="relative">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-pink-500 flex items-center justify-center text-white font-bold">
+                      {lead.avatar}
+                    </div>
+                    <div className="absolute -bottom-1 -right-1">
+                      {lead.platform === "instagram" && (
+                        <Instagram className="h-5 w-5 text-pink-500 bg-gray-900 rounded-full p-0.5" />
+                      )}
+                      {lead.platform === "tiktok" && (
+                        <div className="bg-gray-900 rounded-full p-0.5">
+                          <TikTokIcon className="h-4 w-4 text-white" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-white">{lead.username}</span>
+                        <span className="text-xs text-gray-500 flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {lead.location}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-medium">
+                          Score: {lead.engagementScore}
+                        </div>
+                        <span className="text-xs text-gray-500">{lead.timeAgo}</span>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-300 mt-1">{lead.intentSignal}</p>
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-sm text-emerald-400 font-medium">
+                        Est. Value: {formatCurrency(lead.estimatedValue)}
+                      </span>
+                      <button className="text-xs text-[#28A963] hover:text-emerald-300 flex items-center gap-1">
+                        View Profile <ExternalLink className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </GlassCard>
+      </div>
+
+      {/* Trending Intent Signals & Platform Breakdown */}
+      <div className="grid grid-cols-2 gap-6">
+        {/* Trending Intent Signals */}
+        <GlassCard className="p-6">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-[#28A963]" />
+            Trending Intent Keywords
+          </h3>
+          <div className="space-y-3">
+            {DEMO_DATA.trendingIntentSignals.map((signal, index) => (
+              <div key={signal.keyword} className="flex items-center gap-4">
+                <span className="text-gray-500 w-6 text-sm">{index + 1}</span>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-white font-medium">{signal.keyword}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-400">
+                        {signal.count} mentions
+                      </span>
+                      <span className="text-xs text-emerald-400 flex items-center gap-0.5">
+                        <TrendingUp className="h-3 w-3" />
+                        +{signal.change}%
+                      </span>
+                    </div>
+                  </div>
+                  <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${(signal.count / 342) * 100}%`,
+                        backgroundColor: signal.color,
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </GlassCard>
+
+        {/* Platform Breakdown */}
+        <GlassCard className="p-6">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <Target className="h-5 w-5 text-[#28A963]" />
+            Platform Lead Distribution
+          </h3>
+          <div className="flex items-center gap-8">
+            <div className="w-40 h-40">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={DEMO_DATA.platformBreakdown}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={40}
+                    outerRadius={70}
+                    paddingAngle={4}
+                    dataKey="value"
+                  >
+                    {DEMO_DATA.platformBreakdown.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex-1 space-y-3">
+              {DEMO_DATA.platformBreakdown.map((platform) => (
+                <div
+                  key={platform.name}
+                  className="flex items-center justify-between p-3 rounded-lg bg-gray-800/50"
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: platform.color }}
+                    />
+                    <span className="text-white">{platform.name}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-white font-medium">{platform.value}%</span>
+                    <span className="text-sm text-gray-400 ml-2">
+                      ({platform.leads} leads)
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </GlassCard>
+      </div>
+
+      {/* Intent Trends Chart & Project Interest */}
+      <div className="grid grid-cols-2 gap-6">
+        {/* Intent Trends */}
+        <GlassCard className="p-6">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-[#28A963]" />
+            Intent Trends (4 Weeks)
+          </h3>
+          <div className="h-[250px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={DEMO_DATA.intentTrends}>
+                <defs>
+                  <linearGradient id="colorTier1" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="colorTier2" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="colorTier3" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#28A963" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#28A963" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <XAxis dataKey="week" stroke="#9CA3AF" fontSize={12} />
+                <YAxis stroke="#9CA3AF" fontSize={12} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#1F2937",
+                    border: "1px solid #374151",
+                    borderRadius: "8px",
+                  }}
+                  labelStyle={{ color: "#F9FAFB" }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="tier1"
+                  stroke="#3B82F6"
+                  fill="url(#colorTier1)"
+                  strokeWidth={2}
+                  name="Tier 1"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="tier2"
+                  stroke="#8B5CF6"
+                  fill="url(#colorTier2)"
+                  strokeWidth={2}
+                  name="Tier 2"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="tier3"
+                  stroke="#28A963"
+                  fill="url(#colorTier3)"
+                  strokeWidth={2}
+                  name="Tier 3"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="flex items-center justify-center gap-6 mt-4">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-blue-500" />
+              <span className="text-sm text-gray-400">Browsing</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-purple-500" />
+              <span className="text-sm text-gray-400">Considering</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-[#28A963]" />
+              <span className="text-sm text-gray-400">Ready to Buy</span>
+            </div>
+          </div>
+        </GlassCard>
+
+        {/* Project Interest */}
+        <GlassCard className="p-6">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <Star className="h-5 w-5 text-[#28A963]" />
+            Interest by Project
+          </h3>
+          <div className="h-[250px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={DEMO_DATA.projectInterest}
+                layout="vertical"
+                margin={{ left: 20 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <XAxis type="number" stroke="#9CA3AF" fontSize={12} />
+                <YAxis
+                  type="category"
+                  dataKey="project"
+                  stroke="#9CA3AF"
+                  fontSize={12}
+                  width={120}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#1F2937",
+                    border: "1px solid #374151",
+                    borderRadius: "8px",
+                  }}
+                  labelStyle={{ color: "#F9FAFB" }}
+                  formatter={(value: number, name: string) => [
+                    name === "interest"
+                      ? `${value} leads`
+                      : formatCurrency(value),
+                    name === "interest" ? "Interest" : "Est. Value",
+                  ]}
+                />
+                <Bar
+                  dataKey="interest"
+                  fill="#28A963"
+                  radius={[0, 4, 4, 0]}
+                  name="Interest"
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="mt-4 pt-4 border-t border-gray-800">
+            <div className="grid grid-cols-2 gap-4">
+              {DEMO_DATA.projectInterest.slice(0, 2).map((project) => (
+                <div
+                  key={project.project}
+                  className="p-3 rounded-lg bg-gray-800/50"
+                >
+                  <p className="text-sm text-gray-400">{project.project}</p>
+                  <p className="text-lg font-bold text-emerald-400">
+                    {formatCurrency(project.value)}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {project.interest} interested leads
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </GlassCard>
+      </div>
+    </div>
+  )
 }
