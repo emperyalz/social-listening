@@ -2,6 +2,49 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+  // Platform Branding - stores Orwell dashboard branding configuration
+  platformBranding: defineTable({
+    // Logo files (stored in Convex file storage)
+    logoLightStorageId: v.optional(v.id("_storage")), // Logo for light backgrounds
+    logoDarkStorageId: v.optional(v.id("_storage")), // Logo for dark backgrounds
+    logoIconStorageId: v.optional(v.id("_storage")), // Small icon version
+    faviconStorageId: v.optional(v.id("_storage")), // Favicon
+    // Brand name
+    platformName: v.string(), // "Orwell"
+    tagline: v.optional(v.string()), // Optional tagline
+    // Brand colors
+    primaryColor: v.string(), // Main brand color (e.g., "#28A963")
+    secondaryColor: v.optional(v.string()),
+    accentColor: v.optional(v.string()),
+    // Meta info
+    isActive: v.boolean(), // Currently active branding config
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    updatedBy: v.optional(v.id("users")), // Who last updated
+  }).index("by_active", ["isActive"]),
+
+  // Users - for authentication and role-based access
+  users: defineTable({
+    email: v.string(),
+    name: v.optional(v.string()),
+    avatarUrl: v.optional(v.string()),
+    // Role determines access level
+    role: v.union(
+      v.literal("orwellAdmin"), // Platform administrators - can manage branding
+      v.literal("clientAdmin"), // Client organization admins
+      v.literal("clientUser") // Regular client users
+    ),
+    // For client users, link to their organization
+    organizationId: v.optional(v.id("organizationProfile")),
+    isActive: v.boolean(),
+    lastLoginAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index("by_email", ["email"])
+    .index("by_role", ["role"])
+    .index("by_organization", ["organizationId"]),
+
   // Organization Profile - stores company settings and brand assets
   organizationProfile: defineTable({
     // Corporate Identity
