@@ -13,19 +13,32 @@ export const getActiveBranding = query({
     if (!branding) {
       // Return default Orwell branding if none configured
       return {
+        _id: null as unknown as typeof branding?._id,
         platformName: "Orwell",
+        tagline: undefined as string | undefined,
         primaryColor: "#28A963",
+        secondaryColor: undefined as string | undefined,
+        accentColor: undefined as string | undefined,
         logoLightUrl: "/orwell-logo.svg",
         logoDarkUrl: "/orwell-logo-white.svg",
+        logoIconUrl: null as string | null,
+        faviconUrl: null as string | null,
+        logoLightStorageId: undefined,
+        logoDarkStorageId: undefined,
+        logoIconStorageId: undefined,
+        faviconStorageId: undefined,
+        isActive: true,
         isDefault: true,
+        createdAt: 0,
+        updatedAt: 0,
       };
     }
 
     // Get logo URLs from storage if they exist
-    let logoLightUrl = "/orwell-logo.svg";
-    let logoDarkUrl = "/orwell-logo-white.svg";
-    let logoIconUrl = null;
-    let faviconUrl = null;
+    let logoLightUrl: string | null = "/orwell-logo.svg";
+    let logoDarkUrl: string | null = "/orwell-logo-white.svg";
+    let logoIconUrl: string | null = null;
+    let faviconUrl: string | null = null;
 
     if (branding.logoLightStorageId) {
       logoLightUrl = await ctx.storage.getUrl(branding.logoLightStorageId) || logoLightUrl;
@@ -60,10 +73,10 @@ export const getAllBranding = query({
     // Enhance each branding with logo URLs
     const enhancedBrandings = await Promise.all(
       brandings.map(async (branding) => {
-        let logoLightUrl = null;
-        let logoDarkUrl = null;
-        let logoIconUrl = null;
-        let faviconUrl = null;
+        let logoLightUrl: string | null = null;
+        let logoDarkUrl: string | null = null;
+        let logoIconUrl: string | null = null;
+        let faviconUrl: string | null = null;
 
         if (branding.logoLightStorageId) {
           logoLightUrl = await ctx.storage.getUrl(branding.logoLightStorageId);
