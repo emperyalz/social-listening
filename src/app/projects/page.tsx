@@ -14,6 +14,9 @@ import {
   DollarSign,
   Layers,
   Map,
+  ChevronDown,
+  Hash,
+  Check,
 } from "lucide-react";
 
 interface UnitType {
@@ -23,6 +26,7 @@ interface UnitType {
   size: number;
   totalUnits: number;
   availableUnits: number;
+  tags: string[];
 }
 
 interface StarRange {
@@ -30,24 +34,58 @@ interface StarRange {
   max: number;
 }
 
+interface Project {
+  id: string;
+  name: string;
+  status: "pre-sale" | "under-construction" | "ready";
+}
+
+interface PropertyTag {
+  label: string;
+  color: string;
+}
+
 export default function ProjectsPage() {
+  // Multi-project support
+  const [projects, setProjects] = useState<Project[]>([
+    { id: "1", name: "Ocean Tower Panama", status: "under-construction" },
+    { id: "2", name: "Costa Verde Residences", status: "pre-sale" },
+    { id: "3", name: "Skyline Plaza", status: "ready" },
+  ]);
+  const [activeProjectId, setActiveProjectId] = useState("1");
+  const [projectDropdownOpen, setProjectDropdownOpen] = useState(false);
+
+  const activeProject = projects.find(p => p.id === activeProjectId) || projects[0];
+
   const [projectName, setProjectName] = useState("Ocean Tower Panama");
   const [projectDescription, setProjectDescription] = useState("Luxury oceanfront residential tower with panoramic views of the Pacific Ocean and Panama City skyline.");
   const [projectStatus, setProjectStatus] = useState<"pre-sale" | "under-construction" | "ready">("under-construction");
   
-  // Location
+  // Location with Manual/Map toggle
+  const [locationMode, setLocationMode] = useState<"manual" | "map">("manual");
   const [address, setAddress] = useState("Avenida Balboa, Punta Pacifica");
   const [city, setCity] = useState("Panama City");
   const [country, setCountry] = useState("Panama");
   const [latitude, setLatitude] = useState("8.9824");
   const [longitude, setLongitude] = useState("-79.5199");
 
-  // Unit Types / Inventory
+  // Available Tags for the project
+  const [availableTags, setAvailableTags] = useState<PropertyTag[]>([
+    { label: "Luxury", color: "amber" },
+    { label: "Sea View", color: "blue" },
+    { label: "Investment", color: "purple" },
+    { label: "Beachfront", color: "cyan" },
+    { label: "Penthouse", color: "pink" },
+  ]);
+  const [newTagName, setNewTagName] = useState("");
+  const [showTagCreator, setShowTagCreator] = useState(false);
+
+  // Unit Types / Inventory with Tags
   const [unitTypes, setUnitTypes] = useState<UnitType[]>([
-    { id: "1", label: "Studio", price: 95000, size: 45, totalUnits: 20, availableUnits: 8 },
-    { id: "2", label: "1 Bedroom", price: 150000, size: 72, totalUnits: 40, availableUnits: 15 },
-    { id: "3", label: "2 Bedroom", price: 245000, size: 110, totalUnits: 30, availableUnits: 12 },
-    { id: "4", label: "Ocean View Penthouse", price: 850000, size: 280, totalUnits: 4, availableUnits: 2 },
+    { id: "1", label: "Studio", price: 95000, size: 45, totalUnits: 20, availableUnits: 8, tags: ["Investment"] },
+    { id: "2", label: "1 Bedroom", price: 150000, size: 72, totalUnits: 40, availableUnits: 15, tags: ["Investment", "Sea View"] },
+    { id: "3", label: "2 Bedroom", price: 245000, size: 110, totalUnits: 30, availableUnits: 12, tags: ["Luxury", "Sea View"] },
+    { id: "4", label: "Ocean View Penthouse", price: 850000, size: 280, totalUnits: 4, availableUnits: 2, tags: ["Luxury", "Penthouse", "Sea View"] },
   ]);
 
   // Star Rating Logic
@@ -59,13 +97,7 @@ export default function ProjectsPage() {
     { min: 500000, max: 10000000 },
   ]);
 
-  // Property Tags
-  const [tags, setTags] = useState<{ label: string; color: string }[]>([
-    { label: "Beachfront", color: "blue" },
-    { label: "Luxury", color: "amber" },
-    { label: "Investment", color: "purple" },
-  ]);
-  const [newTag, setNewTag] = useState("");
+  const [editingUnitTags, setEditingUnitTags] = useState<string | null>(null);
 
   const addUnitType = () => {
     const newUnit: UnitType = {
@@ -75,11 +107,12 @@ export default function ProjectsPage() {
       size: 0,
       totalUnits: 0,
       availableUnits: 0,
+      tags: [],
     };
     setUnitTypes([...unitTypes, newUnit]);
   };
 
-  const updateUnitType = (id: string, field: keyof UnitType, value: string | number) => {
+  const updateUnitType = (id: string, field: keyof UnitType, value: string | number | string[]) => {
     setUnitTypes(unitTypes.map(unit => 
       unit.id === id ? { ...unit, [field]: value } : unit
     ));
@@ -89,33 +122,45 @@ export default function ProjectsPage() {
     setUnitTypes(unitTypes.filter(unit => unit.id !== id));
   };
 
+  const toggleUnitTag = (unitId: string, tagLabel: string) => {
+    setUnitTypes(unitTypes.map(unit => {
+      if (unit.id === unitId) {
+        const hasTag = unit.tags.includes(tagLabel);
+        return {
+          ...unit,
+          tags: hasTag 
+            ? unit.tags.filter(t => t !== tagLabel)
+            : [...unit.tags, tagLabel]
+        };
+      }
+      return unit;
+    }));
+  };
+
   const updateStarRange = (index: number, field: "min" | "max", value: number) => {
     const newRanges = [...starRanges];
     newRanges[index] = { ...newRanges[index], [field]: value };
     setStarRanges(newRanges);
   };
 
-  const addTag = () => {
-    if (newTag.trim()) {
+  const createNewTag = () => {
+    if (newTagName.trim()) {
       const colors = ["blue", "green", "amber", "purple", "pink", "cyan"];
       const randomColor = colors[Math.floor(Math.random() * colors.length)];
-      setTags([...tags, { label: newTag.trim(), color: randomColor }]);
-      setNewTag("");
+      setAvailableTags([...availableTags, { label: newTagName.trim(), color: randomColor }]);
+      setNewTagName("");
+      setShowTagCreator(false);
     }
-  };
-
-  const removeTag = (label: string) => {
-    setTags(tags.filter(tag => tag.label !== label));
   };
 
   const getTagColorClasses = (color: string) => {
     const colorMap: Record<string, string> = {
-      blue: "bg-blue-100 text-blue-700 border-blue-200",
-      green: "bg-green-100 text-green-700 border-green-200",
-      amber: "bg-amber-100 text-amber-700 border-amber-200",
-      purple: "bg-purple-100 text-purple-700 border-purple-200",
-      pink: "bg-pink-100 text-pink-700 border-pink-200",
-      cyan: "bg-cyan-100 text-cyan-700 border-cyan-200",
+      blue: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+      green: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+      amber: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+      purple: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
+      pink: "bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400",
+      cyan: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400",
     };
     return colorMap[color] || colorMap.blue;
   };
@@ -129,24 +174,99 @@ export default function ProjectsPage() {
     }).format(value);
   };
 
+  const handleProjectSwitch = (projectId: string) => {
+    setActiveProjectId(projectId);
+    setProjectDropdownOpen(false);
+    // In real app, would load project data here
+  };
+
+  const handleCreateNewProject = () => {
+    const newProject: Project = {
+      id: Date.now().toString(),
+      name: "New Project",
+      status: "pre-sale",
+    };
+    setProjects([...projects, newProject]);
+    setActiveProjectId(newProject.id);
+    setProjectDropdownOpen(false);
+  };
+
   const totalUnits = unitTypes.reduce((sum, unit) => sum + unit.totalUnits, 0);
   const totalAvailable = unitTypes.reduce((sum, unit) => sum + unit.availableUnits, 0);
   const inventoryPercentage = totalUnits > 0 ? Math.round((totalAvailable / totalUnits) * 100) : 0;
 
   return (
     <div className="space-y-8 max-w-5xl">
-      {/* Header */}
+      {/* Header with Project Selector */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Project Configuration</h1>
-          <p className="text-muted-foreground">
-            Define project parameters, pricing matrix, and lead qualification rules
-          </p>
+        <div className="flex items-center gap-4">
+          {/* Project Selection Bar */}
+          <div className="relative">
+            <button
+              onClick={() => setProjectDropdownOpen(!projectDropdownOpen)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-input bg-background hover:bg-muted transition-colors"
+            >
+              <Building2 className="h-5 w-5 text-[#28A963]" />
+              <span className="font-semibold">{activeProject?.name}</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full ${
+                activeProject?.status === "ready" 
+                  ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                  : activeProject?.status === "under-construction"
+                  ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                  : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+              }`}>
+                {activeProject?.status === "under-construction" ? "Building" : activeProject?.status === "pre-sale" ? "Pre-Sale" : "Ready"}
+              </span>
+              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${projectDropdownOpen ? "rotate-180" : ""}`} />
+            </button>
+
+            {/* Dropdown */}
+            {projectDropdownOpen && (
+              <div className="absolute top-full left-0 mt-2 w-72 rounded-lg border bg-card shadow-lg z-50">
+                <div className="p-2">
+                  <p className="text-xs text-muted-foreground px-2 py-1">Switch Project</p>
+                  {projects.map((project) => (
+                    <button
+                      key={project.id}
+                      onClick={() => handleProjectSwitch(project.id)}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors ${
+                        project.id === activeProjectId ? "bg-muted" : ""
+                      }`}
+                    >
+                      <span className="font-medium">{project.name}</span>
+                      {project.id === activeProjectId && (
+                        <Check className="h-4 w-4 text-[#28A963]" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Create New Project Button */}
+          <Button
+            onClick={handleCreateNewProject}
+            size="sm"
+            className="bg-[#28A963] hover:bg-[#229954]"
+            title="Create New Project"
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
         </div>
+
         <Button className="bg-[#28A963] hover:bg-[#229954]">
           <Save className="h-4 w-4 mr-2" />
           Save Project
         </Button>
+      </div>
+
+      {/* Page Title */}
+      <div>
+        <h1 className="text-3xl font-bold">Project Configuration</h1>
+        <p className="text-muted-foreground">
+          Define project parameters, pricing matrix, and lead qualification rules
+        </p>
       </div>
 
       {/* Quick Stats */}
@@ -248,54 +368,93 @@ export default function ProjectsPage() {
               </div>
             </div>
 
-            {/* Right: Location */}
+            {/* Right: Location with Toggle */}
             <div className="space-y-4">
+              {/* Location Mode Toggle */}
               <div>
-                <label className="text-sm font-medium">Address</label>
-                <div className="mt-1.5 flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <input
-                    type="text"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#28A963]/50"
-                  />
+                <label className="text-sm font-medium mb-2 block">Address Input Mode</label>
+                <div className="flex rounded-lg border border-input p-1 bg-muted/30">
+                  <button
+                    onClick={() => setLocationMode("manual")}
+                    className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                      locationMode === "manual"
+                        ? "bg-background shadow text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    Manual Address
+                  </button>
+                  <button
+                    onClick={() => setLocationMode("map")}
+                    className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                      locationMode === "map"
+                        ? "bg-background shadow text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    Pin on Map
+                  </button>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium">City</label>
-                  <input
-                    type="text"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    className="mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#28A963]/50"
-                  />
+
+              {locationMode === "manual" ? (
+                <>
+                  <div>
+                    <label className="text-sm font-medium">Street Address</label>
+                    <div className="mt-1.5 flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <input
+                        type="text"
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
+                        className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#28A963]/50"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium">City</label>
+                      <input
+                        type="text"
+                        value={city}
+                        onChange={(e) => setCity(e.target.value)}
+                        className="mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#28A963]/50"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Country</label>
+                      <input
+                        type="text"
+                        value={country}
+                        onChange={(e) => setCountry(e.target.value)}
+                        className="mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#28A963]/50"
+                      />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                /* Map Mode - Interactive placeholder */
+                <div className="rounded-lg border-2 border-dashed border-muted-foreground/25 bg-muted/30 p-6 text-center h-[180px] flex flex-col items-center justify-center">
+                  <Map className="h-10 w-10 text-[#28A963]/50 mb-3" />
+                  <p className="text-sm font-medium text-foreground">Drop Pin on Map</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Click anywhere on the map to set location
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-3 font-mono">
+                    Lat: {latitude}, Long: {longitude}
+                  </p>
+                  <Button variant="outline" size="sm" className="mt-3">
+                    <MapPin className="h-3 w-3 mr-1" />
+                    Set Pin
+                  </Button>
                 </div>
-                <div>
-                  <label className="text-sm font-medium">Country</label>
-                  <input
-                    type="text"
-                    value={country}
-                    onChange={(e) => setCountry(e.target.value)}
-                    className="mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#28A963]/50"
-                  />
-                </div>
-              </div>
-              {/* Map Placeholder */}
-              <div className="rounded-lg border-2 border-dashed border-muted-foreground/25 bg-muted/30 p-6 text-center">
-                <Map className="mx-auto h-8 w-8 text-muted-foreground/50 mb-2" />
-                <p className="text-sm text-muted-foreground">Map Preview</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Lat: {latitude}, Long: {longitude}
-                </p>
-              </div>
+              )}
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Section B: Inventory & Pricing Matrix */}
+      {/* Section B: Unit Configuration with Tags */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -305,26 +464,70 @@ export default function ProjectsPage() {
               </div>
               <div>
                 <CardTitle>Unit Configuration</CardTitle>
-                <CardDescription>Dynamic pricing matrix and inventory management</CardDescription>
+                <CardDescription>Dynamic pricing matrix, inventory, and tagging</CardDescription>
               </div>
             </div>
-            <Button onClick={addUnitType} variant="outline" size="sm">
-              <Plus className="h-4 w-4 mr-1" />
-              Add Unit Type
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => setShowTagCreator(!showTagCreator)} 
+                variant="ghost" 
+                size="sm"
+                className="text-muted-foreground"
+              >
+                <Hash className="h-4 w-4 mr-1" />
+                Create Tag
+              </Button>
+              <Button onClick={addUnitType} variant="outline" size="sm">
+                <Plus className="h-4 w-4 mr-1" />
+                Add Unit
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
+          {/* Tag Creator */}
+          {showTagCreator && (
+            <div className="mb-4 p-4 rounded-lg border bg-muted/30 flex items-center gap-3">
+              <Hash className="h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                value={newTagName}
+                onChange={(e) => setNewTagName(e.target.value)}
+                placeholder="Enter tag name..."
+                className="flex-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#28A963]/50"
+                onKeyDown={(e) => e.key === "Enter" && createNewTag()}
+              />
+              <Button onClick={createNewTag} size="sm">Create</Button>
+              <Button onClick={() => setShowTagCreator(false)} size="sm" variant="ghost">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+
+          {/* Available Tags Display */}
+          <div className="mb-4 flex flex-wrap gap-2">
+            <span className="text-xs text-muted-foreground mr-2">Available Tags:</span>
+            {availableTags.map((tag) => (
+              <span
+                key={tag.label}
+                className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${getTagColorClasses(tag.color)}`}
+              >
+                {tag.label}
+              </span>
+            ))}
+          </div>
+
           <div className="rounded-lg border overflow-hidden">
             <table className="w-full">
               <thead className="bg-muted/50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Unit Type</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Tags</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Price ($)</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Size (m²)</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Units</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Available</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Total</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Avail.</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider w-12"></th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -339,11 +542,59 @@ export default function ProjectsPage() {
                       />
                     </td>
                     <td className="px-4 py-3">
+                      <div className="relative">
+                        <button
+                          onClick={() => setEditingUnitTags(editingUnitTags === unit.id ? null : unit.id)}
+                          className="flex flex-wrap gap-1 min-h-[28px] items-center"
+                        >
+                          {unit.tags.length > 0 ? (
+                            unit.tags.map((tagLabel) => {
+                              const tag = availableTags.find(t => t.label === tagLabel);
+                              return (
+                                <span
+                                  key={tagLabel}
+                                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${getTagColorClasses(tag?.color || "blue")}`}
+                                >
+                                  {tagLabel}
+                                </span>
+                              );
+                            })
+                          ) : (
+                            <span className="text-xs text-muted-foreground">+ Add tags</span>
+                          )}
+                        </button>
+
+                        {/* Tag Selector Dropdown */}
+                        {editingUnitTags === unit.id && (
+                          <div className="absolute top-full left-0 mt-1 w-48 rounded-lg border bg-card shadow-lg z-50 p-2">
+                            <p className="text-xs text-muted-foreground px-2 mb-2">Select tags:</p>
+                            {availableTags.map((tag) => {
+                              const isSelected = unit.tags.includes(tag.label);
+                              return (
+                                <button
+                                  key={tag.label}
+                                  onClick={() => toggleUnitTag(unit.id, tag.label)}
+                                  className={`w-full flex items-center justify-between px-2 py-1.5 rounded text-sm hover:bg-muted transition-colors ${
+                                    isSelected ? "bg-muted" : ""
+                                  }`}
+                                >
+                                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${getTagColorClasses(tag.color)}`}>
+                                    {tag.label}
+                                  </span>
+                                  {isSelected && <Check className="h-3 w-3 text-[#28A963]" />}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
                       <input
                         type="number"
                         value={unit.price}
                         onChange={(e) => updateUnitType(unit.id, "price", parseInt(e.target.value) || 0)}
-                        className="w-full rounded border border-input bg-background px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#28A963]/50"
+                        className="w-20 rounded border border-input bg-background px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#28A963]/50"
                       />
                     </td>
                     <td className="px-4 py-3">
@@ -351,7 +602,7 @@ export default function ProjectsPage() {
                         type="number"
                         value={unit.size}
                         onChange={(e) => updateUnitType(unit.id, "size", parseInt(e.target.value) || 0)}
-                        className="w-full rounded border border-input bg-background px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#28A963]/50"
+                        className="w-16 rounded border border-input bg-background px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#28A963]/50"
                       />
                     </td>
                     <td className="px-4 py-3">
@@ -359,7 +610,7 @@ export default function ProjectsPage() {
                         type="number"
                         value={unit.totalUnits}
                         onChange={(e) => updateUnitType(unit.id, "totalUnits", parseInt(e.target.value) || 0)}
-                        className="w-full rounded border border-input bg-background px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#28A963]/50"
+                        className="w-16 rounded border border-input bg-background px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#28A963]/50"
                       />
                     </td>
                     <td className="px-4 py-3">
@@ -367,7 +618,7 @@ export default function ProjectsPage() {
                         type="number"
                         value={unit.availableUnits}
                         onChange={(e) => updateUnitType(unit.id, "availableUnits", parseInt(e.target.value) || 0)}
-                        className="w-full rounded border border-input bg-background px-2 py-1 text-sm font-medium text-[#28A963] focus:outline-none focus:ring-1 focus:ring-[#28A963]/50"
+                        className="w-16 rounded border border-input bg-background px-2 py-1 text-sm font-medium text-[#28A963] focus:outline-none focus:ring-1 focus:ring-[#28A963]/50"
                       />
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -386,7 +637,7 @@ export default function ProjectsPage() {
             </table>
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
-            This inventory data feeds directly into the Commercial Intent module to qualify leads automatically.
+            This inventory data feeds directly into the Commercial Intent module to qualify leads automatically. Tags help filter and categorize units (e.g., "The Penthouse has [Luxury] and [Sea View] tags").
           </p>
         </CardContent>
       </Card>
@@ -445,55 +696,7 @@ export default function ProjectsPage() {
         </CardContent>
       </Card>
 
-      {/* Section D: Property Tags */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#28A963]/10">
-              <Tag className="h-5 w-5 text-[#28A963]" />
-            </div>
-            <div>
-              <CardTitle>Property Tags</CardTitle>
-              <CardDescription>Labels for filtering and categorization</CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-2">
-            {tags.map((tag) => (
-              <span
-                key={tag.label}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium ${getTagColorClasses(tag.color)}`}
-              >
-                {tag.label}
-                <button
-                  onClick={() => removeTag(tag.label)}
-                  className="hover:opacity-70 transition-opacity"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={newTag}
-              onChange={(e) => setNewTag(e.target.value)}
-              placeholder="Add new tag..."
-              className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#28A963]/50"
-              onKeyDown={(e) => e.key === "Enter" && addTag()}
-            />
-            <Button onClick={addTag} variant="outline">
-              <Plus className="h-4 w-4 mr-1" />
-              Add Tag
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Tags help categorize properties and improve search/filter functionality across the platform.
-          </p>
-        </CardContent>
-      </Card>
+      {/* Property Tags card REMOVED - functionality merged into Unit Configuration table */}
     </div>
   );
 }
