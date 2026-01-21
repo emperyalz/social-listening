@@ -1,729 +1,208 @@
-"use client"
+"use client";
 
-import { GlassCard } from "@/components/ui/glass-card"
-import { Progress } from "@/components/ui/progress"
-import {
-  Mic2,
-  Volume2,
-  Settings,
-  TrendingUp,
-  TrendingDown,
-  CheckCircle2,
-  XCircle,
-  AlertTriangle,
-  Lightbulb,
-  Target,
-  Users,
-  MessageSquare,
-  Instagram,
-  Youtube,
-  Sparkles,
-  BarChart3,
-} from "lucide-react"
-import {
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar,
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts"
+import { Suspense, useState } from "react";
+import { useTheme } from "@/contexts/ThemeContext";
+import { RadarChart, PolarGrid, PolarAngleAxis, Radar, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
-// TikTok Icon Component
-const TikTokIcon = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
-  </svg>
-)
-
-// Demo Data - Brand Voice Alignment for Grupo Horizonte
-const DEMO_DATA = {
-  voiceConsistency: 82,
-  toneRadar: [
-    { tone: "Professional", target: 85, actual: 82 },
-    { tone: "Aspirational", target: 90, actual: 88 },
-    { tone: "Trustworthy", target: 95, actual: 78 },
-    { tone: "Innovative", target: 70, actual: 75 },
-    { tone: "Warm", target: 75, actual: 85 },
-    { tone: "Exclusive", target: 80, actual: 72 },
-  ],
-  toneBreakdown: [
-    { tone: "Professional", score: 82, trend: 3, status: "aligned" },
-    { tone: "Aspirational", score: 88, trend: 5, status: "aligned" },
-    { tone: "Trustworthy", score: 78, trend: -2, status: "needs_attention" },
-    { tone: "Innovative", score: 75, trend: 8, status: "exceeding" },
-    { tone: "Warm", score: 85, trend: 4, status: "exceeding" },
-    { tone: "Exclusive", score: 72, trend: -5, status: "needs_attention" },
-  ],
-  formalityGauge: {
-    target: 70, // 0 = casual, 100 = very formal
-    actual: 65,
-  },
-  personalityMix: [
-    { trait: "Sophisticated", value: 35, color: "#28A963" },
-    { trait: "Friendly", value: 28, color: "#3B82F6" },
-    { trait: "Authoritative", value: 22, color: "#8B5CF6" },
-    { trait: "Playful", value: 15, color: "#F59E0B" },
-  ],
-  voiceTrends: [
-    { month: "Aug", consistency: 74, alignment: 68 },
-    { month: "Sep", consistency: 76, alignment: 71 },
-    { month: "Oct", consistency: 78, alignment: 74 },
-    { month: "Nov", consistency: 79, alignment: 76 },
-    { month: "Dec", consistency: 80, alignment: 78 },
-    { month: "Jan", consistency: 82, alignment: 80 },
-  ],
-  platformVoice: [
-    {
-      platform: "Instagram",
-      consistency: 85,
-      tone: "Aspirational & Visual",
-      issues: 2,
-      icon: Instagram,
-    },
-    {
-      platform: "TikTok",
-      consistency: 78,
-      tone: "Casual & Engaging",
-      issues: 5,
-      icon: TikTokIcon,
-    },
-    {
-      platform: "YouTube",
-      consistency: 88,
-      tone: "Professional & Detailed",
-      issues: 1,
-      icon: Youtube,
-    },
-  ],
-  voiceRecommendations: [
-    {
-      id: 1,
-      type: "improvement",
-      title: "Increase Trust Signals",
-      description:
-        "Add more customer testimonials and certification mentions to boost trustworthy tone",
-      impact: "Could improve trust score by 8-12%",
-      priority: "high",
-    },
-    {
-      id: 2,
-      type: "warning",
-      title: "TikTok Voice Drift",
-      description:
-        "Content becoming too casual, drifting from brand's premium positioning",
-      impact: "Brand perception inconsistency",
-      priority: "medium",
-    },
-    {
-      id: 3,
-      type: "opportunity",
-      title: "Leverage Warm Tone Success",
-      description:
-        "Family-friendly content performing well - expand this voice element across platforms",
-      impact: "Potential 15% engagement increase",
-      priority: "medium",
-    },
-  ],
-  targetVoiceConfig: {
-    primary: "Professional & Aspirational",
-    secondary: "Trustworthy & Warm",
-    avoid: "Overly casual, Aggressive sales, Jargon-heavy",
-  },
-  emojiUsage: {
-    recommended: 2,
-    actual: 3.5,
-    topUsed: ["\ud83c\udfe2", "\u2728", "\ud83c\udf05", "\ud83c\udfe0", "\ud83d\udc8e"],
-  },
-  voiceExamples: {
-    onBrand: [
-      "Descubre tu nuevo hogar con vistas privilegiadas al mar",
-      "Inversi\u00f3n inteligente en ubicaciones premium de Colombia",
+const DEMO_VOICE_DATA = {
+  summary: { overallConsistency: 84, toneConsistency: 86, formalityConsistency: 81, dominantTone: "Profesional", formalityLevel: "Semi-Formal", totalPostsAnalyzed: 156, totalCommentsAnalyzed: 4892, avgSentenceLength: 12 },
+  brandVoice: {
+    toneScores: [
+      { trait: "Profesional", score: 145, emoji: "💼" }, { trait: "Amigable", score: 98, emoji: "😊" },
+      { trait: "Lujoso", score: 87, emoji: "✨" }, { trait: "Confiable", score: 76, emoji: "🛡️" },
+      { trait: "Inspirador", score: 65, emoji: "🌟" }, { trait: "Innovador", score: 54, emoji: "🚀" },
     ],
-    offBrand: [
-      "OFERTAS INCRE\u00cdBLES!!! No te lo pierdas!!!",
-      "Dale like y comenta para ganar",
+    formalityScore: 68, formalityLevel: "Semi-Formal",
+    personalityScores: [
+      { trait: "Confianza", score: 134, emoji: "🛡️" }, { trait: "Elegancia", score: 98, emoji: "👔" },
+      { trait: "Cercania", score: 87, emoji: "🤝" }, { trait: "Expertise", score: 76, emoji: "📚" },
+      { trait: "Modernidad", score: 65, emoji: "💡" },
+    ],
+    emojiUsage: [
+      { category: "Hogar", count: 156, emojis: ["🏠", "🏡", "🏢"] },
+      { category: "Lujo", count: 98, emojis: ["✨", "💎", "🌟"] },
+      { category: "Ubicacion", count: 87, emojis: ["📍", "🗺️", "🌴"] },
     ],
   },
-}
+  audienceVoice: {
+    toneScores: [
+      { trait: "Profesional", score: 112, emoji: "💼" }, { trait: "Amigable", score: 134, emoji: "😊" },
+      { trait: "Lujoso", score: 67, emoji: "✨" }, { trait: "Confiable", score: 89, emoji: "🛡️" },
+      { trait: "Inspirador", score: 78, emoji: "🌟" }, { trait: "Innovador", score: 45, emoji: "🚀" },
+    ],
+  },
+  targetVoice: { primaryTone: "Profesional", secondaryTone: "Confiable", formalityTarget: 65, personalityFocus: ["Confianza", "Elegancia", "Expertise", "Cercania"] },
+  voiceAlignment: [
+    { trait: "Profesional", emoji: "💼", brandScore: 145, audienceScore: 112, alignment: "aligned" },
+    { trait: "Amigable", emoji: "😊", brandScore: 98, audienceScore: 134, alignment: "audience-only" },
+    { trait: "Lujoso", emoji: "✨", brandScore: 87, audienceScore: 67, alignment: "brand-only" },
+    { trait: "Confiable", emoji: "🛡️", brandScore: 76, audienceScore: 89, alignment: "aligned" },
+  ],
+  platformBreakdown: [
+    { platform: "instagram", dominantTone: "Profesional", formalityLevel: "Semi-Formal", avgSentenceLength: 11 },
+    { platform: "tiktok", dominantTone: "Amigable", formalityLevel: "Casual", avgSentenceLength: 8 },
+    { platform: "youtube", dominantTone: "Profesional", formalityLevel: "Formal", avgSentenceLength: 15 },
+  ],
+  recommendations: [
+    { type: "Ajuste de Tono", message: "Tu audiencia responde mejor al tono Amigable. Considera aumentar este tono en Instagram.", priority: "medium" },
+    { type: "Consistencia", message: "Excelente consistencia en tono profesional. Mantener este nivel.", priority: "low" },
+    { type: "Oportunidad", message: "El tono Lujoso aparece mas en tu contenido que en respuestas. Considera balancear.", priority: "medium" },
+  ],
+  periodDays: 30,
+};
 
-const getStatusIcon = (status: string) => {
-  switch (status) {
-    case "aligned":
-      return <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-    case "exceeding":
-      return <TrendingUp className="h-4 w-4 text-blue-400" />
-    case "needs_attention":
-      return <AlertTriangle className="h-4 w-4 text-amber-400" />
-    default:
-      return null
-  }
-}
+const TONE_COLORS: Record<string, string> = { Profesional: "#6366f1", Amigable: "#f59e0b", Lujoso: "#8b5cf6", Confiable: "#10b981", Inspirador: "#ec4899", Innovador: "#06b6d4" };
+const PERSONALITY_COLORS = ["#10b981", "#6366f1", "#f59e0b", "#ec4899", "#06b6d4"];
+const PLATFORM_EMOJI: Record<string, string> = { instagram: "📸", tiktok: "🎵", youtube: "📺" };
 
-export default function BrandVoicePage() {
+function GlassCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Brand Voice Alignment</h1>
-          <p className="text-gray-400 mt-1">
-            Ensure your content speaks with a consistent brand voice
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <select className="bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm">
-            <option>Last 30 Days</option>
-            <option>Last 7 Days</option>
-            <option>Last 90 Days</option>
-          </select>
-        </div>
+    <div className={`relative overflow-hidden rounded-2xl border border-border shadow-xl bg-card ${className}`} style={{ backdropFilter: "blur(12px)" }}>
+      <div className="absolute inset-0 opacity-30 pointer-events-none" style={{ background: isDark ? "radial-gradient(ellipse at top left, rgba(139, 92, 246, 0.1) 0%, transparent 50%)" : "radial-gradient(ellipse at top left, rgba(139, 92, 246, 0.08) 0%, transparent 50%)" }} />
+      <div className="relative z-10">{children}</div>
+    </div>
+  );
+}
+
+function BrandVoiceContent() {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+  const voiceData = DEMO_VOICE_DATA;
+  const getScoreColor = (score: number) => score >= 80 ? "text-emerald-500" : score >= 60 ? "text-amber-500" : "text-red-500";
+
+  const radarData = voiceData.brandVoice.toneScores.map((brand) => {
+    const audience = voiceData.audienceVoice.toneScores.find((a) => a.trait === brand.trait);
+    return { trait: brand.trait, brand: brand.score, audience: audience?.score || 0 };
+  });
+
+  const pieData = voiceData.brandVoice.personalityScores.map((s) => ({ name: s.trait, value: s.score }));
+
+  return (
+    <div className="min-h-screen bg-background text-foreground p-4 md:p-6 lg:p-8">
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-2"><div className="w-2 h-2 bg-violet-400 rounded-full animate-pulse" /><span className="text-violet-400 text-sm font-medium">Analisis de Voz Activo</span></div>
+        <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">Alineacion de Voz de Marca</h1>
+        <p className="text-muted-foreground mt-1">Analisis de Tono, Estilo y Consistencia</p>
       </div>
 
-      {/* Voice Consistency Hero & Tone Radar */}
-      <div className="grid grid-cols-2 gap-6">
-        {/* Voice Consistency Score */}
-        <GlassCard className="p-6">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <Mic2 className="h-5 w-5 text-[#28A963]" />
-            Voice Consistency Score
-          </h3>
-          <div className="flex items-center gap-8">
-            <div className="relative w-40 h-40">
-              <svg className="w-full h-full -rotate-90">
-                <circle
-                  cx="80"
-                  cy="80"
-                  r="70"
-                  fill="none"
-                  stroke="#374151"
-                  strokeWidth="12"
-                />
-                <circle
-                  cx="80"
-                  cy="80"
-                  r="70"
-                  fill="none"
-                  stroke="#28A963"
-                  strokeWidth="12"
-                  strokeDasharray={`${(DEMO_DATA.voiceConsistency / 100) * 440} 440`}
-                  strokeLinecap="round"
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-4xl font-bold text-white">
-                  {DEMO_DATA.voiceConsistency}%
-                </span>
-                <span className="text-sm text-gray-400">Consistent</span>
-              </div>
-            </div>
-            <div className="flex-1 space-y-3">
-              <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                <p className="text-sm text-emerald-400 font-medium">Target Voice</p>
-                <p className="text-white">{DEMO_DATA.targetVoiceConfig.primary}</p>
-              </div>
-              <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                <p className="text-sm text-blue-400 font-medium">Secondary</p>
-                <p className="text-white">{DEMO_DATA.targetVoiceConfig.secondary}</p>
-              </div>
-              <div className="flex items-center gap-2 text-emerald-400 text-sm">
-                <TrendingUp className="h-4 w-4" />
-                +6% improvement this quarter
-              </div>
+      <GlassCard className="p-8 mb-8">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-2"><span className="text-3xl">🎤</span><span className="text-violet-400 text-sm font-semibold uppercase tracking-wider">Consistencia de Voz</span></div>
+            <div className={`text-6xl font-bold ${getScoreColor(voiceData.summary.overallConsistency)} mb-2`}>{voiceData.summary.overallConsistency}%</div>
+            <p className="text-muted-foreground text-sm mb-6">Que tan consistente es tu contenido con tu voz de marca</p>
+            <div className="grid grid-cols-4 gap-6">
+              <div><span className="text-muted-foreground block text-sm">Match Tono</span><span className={`font-bold text-xl ${getScoreColor(voiceData.summary.toneConsistency)}`}>{voiceData.summary.toneConsistency}%</span></div>
+              <div><span className="text-muted-foreground block text-sm">Match Formalidad</span><span className={`font-bold text-xl ${getScoreColor(voiceData.summary.formalityConsistency)}`}>{voiceData.summary.formalityConsistency}%</span></div>
+              <div><span className="text-muted-foreground block text-sm">Tono Dominante</span><span className="font-bold text-xl text-violet-400">{voiceData.summary.dominantTone}</span></div>
+              <div><span className="text-muted-foreground block text-sm">Formalidad</span><span className="font-bold text-xl text-cyan-400">{voiceData.summary.formalityLevel}</span></div>
             </div>
           </div>
-        </GlassCard>
+          <div className="w-32 h-32 rounded-full border-4 border-border flex items-center justify-center"><span className="text-4xl">🎯</span></div>
+        </div>
+      </GlassCard>
 
-        {/* Tone Radar Chart */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <GlassCard className="p-6">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <Target className="h-5 w-5 text-[#28A963]" />
-            Tone Analysis (Target vs Actual)
-          </h3>
-          <div className="h-[240px]">
+          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2"><span className="text-violet-400">📊</span>ANALISIS DE TONO</h3>
+          <div className="h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
-              <RadarChart data={DEMO_DATA.toneRadar}>
-                <PolarGrid stroke="#374151" />
-                <PolarAngleAxis
-                  dataKey="tone"
-                  tick={{ fill: "#9CA3AF", fontSize: 11 }}
-                />
-                <PolarRadiusAxis
-                  angle={30}
-                  domain={[0, 100]}
-                  tick={{ fill: "#9CA3AF", fontSize: 10 }}
-                />
-                <Radar
-                  name="Target"
-                  dataKey="target"
-                  stroke="#3B82F6"
-                  fill="#3B82F6"
-                  fillOpacity={0.2}
-                  strokeWidth={2}
-                />
-                <Radar
-                  name="Actual"
-                  dataKey="actual"
-                  stroke="#28A963"
-                  fill="#28A963"
-                  fillOpacity={0.3}
-                  strokeWidth={2}
-                />
+              <RadarChart data={radarData}>
+                <PolarGrid stroke={isDark ? "#334155" : "#e2e8f0"} />
+                <PolarAngleAxis dataKey="trait" stroke={isDark ? "#64748b" : "#94a3b8"} fontSize={11} />
+                <Radar name="Tu Contenido" dataKey="brand" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.3} strokeWidth={2} />
+                <Radar name="Audiencia" dataKey="audience" stroke="#06b6d4" fill="#06b6d4" fillOpacity={0.2} strokeWidth={2} />
+                <Legend />
+                <Tooltip contentStyle={{ backgroundColor: isDark ? "rgba(15, 23, 42, 0.95)" : "rgba(255, 255, 255, 0.95)", borderRadius: "12px", color: isDark ? "#fff" : "#1e293b" }} />
               </RadarChart>
             </ResponsiveContainer>
           </div>
-          <div className="flex items-center justify-center gap-6 mt-2">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-blue-500" />
-              <span className="text-sm text-gray-400">Target</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-[#28A963]" />
-              <span className="text-sm text-gray-400">Actual</span>
-            </div>
+        </GlassCard>
+
+        <GlassCard className="p-6">
+          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2"><span className="text-amber-400">🎨</span>DESGLOSE DE TONO</h3>
+          <div className="space-y-4">
+            {voiceData.brandVoice.toneScores.slice(0, 6).map((tone) => (
+              <div key={tone.trait}>
+                <div className="flex items-center justify-between mb-1"><div className="flex items-center gap-2"><span>{tone.emoji}</span><span className="text-foreground font-medium">{tone.trait}</span></div><span className="text-muted-foreground text-sm">{tone.score} senales</span></div>
+                <div className="h-3 bg-muted/50 rounded-full overflow-hidden"><div className="h-full rounded-full" style={{ width: `${Math.max((tone.score / 145) * 100, 5)}%`, backgroundColor: TONE_COLORS[tone.trait] || "#6366f1" }} /></div>
+              </div>
+            ))}
           </div>
         </GlassCard>
       </div>
 
-      {/* Tone Breakdown */}
-      <GlassCard className="p-6">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <Volume2 className="h-5 w-5 text-[#28A963]" />
-          Tone Score Breakdown
-        </h3>
-        <div className="grid grid-cols-3 gap-4">
-          {DEMO_DATA.toneBreakdown.map((tone) => (
-            <div
-              key={tone.tone}
-              className={`p-4 rounded-xl border ${
-                tone.status === "aligned"
-                  ? "border-emerald-500/30 bg-emerald-500/5"
-                  : tone.status === "exceeding"
-                  ? "border-blue-500/30 bg-blue-500/5"
-                  : "border-amber-500/30 bg-amber-500/5"
-              }`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  {getStatusIcon(tone.status)}
-                  <span className="font-medium text-white">{tone.tone}</span>
-                </div>
-                <span
-                  className={`text-lg font-bold ${
-                    tone.score >= 80
-                      ? "text-emerald-400"
-                      : tone.score >= 70
-                      ? "text-amber-400"
-                      : "text-red-400"
-                  }`}
-                >
-                  {tone.score}
-                </span>
-              </div>
-              <Progress value={tone.score} className="h-2" />
-              <div className="flex items-center justify-between mt-2">
-                <span
-                  className={`text-xs px-2 py-0.5 rounded-full ${
-                    tone.status === "aligned"
-                      ? "bg-emerald-500/20 text-emerald-400"
-                      : tone.status === "exceeding"
-                      ? "bg-blue-500/20 text-blue-400"
-                      : "bg-amber-500/20 text-amber-400"
-                  }`}
-                >
-                  {tone.status === "aligned"
-                    ? "On Target"
-                    : tone.status === "exceeding"
-                    ? "Exceeding"
-                    : "Needs Work"}
-                </span>
-                <span
-                  className={`text-xs flex items-center gap-1 ${
-                    tone.trend >= 0 ? "text-emerald-400" : "text-red-400"
-                  }`}
-                >
-                  {tone.trend >= 0 ? (
-                    <TrendingUp className="h-3 w-3" />
-                  ) : (
-                    <TrendingDown className="h-3 w-3" />
-                  )}
-                  {Math.abs(tone.trend)}%
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </GlassCard>
-
-      {/* Formality & Personality Mix */}
-      <div className="grid grid-cols-2 gap-6">
-        {/* Formality Gauge */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <GlassCard className="p-6">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-[#28A963]" />
-            Formality Level
-          </h3>
-          <div className="relative pt-4">
-            <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
-              <span>Casual</span>
-              <span>Balanced</span>
-              <span>Formal</span>
-            </div>
-            <div className="h-4 bg-gradient-to-r from-amber-500 via-emerald-500 to-blue-500 rounded-full relative">
-              {/* Target marker */}
-              <div
-                className="absolute -top-1 w-1 h-6 bg-white rounded-full shadow-lg"
-                style={{ left: `${DEMO_DATA.formalityGauge.target}%` }}
-              />
-              {/* Actual marker */}
-              <div
-                className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full border-2 border-gray-900 shadow-lg"
-                style={{ left: `calc(${DEMO_DATA.formalityGauge.actual}% - 8px)` }}
-              />
-            </div>
-            <div className="mt-4 flex items-center justify-between">
-              <div className="text-center">
-                <p className="text-sm text-gray-400">Target</p>
-                <p className="text-lg font-bold text-blue-400">
-                  {DEMO_DATA.formalityGauge.target}%
-                </p>
-              </div>
-              <div className="text-center">
-                <p className="text-sm text-gray-400">Actual</p>
-                <p className="text-lg font-bold text-emerald-400">
-                  {DEMO_DATA.formalityGauge.actual}%
-                </p>
-              </div>
-              <div className="text-center">
-                <p className="text-sm text-gray-400">Gap</p>
-                <p className="text-lg font-bold text-amber-400">
-                  {Math.abs(
-                    DEMO_DATA.formalityGauge.target - DEMO_DATA.formalityGauge.actual
-                  )}
-                  %
-                </p>
-              </div>
-            </div>
+          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2"><span className="text-cyan-400">📏</span>NIVEL DE FORMALIDAD</h3>
+          <div className="relative h-8 bg-gradient-to-r from-pink-500 via-yellow-500 via-slate-500 via-blue-500 to-indigo-500 rounded-full mb-4">
+            <div className="absolute top-0 h-full w-1 bg-white/50" style={{ left: `${voiceData.targetVoice.formalityTarget}%` }}><div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs text-muted-foreground">Objetivo</div></div>
+            <div className="absolute top-1/2 -translate-y-1/2 w-6 h-6 bg-white rounded-full border-4 border-background shadow-lg" style={{ left: `calc(${voiceData.brandVoice.formalityScore}% - 12px)` }} />
           </div>
+          <div className="flex justify-between text-xs text-muted-foreground mb-6"><span>Muy Casual</span><span>Casual</span><span>Neutral</span><span>Formal</span><span>Muy Formal</span></div>
+          <div className="flex items-center justify-between p-4 bg-muted/30 rounded-xl"><div><span className="text-muted-foreground text-sm block">Nivel Actual</span><span className="text-foreground font-bold text-xl">{voiceData.brandVoice.formalityLevel}</span></div><div className="text-right"><span className="text-muted-foreground text-sm block">Score</span><span className="text-cyan-400 font-bold text-xl">{voiceData.brandVoice.formalityScore}/100</span></div></div>
         </GlassCard>
 
-        {/* Personality Mix */}
         <GlassCard className="p-6">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-[#28A963]" />
-            Brand Personality Mix
-          </h3>
-          <div className="flex items-center gap-6">
-            <div className="w-32 h-32">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={DEMO_DATA.personalityMix}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={35}
-                    outerRadius={55}
-                    paddingAngle={4}
-                    dataKey="value"
-                  >
-                    {DEMO_DATA.personalityMix.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="flex-1 space-y-2">
-              {DEMO_DATA.personalityMix.map((item) => (
-                <div key={item.trait} className="flex items-center gap-3">
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: item.color }}
-                  />
-                  <span className="text-gray-400 flex-1">{item.trait}</span>
-                  <span className="text-white font-medium">{item.value}%</span>
-                </div>
-              ))}
-            </div>
+          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2"><span className="text-pink-400">🎭</span>MIX DE PERSONALIDAD</h3>
+          <div className="h-[200px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart><Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value">{pieData.map((_, i) => <Cell key={`cell-${i}`} fill={PERSONALITY_COLORS[i % PERSONALITY_COLORS.length]} />)}</Pie><Tooltip contentStyle={{ backgroundColor: isDark ? "rgba(15, 23, 42, 0.95)" : "rgba(255, 255, 255, 0.95)", borderRadius: "12px", color: isDark ? "#fff" : "#1e293b" }} /></PieChart>
+            </ResponsiveContainer>
           </div>
+          <div className="grid grid-cols-3 gap-2 mt-4">{voiceData.brandVoice.personalityScores.slice(0, 5).map((s, i) => (<div key={s.trait} className="flex items-center gap-2 text-sm"><div className="w-3 h-3 rounded" style={{ backgroundColor: PERSONALITY_COLORS[i % PERSONALITY_COLORS.length] }} /><span className="text-muted-foreground truncate">{s.trait}</span></div>))}</div>
         </GlassCard>
       </div>
 
-      {/* Platform Voice Comparison */}
-      <GlassCard className="p-6">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <Users className="h-5 w-5 text-[#28A963]" />
-          Voice Consistency by Platform
-        </h3>
-        <div className="grid grid-cols-3 gap-4">
-          {DEMO_DATA.platformVoice.map((platform) => (
-            <div
-              key={platform.platform}
-              className="p-4 rounded-xl bg-gray-800/50 border border-gray-700/50"
-            >
-              <div className="flex items-center gap-3 mb-3">
-                {platform.platform === "Instagram" && (
-                  <Instagram className="h-6 w-6 text-pink-500" />
-                )}
-                {platform.platform === "TikTok" && (
-                  <TikTokIcon className="h-6 w-6 text-white" />
-                )}
-                {platform.platform === "YouTube" && (
-                  <Youtube className="h-6 w-6 text-red-500" />
-                )}
-                <span className="text-white font-medium">{platform.platform}</span>
-              </div>
-              <div className="mb-3">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm text-gray-400">Consistency</span>
-                  <span
-                    className={`font-bold ${
-                      platform.consistency >= 85
-                        ? "text-emerald-400"
-                        : platform.consistency >= 75
-                        ? "text-amber-400"
-                        : "text-red-400"
-                    }`}
-                  >
-                    {platform.consistency}%
-                  </span>
-                </div>
-                <Progress value={platform.consistency} className="h-2" />
-              </div>
-              <div className="text-sm">
-                <span className="text-gray-500">Voice:</span>
-                <span className="text-white ml-2">{platform.tone}</span>
-              </div>
-              {platform.issues > 0 && (
-                <div className="mt-2 flex items-center gap-1 text-amber-400 text-xs">
-                  <AlertTriangle className="h-3 w-3" />
-                  {platform.issues} voice inconsistencies detected
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </GlassCard>
-
-      {/* Voice Trends */}
-      <GlassCard className="p-6">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <TrendingUp className="h-5 w-5 text-[#28A963]" />
-          Voice Consistency Trends
-        </h3>
-        <div className="h-[250px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={DEMO_DATA.voiceTrends}>
-              <defs>
-                <linearGradient id="colorConsistency" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#28A963" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#28A963" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="colorAlignment" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis dataKey="month" stroke="#9CA3AF" fontSize={12} />
-              <YAxis stroke="#9CA3AF" fontSize={12} domain={[60, 100]} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "#1F2937",
-                  border: "1px solid #374151",
-                  borderRadius: "8px",
-                }}
-                labelStyle={{ color: "#F9FAFB" }}
-              />
-              <Area
-                type="monotone"
-                dataKey="consistency"
-                stroke="#28A963"
-                fill="url(#colorConsistency)"
-                strokeWidth={2}
-                name="Consistency %"
-              />
-              <Area
-                type="monotone"
-                dataKey="alignment"
-                stroke="#3B82F6"
-                fill="url(#colorAlignment)"
-                strokeWidth={2}
-                name="Brand Alignment %"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-        <div className="flex items-center justify-center gap-6 mt-4">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-[#28A963]" />
-            <span className="text-sm text-gray-400">Consistency</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-blue-500" />
-            <span className="text-sm text-gray-400">Brand Alignment</span>
-          </div>
-        </div>
-      </GlassCard>
-
-      {/* Voice Recommendations & Examples */}
-      <div className="grid grid-cols-2 gap-6">
-        {/* Recommendations */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <GlassCard className="p-6">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <Lightbulb className="h-5 w-5 text-[#28A963]" />
-            Voice Recommendations
-          </h3>
+          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2"><span className="text-emerald-500">🔄</span>ALINEACION VOZ MARCA-AUDIENCIA</h3>
           <div className="space-y-3">
-            {DEMO_DATA.voiceRecommendations.map((rec) => (
-              <div
-                key={rec.id}
-                className={`p-4 rounded-xl border ${
-                  rec.type === "improvement"
-                    ? "border-emerald-500/30 bg-emerald-500/5"
-                    : rec.type === "warning"
-                    ? "border-amber-500/30 bg-amber-500/5"
-                    : "border-blue-500/30 bg-blue-500/5"
-                }`}
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    {rec.type === "improvement" && (
-                      <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                    )}
-                    {rec.type === "warning" && (
-                      <AlertTriangle className="h-4 w-4 text-amber-400" />
-                    )}
-                    {rec.type === "opportunity" && (
-                      <Sparkles className="h-4 w-4 text-blue-400" />
-                    )}
-                    <span className="font-medium text-white">{rec.title}</span>
-                  </div>
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-xs ${
-                      rec.priority === "high"
-                        ? "bg-red-500/20 text-red-400"
-                        : "bg-amber-500/20 text-amber-400"
-                    }`}
-                  >
-                    {rec.priority}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-400">{rec.description}</p>
-                <p className="text-xs text-emerald-400 mt-2">{rec.impact}</p>
+            {voiceData.voiceAlignment.map((item) => (
+              <div key={item.trait} className={`p-3 rounded-xl border ${item.alignment === "aligned" ? "border-emerald-500/30 bg-emerald-500/10" : item.alignment === "brand-only" ? "border-amber-500/30 bg-amber-500/10" : "border-cyan-500/30 bg-cyan-500/10"}`}>
+                <div className="flex items-center justify-between"><div className="flex items-center gap-2"><span>{item.emoji}</span><span className="text-foreground font-medium">{item.trait}</span></div><span className={`text-xs px-2 py-0.5 rounded ${item.alignment === "aligned" ? "bg-emerald-500/20 text-emerald-500" : item.alignment === "brand-only" ? "bg-amber-500/20 text-amber-500" : "bg-cyan-500/20 text-cyan-500"}`}>{item.alignment === "aligned" ? "Alineado" : item.alignment === "brand-only" ? "Solo Marca" : "Solo Audiencia"}</span></div>
+                <div className="grid grid-cols-2 gap-4 mt-2 text-sm"><div><span className="text-muted-foreground">Tu: </span><span className="text-violet-400">{item.brandScore}</span></div><div><span className="text-muted-foreground">Audiencia: </span><span className="text-cyan-400">{item.audienceScore}</span></div></div>
               </div>
             ))}
           </div>
         </GlassCard>
 
-        {/* Voice Examples */}
         <GlassCard className="p-6">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <MessageSquare className="h-5 w-5 text-[#28A963]" />
-            Voice Examples
-          </h3>
+          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2"><span className="text-indigo-400">📱</span>VOZ POR PLATAFORMA</h3>
           <div className="space-y-4">
-            {/* On-Brand Examples */}
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                <span className="text-sm font-medium text-emerald-400">On-Brand</span>
+            {voiceData.platformBreakdown.map((p) => (
+              <div key={p.platform} className="p-4 bg-muted/30 rounded-xl">
+                <div className="flex items-center gap-2 mb-3"><span className="text-2xl">{PLATFORM_EMOJI[p.platform]}</span><span className="text-foreground font-medium capitalize">{p.platform}</span></div>
+                <div className="grid grid-cols-3 gap-4 text-sm"><div><span className="text-muted-foreground block">Tono</span><span className="text-violet-400 font-medium">{p.dominantTone}</span></div><div><span className="text-muted-foreground block">Formalidad</span><span className="text-cyan-400 font-medium">{p.formalityLevel}</span></div><div><span className="text-muted-foreground block">Palabras/Oracion</span><span className="text-emerald-500 font-medium">{p.avgSentenceLength}</span></div></div>
               </div>
-              <div className="space-y-2">
-                {DEMO_DATA.voiceExamples.onBrand.map((example, index) => (
-                  <div
-                    key={index}
-                    className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20"
-                  >
-                    <p className="text-sm text-white">"{example}"</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Off-Brand Examples */}
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <XCircle className="h-4 w-4 text-red-400" />
-                <span className="text-sm font-medium text-red-400">Avoid</span>
-              </div>
-              <div className="space-y-2">
-                {DEMO_DATA.voiceExamples.offBrand.map((example, index) => (
-                  <div
-                    key={index}
-                    className="p-3 rounded-lg bg-red-500/10 border border-red-500/20"
-                  >
-                    <p className="text-sm text-white line-through opacity-60">
-                      "{example}"
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Emoji Usage */}
-            <div className="p-4 rounded-xl bg-gray-800/50 border border-gray-700/50">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-gray-400">Emoji Usage</span>
-                <span
-                  className={`text-sm ${
-                    Math.abs(
-                      DEMO_DATA.emojiUsage.actual - DEMO_DATA.emojiUsage.recommended
-                    ) <= 1
-                      ? "text-emerald-400"
-                      : "text-amber-400"
-                  }`}
-                >
-                  {DEMO_DATA.emojiUsage.actual} per post (target:{" "}
-                  {DEMO_DATA.emojiUsage.recommended})
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-2xl">
-                {DEMO_DATA.emojiUsage.topUsed.map((emoji, index) => (
-                  <span key={index}>{emoji}</span>
-                ))}
-              </div>
-            </div>
+            ))}
           </div>
         </GlassCard>
       </div>
 
-      {/* Target Voice Config */}
-      <GlassCard className="p-6">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <Settings className="h-5 w-5 text-[#28A963]" />
-          Target Voice Configuration
-        </h3>
-        <div className="grid grid-cols-3 gap-4">
-          <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
-            <p className="text-sm text-emerald-400 font-medium mb-2">Primary Voice</p>
-            <p className="text-white font-medium">
-              {DEMO_DATA.targetVoiceConfig.primary}
-            </p>
-          </div>
-          <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30">
-            <p className="text-sm text-blue-400 font-medium mb-2">Secondary Voice</p>
-            <p className="text-white font-medium">
-              {DEMO_DATA.targetVoiceConfig.secondary}
-            </p>
-          </div>
-          <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30">
-            <p className="text-sm text-red-400 font-medium mb-2">Avoid</p>
-            <p className="text-white font-medium">{DEMO_DATA.targetVoiceConfig.avoid}</p>
-          </div>
+      <GlassCard className="p-6 mb-8">
+        <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2"><span className="text-amber-400">💡</span>RECOMENDACIONES DE VOZ</h3>
+        <div className="space-y-3">
+          {voiceData.recommendations.map((rec, i) => (
+            <div key={i} className={`p-4 rounded-xl border ${rec.priority === "high" ? "border-red-500/30 bg-red-500/10" : rec.priority === "medium" ? "border-amber-500/30 bg-amber-500/10" : "border-border bg-muted/30"}`}>
+              <div className="flex items-start gap-3"><span className="text-lg">{rec.priority === "high" ? "🔴" : rec.priority === "medium" ? "🟡" : "🟢"}</span><div><span className="text-foreground font-medium block mb-1">{rec.type}</span><p className="text-muted-foreground text-sm">{rec.message}</p></div></div>
+            </div>
+          ))}
         </div>
       </GlassCard>
+
+      <section className="pt-6 border-t border-border">
+        <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-4"><span><strong className="text-foreground">{voiceData.summary.totalPostsAnalyzed}</strong> posts</span><span><strong className="text-foreground">{voiceData.summary.totalCommentsAnalyzed}</strong> comentarios</span><span>Periodo: <strong className="text-foreground">{voiceData.periodDays} dias</strong></span></div>
+          <span>Actualizado: {new Date().toLocaleTimeString("es-CO")}</span>
+        </div>
+      </section>
     </div>
-  )
+  );
+}
+
+export default function BrandVoicePage() {
+  return (<Suspense fallback={<div className="flex items-center justify-center min-h-screen bg-background"><div className="text-center"><div className="w-12 h-12 border-4 border-violet-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" /><p className="text-muted-foreground">Cargando...</p></div></div>}><BrandVoiceContent /></Suspense>);
 }

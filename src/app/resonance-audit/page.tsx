@@ -1,612 +1,169 @@
-"use client"
+"use client";
 
-import { GlassCard } from "@/components/ui/glass-card"
-import { Progress } from "@/components/ui/progress"
-import {
-  Target,
-  CheckCircle2,
-  XCircle,
-  AlertTriangle,
-  TrendingUp,
-  TrendingDown,
-  Sparkles,
-  Users,
-  MessageSquare,
-  ArrowRight,
-  Hexagon,
-  PieChart as PieChartIcon,
-  BarChart3,
-  Lightbulb,
-} from "lucide-react"
-import {
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar,
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-} from "recharts"
+import { Suspense, useState } from "react";
+import { useTheme } from "@/contexts/ThemeContext";
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
-// Demo Data - Resonance Audit for Grupo Horizonte
-const DEMO_DATA = {
-  alignmentScore: 78,
-  messagingMatch: 65,
+const DEMO_AUDIT_DATA = {
+  summary: { overallAlignmentScore: 78, messagingMatchScore: 82, alignedConcepts: 12, alignmentErrors: 3, alignmentWarnings: 5, totalPostsAnalyzed: 156, totalCommentsAnalyzed: 4892 },
   hexGrid: [
-    {
-      concept: "Luxury-Aligned",
-      status: "aligned",
-      score: 92,
-      description: "Premium positioning resonates well with target audience",
-    },
-    {
-      concept: "Fast Delivery",
-      status: "error",
-      score: 34,
-      description: "Delivery promises creating negative sentiment",
-    },
-    {
-      concept: "Family-Friendly",
-      status: "unintended_win",
-      score: 88,
-      description: "Unexpectedly strong resonance with families",
-    },
-    {
-      concept: "Investment Value",
-      status: "aligned",
-      score: 85,
-      description: "ROI messaging performing as intended",
-    },
-    {
-      concept: "Location Premium",
-      status: "aligned",
-      score: 91,
-      description: "Prime location emphasis highly effective",
-    },
-    {
-      concept: "Modern Design",
-      status: "partial",
-      score: 67,
-      description: "Design messaging needs refinement",
-    },
+    { concept: "Lujo", inStrategy: true, captionPresence: 45, commentPresence: 38, status: "aligned" },
+    { concept: "Inversion", inStrategy: true, captionPresence: 52, commentPresence: 61, status: "aligned" },
+    { concept: "Ubicacion", inStrategy: true, captionPresence: 67, commentPresence: 89, status: "aligned" },
+    { concept: "Calidad", inStrategy: true, captionPresence: 41, commentPresence: 32, status: "aligned" },
+    { concept: "Modernidad", inStrategy: true, captionPresence: 38, commentPresence: 28, status: "warning" },
+    { concept: "Sostenibilidad", inStrategy: true, captionPresence: 12, commentPresence: 8, status: "error" },
+    { concept: "Precio", inStrategy: false, captionPresence: 8, commentPresence: 124, status: "warning" },
   ],
-  segmentGaps: [
-    {
-      segment: "Luxury Investors",
-      target: 40,
-      actual: 28,
-      status: "under",
-      gap: -12,
-    },
-    {
-      segment: "Growing Families",
-      target: 25,
-      actual: 38,
-      status: "over",
-      gap: 13,
-    },
-    {
-      segment: "First-Time Buyers",
-      target: 20,
-      actual: 22,
-      status: "aligned",
-      gap: 2,
-    },
-    {
-      segment: "Retirees",
-      target: 15,
-      actual: 12,
-      status: "under",
-      gap: -3,
-    },
+  segmentGapAnalysis: [
+    { segment: "Inversionistas", isTargeted: true, presence: 234, status: "on-target" },
+    { segment: "Familias Jovenes", isTargeted: true, presence: 189, status: "on-target" },
+    { segment: "Profesionales", isTargeted: true, presence: 156, status: "on-target" },
+    { segment: "Extranjeros", isTargeted: true, presence: 67, status: "under-target" },
+    { segment: "Jubilados", isTargeted: false, presence: 98, status: "over-performing" },
   ],
   contentThemes: [
-    { theme: "Location", value: 42, color: "#28A963" },
-    { theme: "Amenities", value: 28, color: "#3B82F6" },
-    { theme: "Price/Value", value: 18, color: "#8B5CF6" },
-    { theme: "Lifestyle", value: 12, color: "#F59E0B" },
-  ],
-  alignmentTrends: [
-    { month: "Aug", score: 65, messaging: 58 },
-    { month: "Sep", score: 68, messaging: 60 },
-    { month: "Oct", score: 72, messaging: 62 },
-    { month: "Nov", score: 74, messaging: 64 },
-    { month: "Dec", score: 76, messaging: 63 },
-    { month: "Jan", score: 78, messaging: 65 },
-  ],
-  radarData: [
-    { subject: "Brand Perception", A: 85, fullMark: 100 },
-    { subject: "Message Clarity", A: 72, fullMark: 100 },
-    { subject: "Target Reach", A: 68, fullMark: 100 },
-    { subject: "Competitive Edge", A: 78, fullMark: 100 },
-    { subject: "Emotional Connect", A: 82, fullMark: 100 },
-    { subject: "Value Proposition", A: 75, fullMark: 100 },
+    { theme: "Proyectos", score: 156, percentage: 32 },
+    { theme: "Lifestyle", score: 98, percentage: 20 },
+    { theme: "Ubicacion", score: 87, percentage: 18 },
+    { theme: "Financiero", score: 78, percentage: 16 },
+    { theme: "Comunidad", score: 67, percentage: 14 },
   ],
   alignmentIssues: [
-    {
-      id: 1,
-      issue: "Delivery Timeline Disconnect",
-      severity: "high",
-      description:
-        "Marketing promises 'immediate delivery' but actual timeline is 18-24 months",
-      impact: "23% negative sentiment increase",
-      recommendation: "Update messaging to '2026 delivery' with construction progress updates",
-    },
-    {
-      id: 2,
-      issue: "Price Positioning Gap",
-      severity: "medium",
-      description:
-        "Luxury positioning conflicts with aggressive discount promotions",
-      impact: "15% brand perception decline",
-      recommendation: "Replace discounts with 'exclusive incentives' language",
-    },
-    {
-      id: 3,
-      issue: "Audience Mismatch",
-      severity: "low",
-      description:
-        "Content resonating more with families than targeted luxury investors",
-      impact: "Opportunity cost: reaching wrong segment",
-      recommendation: "Create separate content tracks for each audience",
-    },
+    { type: "Gap", concept: "Sostenibilidad", message: "Tu estrategia menciona sostenibilidad pero solo 2% de tu contenido lo refleja.", severity: "high" },
+    { type: "No Estrategico", concept: "Precio", message: "Alta mencion de precio en comentarios pero no esta en tu estrategia.", severity: "medium" },
   ],
-}
+  periodDays: 30,
+};
 
-const getStatusIcon = (status: string) => {
-  switch (status) {
-    case "aligned":
-      return <CheckCircle2 className="h-5 w-5 text-emerald-400" />
-    case "error":
-      return <XCircle className="h-5 w-5 text-red-400" />
-    case "unintended_win":
-      return <Sparkles className="h-5 w-5 text-amber-400" />
-    case "partial":
-      return <AlertTriangle className="h-5 w-5 text-orange-400" />
-    default:
-      return null
-  }
-}
+const DEMO_TREND_DATA = [
+  { date: "2025-12-26", alignmentScore: 76 }, { date: "2025-12-27", alignmentScore: 78 },
+  { date: "2025-12-28", alignmentScore: 79 }, { date: "2025-12-30", alignmentScore: 80 },
+  { date: "2026-01-02", alignmentScore: 78 }, { date: "2026-01-04", alignmentScore: 82 },
+];
 
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case "aligned":
-      return "border-emerald-500/30 bg-emerald-500/10"
-    case "error":
-      return "border-red-500/30 bg-red-500/10"
-    case "unintended_win":
-      return "border-amber-500/30 bg-amber-500/10"
-    case "partial":
-      return "border-orange-500/30 bg-orange-500/10"
-    default:
-      return "border-gray-500/30 bg-gray-500/10"
-  }
-}
+const STATUS_COLORS = { aligned: "#10b981", error: "#ef4444", warning: "#f59e0b" };
+const SEGMENT_STATUS_COLORS = { "on-target": "#10b981", "under-target": "#ef4444", "over-performing": "#f59e0b" };
 
-export default function ResonanceAuditPage() {
+function GlassCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Resonance Audit</h1>
-          <p className="text-gray-400 mt-1">
-            Strategy-to-reality alignment analysis
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <select className="bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm">
-            <option>Last 30 Days</option>
-            <option>Last 7 Days</option>
-            <option>Last 90 Days</option>
-          </select>
-        </div>
+    <div className={`relative overflow-hidden rounded-2xl border border-border shadow-xl bg-card ${className}`} style={{ backdropFilter: "blur(12px)" }}>
+      <div className="absolute inset-0 opacity-30 pointer-events-none" style={{ background: isDark ? "radial-gradient(ellipse at top left, rgba(239, 68, 68, 0.1) 0%, transparent 50%)" : "radial-gradient(ellipse at top left, rgba(239, 68, 68, 0.08) 0%, transparent 50%)" }} />
+      <div className="relative z-10">{children}</div>
+    </div>
+  );
+}
+
+function ResonanceAuditContent() {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+  const auditData = DEMO_AUDIT_DATA;
+  const trendData = DEMO_TREND_DATA;
+  const getScoreColor = (score: number) => score >= 80 ? "text-emerald-500" : score >= 60 ? "text-amber-500" : "text-red-500";
+
+  return (
+    <div className="min-h-screen bg-background text-foreground p-4 md:p-6 lg:p-8">
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-2"><div className="w-2 h-2 bg-red-400 rounded-full animate-pulse" /><span className="text-red-400 text-sm font-medium">Analisis de Resonancia Activo</span></div>
+        <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-red-400 to-amber-400 bg-clip-text text-transparent">Auditoria de Resonancia</h1>
+        <p className="text-muted-foreground mt-1">Estrategia vs Realidad - Mide tu alineacion de marca</p>
       </div>
 
-      {/* Hero Scores */}
-      <div className="grid grid-cols-2 gap-6">
-        {/* Alignment Score */}
-        <GlassCard className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-              <Target className="h-5 w-5 text-[#28A963]" />
-              Strategy-Reality Alignment
-            </h3>
-            <span className="text-sm text-emerald-400 flex items-center gap-1">
-              <TrendingUp className="h-4 w-4" />
-              +4% this month
-            </span>
-          </div>
-          <div className="flex items-center gap-8">
-            <div className="relative w-40 h-40">
-              <svg className="w-full h-full -rotate-90">
-                <circle
-                  cx="80"
-                  cy="80"
-                  r="70"
-                  fill="none"
-                  stroke="#374151"
-                  strokeWidth="12"
-                />
-                <circle
-                  cx="80"
-                  cy="80"
-                  r="70"
-                  fill="none"
-                  stroke="#28A963"
-                  strokeWidth="12"
-                  strokeDasharray={`${(DEMO_DATA.alignmentScore / 100) * 440} 440`}
-                  strokeLinecap="round"
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-4xl font-bold text-white">
-                  {DEMO_DATA.alignmentScore}%
-                </span>
-                <span className="text-sm text-gray-400">Aligned</span>
-              </div>
-            </div>
-            <div className="flex-1 space-y-3">
-              <div>
-                <div className="flex items-center justify-between text-sm mb-1">
-                  <span className="text-gray-400">Messaging Match</span>
-                  <span className="text-white">{DEMO_DATA.messagingMatch}%</span>
-                </div>
-                <Progress value={DEMO_DATA.messagingMatch} className="h-2" />
-              </div>
-              <div>
-                <div className="flex items-center justify-between text-sm mb-1">
-                  <span className="text-gray-400">Audience Alignment</span>
-                  <span className="text-white">72%</span>
-                </div>
-                <Progress value={72} className="h-2" />
-              </div>
-              <div>
-                <div className="flex items-center justify-between text-sm mb-1">
-                  <span className="text-gray-400">Brand Consistency</span>
-                  <span className="text-white">85%</span>
-                </div>
-                <Progress value={85} className="h-2" />
-              </div>
+      <GlassCard className="p-8 mb-8">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-2"><span className="text-3xl">🎯</span><span className="text-red-400 text-sm font-semibold uppercase tracking-wider">Alineacion Estrategia-Realidad</span></div>
+            <div className={`text-6xl font-bold ${getScoreColor(auditData.summary.overallAlignmentScore)} mb-2`}>{auditData.summary.overallAlignmentScore}%</div>
+            <p className="text-muted-foreground text-sm mb-6">Que tan bien tu contenido coincide con tu estrategia</p>
+            <div className="grid grid-cols-4 gap-6">
+              <div><span className="text-muted-foreground block text-sm">Match Mensajes</span><span className={`font-bold text-xl ${getScoreColor(auditData.summary.messagingMatchScore)}`}>{auditData.summary.messagingMatchScore}%</span></div>
+              <div><span className="text-muted-foreground block text-sm">Alineados</span><span className="font-bold text-xl text-emerald-500">{auditData.summary.alignedConcepts}</span></div>
+              <div><span className="text-muted-foreground block text-sm">Errores</span><span className="font-bold text-xl text-red-500">{auditData.summary.alignmentErrors}</span></div>
+              <div><span className="text-muted-foreground block text-sm">Advertencias</span><span className="font-bold text-xl text-amber-500">{auditData.summary.alignmentWarnings}</span></div>
             </div>
           </div>
-        </GlassCard>
-
-        {/* Brand Perception Radar */}
-        <GlassCard className="p-6">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-[#28A963]" />
-            Brand Perception Analysis
-          </h3>
-          <div className="h-[200px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <RadarChart data={DEMO_DATA.radarData}>
-                <PolarGrid stroke="#374151" />
-                <PolarAngleAxis
-                  dataKey="subject"
-                  tick={{ fill: "#9CA3AF", fontSize: 11 }}
-                />
-                <PolarRadiusAxis
-                  angle={30}
-                  domain={[0, 100]}
-                  tick={{ fill: "#9CA3AF", fontSize: 10 }}
-                />
-                <Radar
-                  name="Score"
-                  dataKey="A"
-                  stroke="#28A963"
-                  fill="#28A963"
-                  fillOpacity={0.3}
-                  strokeWidth={2}
-                />
-              </RadarChart>
-            </ResponsiveContainer>
-          </div>
-        </GlassCard>
-      </div>
-
-      {/* Strategy Hex Grid */}
-      <GlassCard className="p-6">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <Hexagon className="h-5 w-5 text-[#28A963]" />
-          Strategy Concept Grid
-        </h3>
-        <div className="grid grid-cols-3 gap-4">
-          {DEMO_DATA.hexGrid.map((item, index) => (
-            <div
-              key={index}
-              className={`p-4 rounded-xl border ${getStatusColor(item.status)}`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  {getStatusIcon(item.status)}
-                  <span className="font-medium text-white">{item.concept}</span>
-                </div>
-                <span
-                  className={`text-lg font-bold ${
-                    item.score >= 80
-                      ? "text-emerald-400"
-                      : item.score >= 60
-                      ? "text-amber-400"
-                      : "text-red-400"
-                  }`}
-                >
-                  {item.score}
-                </span>
-              </div>
-              <p className="text-sm text-gray-400">{item.description}</p>
-              <div className="mt-2">
-                <Progress
-                  value={item.score}
-                  className={`h-1.5 ${
-                    item.status === "error" ? "[&>div]:bg-red-500" : ""
-                  }`}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="mt-4 pt-4 border-t border-gray-800 flex items-center gap-6">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-            <span className="text-sm text-gray-400">Aligned</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <XCircle className="h-4 w-4 text-red-400" />
-            <span className="text-sm text-gray-400">Misaligned</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-amber-400" />
-            <span className="text-sm text-gray-400">Unintended Win</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-orange-400" />
-            <span className="text-sm text-gray-400">Needs Attention</span>
-          </div>
+          <div className="w-32 h-32 rounded-full border-4 border-border flex items-center justify-center"><span className="text-4xl">🛡️</span></div>
         </div>
       </GlassCard>
 
-      {/* Segment Gap Analysis & Content Themes */}
-      <div className="grid grid-cols-2 gap-6">
-        {/* Segment Gap Analysis */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <GlassCard className="p-6">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <Users className="h-5 w-5 text-[#28A963]" />
-            Segment Gap Analysis
-          </h3>
-          <div className="space-y-4">
-            {DEMO_DATA.segmentGaps.map((segment) => (
-              <div key={segment.segment} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-white font-medium">{segment.segment}</span>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`text-sm px-2 py-0.5 rounded-full ${
-                        segment.status === "under"
-                          ? "bg-red-500/20 text-red-400"
-                          : segment.status === "over"
-                          ? "bg-amber-500/20 text-amber-400"
-                          : "bg-emerald-500/20 text-emerald-400"
-                      }`}
-                    >
-                      {segment.gap > 0 ? "+" : ""}
-                      {segment.gap}%
-                    </span>
-                  </div>
-                </div>
-                <div className="relative h-6 bg-gray-800 rounded-lg overflow-hidden">
-                  {/* Target marker */}
-                  <div
-                    className="absolute top-0 bottom-0 w-0.5 bg-white z-10"
-                    style={{ left: `${segment.target}%` }}
-                  />
-                  {/* Actual bar */}
-                  <div
-                    className={`absolute top-1 bottom-1 rounded ${
-                      segment.status === "under"
-                        ? "bg-red-500"
-                        : segment.status === "over"
-                        ? "bg-amber-500"
-                        : "bg-emerald-500"
-                    }`}
-                    style={{ width: `${segment.actual}%`, left: 0 }}
-                  />
-                </div>
-                <div className="flex items-center justify-between text-xs text-gray-500">
-                  <span>Actual: {segment.actual}%</span>
-                  <span>Target: {segment.target}%</span>
+          <h3 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2"><span className="text-red-400">⬢</span>GRID DE ESTRATEGIA</h3>
+          <div className="grid grid-cols-3 gap-4">
+            {auditData.hexGrid.map((item) => (
+              <div key={item.concept} className={`p-4 rounded-xl border-2 transition-all ${item.status === 'aligned' ? 'border-emerald-500/50 bg-emerald-500/10' : item.status === 'error' ? 'border-red-500/50 bg-red-500/10' : 'border-amber-500/50 bg-amber-500/10'}`}>
+                <div className="text-center">
+                  <span className="text-2xl mb-2 block">{item.status === 'aligned' ? '✅' : item.status === 'error' ? '❌' : '⚠️'}</span>
+                  <span className="text-foreground font-medium block mb-1">{item.concept}</span>
+                  <div className="text-xs text-muted-foreground"><span>Cap: {item.captionPresence}</span> | <span>Com: {item.commentPresence}</span></div>
                 </div>
               </div>
             ))}
           </div>
         </GlassCard>
 
-        {/* Content Theme Distribution */}
         <GlassCard className="p-6">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <PieChartIcon className="h-5 w-5 text-[#28A963]" />
-            Content Theme Distribution
-          </h3>
-          <div className="flex items-center gap-6">
-            <div className="w-40 h-40">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={DEMO_DATA.contentThemes}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={40}
-                    outerRadius={70}
-                    paddingAngle={4}
-                    dataKey="value"
-                  >
-                    {DEMO_DATA.contentThemes.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="flex-1 space-y-3">
-              {DEMO_DATA.contentThemes.map((theme) => (
-                <div key={theme.theme} className="flex items-center gap-3">
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: theme.color }}
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-white">{theme.theme}</span>
-                      <span className="text-white font-medium">{theme.value}%</span>
-                    </div>
-                    <div className="h-1.5 bg-gray-800 rounded-full mt-1 overflow-hidden">
-                      <div
-                        className="h-full rounded-full"
-                        style={{
-                          width: `${theme.value}%`,
-                          backgroundColor: theme.color,
-                        }}
-                      />
-                    </div>
+          <h3 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2"><span className="text-amber-400">🎯</span>ANALISIS DE GAPS POR SEGMENTO</h3>
+          <div className="space-y-4">
+            {auditData.segmentGapAnalysis.map((seg) => (
+              <div key={seg.segment}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">{seg.isTargeted && <span className="text-xs bg-indigo-500/30 text-indigo-300 px-2 py-0.5 rounded">OBJETIVO</span>}<span className="text-foreground font-medium">{seg.segment}</span></div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs px-2 py-0.5 rounded ${seg.status === 'on-target' ? 'bg-emerald-500/20 text-emerald-500' : seg.status === 'under-target' ? 'bg-red-500/20 text-red-500' : 'bg-amber-500/20 text-amber-500'}`}>{seg.status === 'on-target' ? 'EN OBJETIVO' : seg.status === 'under-target' ? 'BAJO' : 'SOBRE'}</span>
+                    <span className="text-muted-foreground text-sm">{seg.presence}</span>
                   </div>
                 </div>
-              ))}
-            </div>
+                <div className="h-3 bg-muted/50 rounded-full overflow-hidden"><div className="h-full rounded-full" style={{ width: `${Math.max((seg.presence / 234) * 100, 5)}%`, backgroundColor: SEGMENT_STATUS_COLORS[seg.status as keyof typeof SEGMENT_STATUS_COLORS] }} /></div>
+              </div>
+            ))}
           </div>
         </GlassCard>
       </div>
 
-      {/* Alignment Trends */}
-      <GlassCard className="p-6">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <TrendingUp className="h-5 w-5 text-[#28A963]" />
-          Alignment Score Trends
-        </h3>
-        <div className="h-[250px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={DEMO_DATA.alignmentTrends}>
-              <defs>
-                <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#28A963" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#28A963" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="colorMessaging" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis dataKey="month" stroke="#9CA3AF" fontSize={12} />
-              <YAxis stroke="#9CA3AF" fontSize={12} domain={[50, 100]} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "#1F2937",
-                  border: "1px solid #374151",
-                  borderRadius: "8px",
-                }}
-                labelStyle={{ color: "#F9FAFB" }}
-              />
-              <Area
-                type="monotone"
-                dataKey="score"
-                stroke="#28A963"
-                fill="url(#colorScore)"
-                strokeWidth={2}
-                name="Alignment Score"
-              />
-              <Area
-                type="monotone"
-                dataKey="messaging"
-                stroke="#3B82F6"
-                fill="url(#colorMessaging)"
-                strokeWidth={2}
-                name="Messaging Match"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-        <div className="flex items-center justify-center gap-6 mt-4">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-[#28A963]" />
-            <span className="text-sm text-gray-400">Alignment Score</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-blue-500" />
-            <span className="text-sm text-gray-400">Messaging Match</span>
-          </div>
-        </div>
-      </GlassCard>
-
-      {/* Alignment Issues & Recommendations */}
-      <GlassCard className="p-6">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <Lightbulb className="h-5 w-5 text-[#28A963]" />
-          Alignment Issues & Recommendations
-        </h3>
-        <div className="space-y-4">
-          {DEMO_DATA.alignmentIssues.map((issue) => (
-            <div
-              key={issue.id}
-              className={`p-4 rounded-xl border ${
-                issue.severity === "high"
-                  ? "border-red-500/30 bg-red-500/5"
-                  : issue.severity === "medium"
-                  ? "border-amber-500/30 bg-amber-500/5"
-                  : "border-blue-500/30 bg-blue-500/5"
-              }`}
-            >
-              <div className="flex items-start justify-between">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <GlassCard className="p-6">
+          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2"><span className="text-red-400">⚠️</span>PROBLEMAS DE ALINEACION</h3>
+          <div className="space-y-3">
+            {auditData.alignmentIssues.map((issue, i) => (
+              <div key={i} className={`p-4 rounded-xl border ${issue.severity === 'high' ? 'border-red-500/30 bg-red-500/10' : 'border-amber-500/30 bg-amber-500/10'}`}>
                 <div className="flex items-start gap-3">
-                  <div
-                    className={`p-2 rounded-lg ${
-                      issue.severity === "high"
-                        ? "bg-red-500/20 text-red-400"
-                        : issue.severity === "medium"
-                        ? "bg-amber-500/20 text-amber-400"
-                        : "bg-blue-500/20 text-blue-400"
-                    }`}
-                  >
-                    <AlertTriangle className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-white">{issue.issue}</h4>
-                    <p className="text-sm text-gray-400 mt-1">{issue.description}</p>
-                    <p className="text-sm text-red-400 mt-2">Impact: {issue.impact}</p>
-                  </div>
+                  <span className="text-lg">{issue.severity === 'high' ? '🔴' : '🟡'}</span>
+                  <div><div className="flex items-center gap-2 mb-1"><span className="text-foreground font-medium">{issue.concept}</span><span className="text-xs text-muted-foreground">{issue.type}</span></div><p className="text-muted-foreground text-sm">{issue.message}</p></div>
                 </div>
-                <span
-                  className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    issue.severity === "high"
-                      ? "bg-red-500/20 text-red-400"
-                      : issue.severity === "medium"
-                      ? "bg-amber-500/20 text-amber-400"
-                      : "bg-blue-500/20 text-blue-400"
-                  }`}
-                >
-                  {issue.severity.toUpperCase()}
-                </span>
               </div>
-              <div className="mt-3 pt-3 border-t border-gray-800">
-                <div className="flex items-center gap-2 text-emerald-400">
-                  <Lightbulb className="h-4 w-4" />
-                  <span className="text-sm font-medium">Recommendation:</span>
-                </div>
-                <p className="text-sm text-gray-300 mt-1">{issue.recommendation}</p>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
+        </GlassCard>
+
+        <GlassCard className="p-6">
+          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2"><span className="text-emerald-500">📈</span>TENDENCIA DE ALINEACION</h3>
+          <div className="h-[200px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={trendData}>
+                <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#334155" : "#e2e8f0"} />
+                <XAxis dataKey="date" stroke={isDark ? "#64748b" : "#94a3b8"} fontSize={11} tickFormatter={(v) => new Date(v).toLocaleDateString("es-CO", { month: "short", day: "numeric" })} />
+                <YAxis stroke={isDark ? "#64748b" : "#94a3b8"} fontSize={11} domain={[0, 100]} />
+                <Tooltip contentStyle={{ backgroundColor: isDark ? "rgba(15, 23, 42, 0.95)" : "rgba(255, 255, 255, 0.95)", borderRadius: "12px", color: isDark ? "#fff" : "#1e293b" }} />
+                <Line type="monotone" dataKey="alignmentScore" stroke="#10b981" strokeWidth={3} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </GlassCard>
+      </div>
+
+      <section className="pt-6 border-t border-border">
+        <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-4"><span><strong className="text-foreground">{auditData.summary.totalPostsAnalyzed}</strong> posts</span><span><strong className="text-foreground">{auditData.summary.totalCommentsAnalyzed}</strong> comentarios</span><span>Periodo: <strong className="text-foreground">{auditData.periodDays} dias</strong></span></div>
+          <span>Actualizado: {new Date().toLocaleTimeString("es-CO")}</span>
         </div>
-      </GlassCard>
+      </section>
     </div>
-  )
+  );
+}
+
+export default function ResonanceAuditPage() {
+  return (<Suspense fallback={<div className="flex items-center justify-center min-h-screen bg-background"><div className="text-center"><div className="w-12 h-12 border-4 border-red-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" /><p className="text-muted-foreground">Cargando...</p></div></div>}><ResonanceAuditContent /></Suspense>);
 }

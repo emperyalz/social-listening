@@ -1,667 +1,199 @@
-"use client"
+"use client";
 
-import { GlassCard } from "@/components/ui/glass-card"
-import { Progress } from "@/components/ui/progress"
-import { formatNumber } from "@/lib/utils"
-import {
-  Heart,
-  Smile,
-  Meh,
-  Frown,
-  TrendingUp,
-  TrendingDown,
-  MessageSquare,
-  AlertTriangle,
-  Users,
-  ThumbsUp,
-  ThumbsDown,
-  Instagram,
-  Youtube,
-  Star,
-  Clock,
-  ExternalLink,
-  Sparkles,
-  BarChart,
-} from "lucide-react"
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  BarChart as RechartsBarChart,
-  Bar,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar,
-} from "recharts"
+import { Suspense, useState } from "react";
+import { useTheme } from "@/contexts/ThemeContext";
+import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 
-// TikTok Icon Component
-const TikTokIcon = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
-  </svg>
-)
-
-// Demo Data - Audience Sentiment for Grupo Horizonte
-const DEMO_DATA = {
-  sentimentScore: 68,
-  moodBreakdown: [
-    { name: "Positive", value: 62, color: "#28A963" },
-    { name: "Neutral", value: 28, color: "#6B7280" },
-    { name: "Negative", value: 10, color: "#EF4444" },
+const DEMO_SENTIMENT_DATA = {
+  summary: { overallSentiment: 72, positivePercentage: 68, neutralPercentage: 24, negativePercentage: 8, totalCommentsAnalyzed: 4892, sentimentTrend: "improving" },
+  distribution: [
+    { name: "Positivo", value: 3327, color: "#10b981" },
+    { name: "Neutral", value: 1174, color: "#6366f1" },
+    { name: "Negativo", value: 391, color: "#ef4444" },
   ],
-  sentimentByTopic: [
-    { topic: "Design & Views", positive: 92, neutral: 6, negative: 2 },
-    { topic: "Location", positive: 78, neutral: 15, negative: 7 },
-    { topic: "Amenities", positive: 72, neutral: 20, negative: 8 },
-    { topic: "Customer Service", positive: 55, neutral: 25, negative: 20 },
-    { topic: "Pricing", positive: 35, neutral: 40, negative: 25 },
-    { topic: "Delivery Time", positive: 28, neutral: 32, negative: 40 },
+  topPositiveThemes: [
+    { theme: "Calidad de Construccion", mentions: 456, sentiment: 89 },
+    { theme: "Ubicacion Privilegiada", mentions: 398, sentiment: 92 },
+    { theme: "Atencion al Cliente", mentions: 312, sentiment: 85 },
+    { theme: "Diseno Moderno", mentions: 287, sentiment: 88 },
+    { theme: "Zonas Comunes", mentions: 245, sentiment: 86 },
   ],
-  topSentimentWords: {
-    positive: [
-      { word: "Hermoso", count: 456, growth: 12 },
-      { word: "Incre\u00edble", count: 389, growth: 8 },
-      { word: "Excelente", count: 312, growth: 15 },
-      { word: "Perfecto", count: 287, growth: 5 },
-      { word: "Espectacular", count: 234, growth: 22 },
-    ],
-    negative: [
-      { word: "Caro", count: 145, growth: -8 },
-      { word: "Demora", count: 123, growth: 18 },
-      { word: "Problema", count: 89, growth: 5 },
-      { word: "Dif\u00edcil", count: 67, growth: -3 },
-      { word: "Decepci\u00f3n", count: 45, growth: 12 },
-    ],
-  },
+  topNegativeThemes: [
+    { theme: "Tiempos de Entrega", mentions: 156, sentiment: 28 },
+    { theme: "Precios Altos", mentions: 98, sentiment: 35 },
+    { theme: "Parqueaderos", mentions: 67, sentiment: 32 },
+    { theme: "Respuesta Postventa", mentions: 45, sentiment: 25 },
+  ],
+  trendingKeywords: [
+    { keyword: "excelente", count: 234, sentiment: "positive" },
+    { keyword: "hermoso", count: 198, sentiment: "positive" },
+    { keyword: "recomendado", count: 176, sentiment: "positive" },
+    { keyword: "espera", count: 87, sentiment: "negative" },
+    { keyword: "caro", count: 65, sentiment: "negative" },
+  ],
   platformSentiment: [
-    { platform: "Instagram", positive: 65, neutral: 25, negative: 10, total: 12500 },
-    { platform: "TikTok", positive: 72, neutral: 20, negative: 8, total: 8900 },
-    { platform: "YouTube", positive: 58, neutral: 32, negative: 10, total: 4200 },
+    { platform: "Instagram", positive: 72, neutral: 21, negative: 7 },
+    { platform: "TikTok", positive: 65, neutral: 28, negative: 7 },
+    { platform: "YouTube", positive: 78, neutral: 18, negative: 4 },
   ],
-  sentimentTrends: [
-    { month: "Aug", positive: 58, neutral: 30, negative: 12, score: 62 },
-    { month: "Sep", positive: 60, neutral: 28, negative: 12, score: 64 },
-    { month: "Oct", positive: 61, neutral: 28, negative: 11, score: 65 },
-    { month: "Nov", positive: 63, neutral: 27, negative: 10, score: 67 },
-    { month: "Dec", positive: 61, neutral: 29, negative: 10, score: 66 },
-    { month: "Jan", positive: 62, neutral: 28, negative: 10, score: 68 },
+  recentComments: [
+    { id: "1", text: "El apartamento modelo es espectacular! Ya quiero mudarme", author: "maria_lopez", sentiment: "positive", platform: "instagram" },
+    { id: "2", text: "Cuando estaran listos los de la torre B? Llevamos meses esperando", author: "carlos_r", sentiment: "negative", platform: "instagram" },
+    { id: "3", text: "Buena ubicacion pero los precios subieron mucho", author: "ana_garcia", sentiment: "neutral", platform: "tiktok" },
   ],
-  topCommenters: [
-    {
-      username: "@inversor_bogota",
-      platform: "instagram",
-      comments: 45,
-      sentiment: "positive",
-      influence: "high",
-    },
-    {
-      username: "@maria_realestate",
-      platform: "tiktok",
-      comments: 38,
-      sentiment: "positive",
-      influence: "medium",
-    },
-    {
-      username: "@carlos_critico",
-      platform: "instagram",
-      comments: 32,
-      sentiment: "negative",
-      influence: "high",
-    },
-    {
-      username: "@familia_feliz",
-      platform: "youtube",
-      comments: 28,
-      sentiment: "positive",
-      influence: "medium",
-    },
-  ],
-  attentionRequired: [
-    {
-      id: 1,
-      type: "complaint",
-      content: "Llevo 3 semanas esperando respuesta sobre mi reserva",
-      username: "@cliente_frustrado",
-      platform: "instagram",
-      sentiment: -0.85,
-      urgency: "high",
-      timestamp: "2 hours ago",
-    },
-    {
-      id: 2,
-      type: "question",
-      content: "\u00bfCu\u00e1ndo estar\u00e1 lista la torre 2? Ya pas\u00f3 la fecha prometida",
-      username: "@esperando_entrega",
-      platform: "tiktok",
-      sentiment: -0.6,
-      urgency: "medium",
-      timestamp: "5 hours ago",
-    },
-    {
-      id: 3,
-      type: "negative_review",
-      content: "Los precios subieron 20% desde que consult\u00e9. Muy decepcionante",
-      username: "@comprador_sorprendido",
-      platform: "instagram",
-      sentiment: -0.72,
-      urgency: "medium",
-      timestamp: "1 day ago",
-    },
-  ],
-  engagementBreakdown: [
-    { type: "Likes", count: 45200, sentiment: 0.8 },
-    { type: "Comments", count: 8900, sentiment: 0.65 },
-    { type: "Shares", count: 3400, sentiment: 0.75 },
-    { type: "Saves", count: 12800, sentiment: 0.85 },
-  ],
-}
+  periodDays: 30,
+};
 
-const getSentimentIcon = (sentiment: string, size: string = "h-5 w-5") => {
-  switch (sentiment) {
-    case "positive":
-      return <Smile className={`${size} text-emerald-400`} />
-    case "neutral":
-      return <Meh className={`${size} text-gray-400`} />
-    case "negative":
-      return <Frown className={`${size} text-red-400`} />
-    default:
-      return null
-  }
-}
+const DEMO_TREND_DATA = [
+  { date: "2025-12-22", sentiment: 68 }, { date: "2025-12-24", sentiment: 70 },
+  { date: "2025-12-26", sentiment: 69 }, { date: "2025-12-28", sentiment: 73 },
+  { date: "2025-12-30", sentiment: 71 }, { date: "2026-01-02", sentiment: 74 },
+  { date: "2026-01-04", sentiment: 72 }, { date: "2026-01-05", sentiment: 75 },
+];
 
-export default function AudienceSentimentPage() {
+const SENTIMENT_COLORS = { positive: "#10b981", neutral: "#6366f1", negative: "#ef4444" };
+const PLATFORM_EMOJI: Record<string, string> = { instagram: "📸", tiktok: "🎵", youtube: "📺" };
+
+function GlassCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Audience & Sentiment Deep Dive</h1>
-          <p className="text-gray-400 mt-1">
-            Understanding how your audience feels about your brand
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <select className="bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm">
-            <option>Last 30 Days</option>
-            <option>Last 7 Days</option>
-            <option>Last 90 Days</option>
-          </select>
-        </div>
+    <div className={`relative overflow-hidden rounded-2xl border border-border shadow-xl bg-card ${className}`} style={{ backdropFilter: "blur(12px)" }}>
+      <div className="absolute inset-0 opacity-30 pointer-events-none" style={{ background: isDark ? "radial-gradient(ellipse at top left, rgba(6, 182, 212, 0.1) 0%, transparent 50%)" : "radial-gradient(ellipse at top left, rgba(6, 182, 212, 0.08) 0%, transparent 50%)" }} />
+      <div className="relative z-10">{children}</div>
+    </div>
+  );
+}
+
+function AudienceSentimentContent() {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+  const sentimentData = DEMO_SENTIMENT_DATA;
+  const trendData = DEMO_TREND_DATA;
+  const getSentimentColor = (score: number) => score >= 70 ? "text-emerald-500" : score >= 50 ? "text-amber-500" : "text-red-500";
+
+  return (
+    <div className="min-h-screen bg-background text-foreground p-4 md:p-6 lg:p-8">
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-2"><div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse" /><span className="text-cyan-400 text-sm font-medium">Analisis de Sentimiento Activo</span></div>
+        <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">Sentimiento de Audiencia</h1>
+        <p className="text-muted-foreground mt-1">Entiende como se siente tu audiencia sobre tu marca</p>
       </div>
 
-      {/* Sentiment Score Hero & Mood Distribution */}
-      <div className="grid grid-cols-3 gap-6">
-        {/* Sentiment Score */}
-        <GlassCard className="p-6">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <Heart className="h-5 w-5 text-[#28A963]" />
-            Overall Sentiment Score
-          </h3>
-          <div className="flex flex-col items-center">
-            <div className="relative w-40 h-40">
-              <svg className="w-full h-full -rotate-90">
-                <circle
-                  cx="80"
-                  cy="80"
-                  r="70"
-                  fill="none"
-                  stroke="#374151"
-                  strokeWidth="12"
-                />
-                <circle
-                  cx="80"
-                  cy="80"
-                  r="70"
-                  fill="none"
-                  stroke={
-                    DEMO_DATA.sentimentScore >= 70
-                      ? "#28A963"
-                      : DEMO_DATA.sentimentScore >= 50
-                      ? "#F59E0B"
-                      : "#EF4444"
-                  }
-                  strokeWidth="12"
-                  strokeDasharray={`${(DEMO_DATA.sentimentScore / 100) * 440} 440`}
-                  strokeLinecap="round"
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-4xl font-bold text-white">
-                  {DEMO_DATA.sentimentScore}
-                </span>
-                <span className="text-sm text-gray-400">out of 100</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 mt-4 text-emerald-400">
-              <TrendingUp className="h-4 w-4" />
-              <span className="text-sm">+3 points this month</span>
+      <GlassCard className="p-8 mb-8">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-2"><span className="text-3xl">💭</span><span className="text-cyan-400 text-sm font-semibold uppercase tracking-wider">Sentimiento General</span></div>
+            <div className={`text-6xl font-bold ${getSentimentColor(sentimentData.summary.overallSentiment)} mb-2`}>{sentimentData.summary.overallSentiment}/100</div>
+            <p className="text-muted-foreground text-sm mb-6">Score de sentimiento basado en {sentimentData.summary.totalCommentsAnalyzed.toLocaleString()} comentarios</p>
+            <div className="grid grid-cols-3 gap-6">
+              <div><span className="text-muted-foreground block text-sm">Positivo</span><span className="text-emerald-500 font-bold text-xl">{sentimentData.summary.positivePercentage}%</span></div>
+              <div><span className="text-muted-foreground block text-sm">Neutral</span><span className="text-indigo-400 font-bold text-xl">{sentimentData.summary.neutralPercentage}%</span></div>
+              <div><span className="text-muted-foreground block text-sm">Negativo</span><span className="text-red-500 font-bold text-xl">{sentimentData.summary.negativePercentage}%</span></div>
             </div>
           </div>
-        </GlassCard>
-
-        {/* Mood Breakdown Pie */}
-        <GlassCard className="p-6">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-[#28A963]" />
-            Mood Distribution
-          </h3>
-          <div className="flex items-center gap-4">
-            <div className="w-32 h-32">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={DEMO_DATA.moodBreakdown}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={35}
-                    outerRadius={55}
-                    paddingAngle={4}
-                    dataKey="value"
-                  >
-                    {DEMO_DATA.moodBreakdown.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="flex-1 space-y-3">
-              {DEMO_DATA.moodBreakdown.map((mood) => (
-                <div key={mood.name} className="flex items-center gap-3">
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: mood.color }}
-                  />
-                  <span className="text-gray-400 text-sm flex-1">{mood.name}</span>
-                  <span className="text-white font-medium">{mood.value}%</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </GlassCard>
-
-        {/* Engagement Breakdown */}
-        <GlassCard className="p-6">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <MessageSquare className="h-5 w-5 text-[#28A963]" />
-            Engagement Breakdown
-          </h3>
-          <div className="space-y-3">
-            {DEMO_DATA.engagementBreakdown.map((item) => (
-              <div key={item.type} className="flex items-center gap-3">
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-gray-400 text-sm">{item.type}</span>
-                    <span className="text-white font-medium">
-                      {formatNumber(item.count)}
-                    </span>
-                  </div>
-                  <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full"
-                      style={{
-                        width: `${item.sentiment * 100}%`,
-                        backgroundColor:
-                          item.sentiment >= 0.7
-                            ? "#28A963"
-                            : item.sentiment >= 0.5
-                            ? "#F59E0B"
-                            : "#EF4444",
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </GlassCard>
-      </div>
-
-      {/* Sentiment by Topic */}
-      <GlassCard className="p-6">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <BarChart className="h-5 w-5 text-[#28A963]" />
-          Sentiment Distribution by Topic
-        </h3>
-        <div className="h-[300px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <RechartsBarChart data={DEMO_DATA.sentimentByTopic} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis type="number" stroke="#9CA3AF" fontSize={12} domain={[0, 100]} />
-              <YAxis
-                type="category"
-                dataKey="topic"
-                stroke="#9CA3AF"
-                fontSize={12}
-                width={120}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "#1F2937",
-                  border: "1px solid #374151",
-                  borderRadius: "8px",
-                }}
-                labelStyle={{ color: "#F9FAFB" }}
-              />
-              <Bar dataKey="positive" stackId="a" fill="#28A963" name="Positive" />
-              <Bar dataKey="neutral" stackId="a" fill="#6B7280" name="Neutral" />
-              <Bar dataKey="negative" stackId="a" fill="#EF4444" name="Negative" />
-            </RechartsBarChart>
-          </ResponsiveContainer>
-        </div>
-        <div className="flex items-center justify-center gap-6 mt-4">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-[#28A963]" />
-            <span className="text-sm text-gray-400">Positive</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-gray-500" />
-            <span className="text-sm text-gray-400">Neutral</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-red-500" />
-            <span className="text-sm text-gray-400">Negative</span>
+          <div className="w-48 h-48">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart><Pie data={sentimentData.distribution} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value">{sentimentData.distribution.map((entry, i) => <Cell key={`cell-${i}`} fill={entry.color} />)}</Pie><Tooltip contentStyle={{ backgroundColor: isDark ? "rgba(15, 23, 42, 0.95)" : "rgba(255, 255, 255, 0.95)", borderRadius: "12px", color: isDark ? "#fff" : "#1e293b" }} /></PieChart>
+            </ResponsiveContainer>
           </div>
         </div>
       </GlassCard>
 
-      {/* Top Sentiment Words */}
-      <div className="grid grid-cols-2 gap-6">
-        {/* Positive Words */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <GlassCard className="p-6">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <ThumbsUp className="h-5 w-5 text-emerald-400" />
-            Top Positive Words
-          </h3>
-          <div className="space-y-3">
-            {DEMO_DATA.topSentimentWords.positive.map((word, index) => (
-              <div
-                key={word.word}
-                className="flex items-center gap-3 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20"
-              >
-                <span className="text-emerald-400 font-bold w-6">{index + 1}</span>
-                <span className="text-white flex-1">{word.word}</span>
-                <span className="text-gray-400 text-sm">{word.count} mentions</span>
-                <span className="text-emerald-400 text-sm flex items-center gap-1">
-                  <TrendingUp className="h-3 w-3" />
-                  {word.growth}%
-                </span>
+          <h3 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2"><span className="text-emerald-500">👍</span>TEMAS POSITIVOS TOP</h3>
+          <div className="space-y-4">
+            {sentimentData.topPositiveThemes.map((item) => (
+              <div key={item.theme}>
+                <div className="flex items-center justify-between mb-1"><span className="text-foreground font-medium">{item.theme}</span><div className="flex items-center gap-2"><span className="text-muted-foreground text-sm">{item.mentions} menciones</span><span className="text-emerald-500 font-bold">{item.sentiment}%</span></div></div>
+                <div className="h-2 bg-muted/50 rounded-full overflow-hidden"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${item.sentiment}%` }} /></div>
               </div>
             ))}
           </div>
         </GlassCard>
 
-        {/* Negative Words */}
         <GlassCard className="p-6">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <ThumbsDown className="h-5 w-5 text-red-400" />
-            Top Negative Words
-          </h3>
-          <div className="space-y-3">
-            {DEMO_DATA.topSentimentWords.negative.map((word, index) => (
-              <div
-                key={word.word}
-                className="flex items-center gap-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20"
-              >
-                <span className="text-red-400 font-bold w-6">{index + 1}</span>
-                <span className="text-white flex-1">{word.word}</span>
-                <span className="text-gray-400 text-sm">{word.count} mentions</span>
-                <span
-                  className={`text-sm flex items-center gap-1 ${
-                    word.growth > 0 ? "text-red-400" : "text-emerald-400"
-                  }`}
-                >
-                  {word.growth > 0 ? (
-                    <TrendingUp className="h-3 w-3" />
-                  ) : (
-                    <TrendingDown className="h-3 w-3" />
-                  )}
-                  {Math.abs(word.growth)}%
-                </span>
+          <h3 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2"><span className="text-red-400">👎</span>TEMAS NEGATIVOS TOP</h3>
+          <div className="space-y-4">
+            {sentimentData.topNegativeThemes.map((item) => (
+              <div key={item.theme}>
+                <div className="flex items-center justify-between mb-1"><span className="text-foreground font-medium">{item.theme}</span><div className="flex items-center gap-2"><span className="text-muted-foreground text-sm">{item.mentions} menciones</span><span className="text-red-500 font-bold">{item.sentiment}%</span></div></div>
+                <div className="h-2 bg-muted/50 rounded-full overflow-hidden"><div className="h-full rounded-full bg-red-500" style={{ width: `${100 - item.sentiment}%` }} /></div>
               </div>
             ))}
           </div>
         </GlassCard>
       </div>
 
-      {/* Platform Sentiment & Trends */}
-      <div className="grid grid-cols-2 gap-6">
-        {/* Platform Sentiment */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <GlassCard className="p-6">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <Users className="h-5 w-5 text-[#28A963]" />
-            Sentiment by Platform
-          </h3>
-          <div className="space-y-4">
-            {DEMO_DATA.platformSentiment.map((platform) => (
-              <div key={platform.platform} className="p-4 rounded-xl bg-gray-800/50">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    {platform.platform === "Instagram" && (
-                      <Instagram className="h-5 w-5 text-pink-500" />
-                    )}
-                    {platform.platform === "TikTok" && (
-                      <TikTokIcon className="h-5 w-5 text-white" />
-                    )}
-                    {platform.platform === "YouTube" && (
-                      <Youtube className="h-5 w-5 text-red-500" />
-                    )}
-                    <span className="text-white font-medium">{platform.platform}</span>
-                  </div>
-                  <span className="text-gray-400 text-sm">
-                    {formatNumber(platform.total)} comments
-                  </span>
-                </div>
-                <div className="h-3 bg-gray-700 rounded-full overflow-hidden flex">
-                  <div
-                    className="h-full bg-emerald-500"
-                    style={{ width: `${platform.positive}%` }}
-                  />
-                  <div
-                    className="h-full bg-gray-500"
-                    style={{ width: `${platform.neutral}%` }}
-                  />
-                  <div
-                    className="h-full bg-red-500"
-                    style={{ width: `${platform.negative}%` }}
-                  />
-                </div>
-                <div className="flex items-center justify-between mt-2 text-xs">
-                  <span className="text-emerald-400">{platform.positive}% positive</span>
-                  <span className="text-gray-400">{platform.neutral}% neutral</span>
-                  <span className="text-red-400">{platform.negative}% negative</span>
-                </div>
+          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2"><span className="text-amber-400">🔤</span>PALABRAS TRENDING</h3>
+          <div className="space-y-2">
+            {sentimentData.trendingKeywords.map((item) => (
+              <div key={item.keyword} className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
+                <span className="text-foreground">"{item.keyword}"</span>
+                <div className="flex items-center gap-2"><span className="text-muted-foreground text-sm">{item.count}x</span><span className={`w-2 h-2 rounded-full ${item.sentiment === 'positive' ? 'bg-emerald-500' : item.sentiment === 'negative' ? 'bg-red-500' : 'bg-indigo-400'}`} /></div>
               </div>
             ))}
           </div>
         </GlassCard>
 
-        {/* Sentiment Trends */}
-        <GlassCard className="p-6">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-[#28A963]" />
-            Sentiment Trends
-          </h3>
-          <div className="h-[250px]">
+        <GlassCard className="p-6 lg:col-span-2">
+          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2"><span className="text-cyan-400">📈</span>TENDENCIA DE SENTIMIENTO</h3>
+          <div className="h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={DEMO_DATA.sentimentTrends}>
-                <defs>
-                  <linearGradient id="colorPositive" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#28A963" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#28A963" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="colorNeutral" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6B7280" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#6B7280" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="colorNegative" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#EF4444" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#EF4444" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis dataKey="month" stroke="#9CA3AF" fontSize={12} />
-                <YAxis stroke="#9CA3AF" fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#1F2937",
-                    border: "1px solid #374151",
-                    borderRadius: "8px",
-                  }}
-                  labelStyle={{ color: "#F9FAFB" }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="positive"
-                  stroke="#28A963"
-                  fill="url(#colorPositive)"
-                  strokeWidth={2}
-                  name="Positive %"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="negative"
-                  stroke="#EF4444"
-                  fill="url(#colorNegative)"
-                  strokeWidth={2}
-                  name="Negative %"
-                />
-              </AreaChart>
+              <LineChart data={trendData}>
+                <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#334155" : "#e2e8f0"} />
+                <XAxis dataKey="date" stroke={isDark ? "#64748b" : "#94a3b8"} fontSize={11} tickFormatter={(v) => new Date(v).toLocaleDateString("es-CO", { month: "short", day: "numeric" })} />
+                <YAxis stroke={isDark ? "#64748b" : "#94a3b8"} fontSize={11} domain={[0, 100]} />
+                <Tooltip contentStyle={{ backgroundColor: isDark ? "rgba(15, 23, 42, 0.95)" : "rgba(255, 255, 255, 0.95)", borderRadius: "12px", color: isDark ? "#fff" : "#1e293b" }} />
+                <Line type="monotone" dataKey="sentiment" stroke="#06b6d4" strokeWidth={3} dot={false} />
+              </LineChart>
             </ResponsiveContainer>
           </div>
         </GlassCard>
       </div>
 
-      {/* Top Commenters & Attention Required */}
-      <div className="grid grid-cols-2 gap-6">
-        {/* Top Commenters */}
-        <GlassCard className="p-6">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <Star className="h-5 w-5 text-[#28A963]" />
-            Most Active Commenters
-          </h3>
-          <div className="space-y-3">
-            {DEMO_DATA.topCommenters.map((commenter, index) => (
-              <div
-                key={commenter.username}
-                className="flex items-center gap-3 p-3 rounded-lg bg-gray-800/50"
-              >
-                <div className="relative">
-                  <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${
-                      commenter.sentiment === "positive"
-                        ? "bg-emerald-500"
-                        : commenter.sentiment === "negative"
-                        ? "bg-red-500"
-                        : "bg-gray-500"
-                    }`}
-                  >
-                    {commenter.username.charAt(1).toUpperCase()}
-                  </div>
-                  <div className="absolute -bottom-1 -right-1">
-                    {commenter.platform === "instagram" && (
-                      <Instagram className="h-4 w-4 text-pink-500 bg-gray-900 rounded-full p-0.5" />
-                    )}
-                    {commenter.platform === "tiktok" && (
-                      <div className="bg-gray-900 rounded-full p-0.5">
-                        <TikTokIcon className="h-3 w-3 text-white" />
-                      </div>
-                    )}
-                    {commenter.platform === "youtube" && (
-                      <Youtube className="h-4 w-4 text-red-500 bg-gray-900 rounded-full p-0.5" />
-                    )}
-                  </div>
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-white font-medium">{commenter.username}</span>
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-xs ${
-                        commenter.influence === "high"
-                          ? "bg-purple-500/20 text-purple-400"
-                          : "bg-blue-500/20 text-blue-400"
-                      }`}
-                    >
-                      {commenter.influence} influence
-                    </span>
-                  </div>
-                  <span className="text-sm text-gray-400">
-                    {commenter.comments} comments
-                  </span>
-                </div>
-                {getSentimentIcon(commenter.sentiment)}
-              </div>
-            ))}
-          </div>
-        </GlassCard>
+      <GlassCard className="p-6 mb-8">
+        <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2"><span className="text-indigo-400">📱</span>SENTIMIENTO POR PLATAFORMA</h3>
+        <div className="h-[200px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={sentimentData.platformSentiment} layout="vertical">
+              <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#334155" : "#e2e8f0"} />
+              <XAxis type="number" stroke={isDark ? "#64748b" : "#94a3b8"} fontSize={11} />
+              <YAxis type="category" dataKey="platform" stroke={isDark ? "#64748b" : "#94a3b8"} fontSize={11} width={80} />
+              <Tooltip contentStyle={{ backgroundColor: isDark ? "rgba(15, 23, 42, 0.95)" : "rgba(255, 255, 255, 0.95)", borderRadius: "12px", color: isDark ? "#fff" : "#1e293b" }} />
+              <Bar dataKey="positive" name="Positivo" stackId="a" fill={SENTIMENT_COLORS.positive} />
+              <Bar dataKey="neutral" name="Neutral" stackId="a" fill={SENTIMENT_COLORS.neutral} />
+              <Bar dataKey="negative" name="Negativo" stackId="a" fill={SENTIMENT_COLORS.negative} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </GlassCard>
 
-        {/* Attention Required */}
-        <GlassCard className="p-6" variant="warning">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-amber-400" />
-            Attention Required
-            <span className="ml-2 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-xs">
-              {DEMO_DATA.attentionRequired.length} items
-            </span>
-          </h3>
-          <div className="space-y-3">
-            {DEMO_DATA.attentionRequired.map((item) => (
-              <div
-                key={item.id}
-                className={`p-4 rounded-xl border ${
-                  item.urgency === "high"
-                    ? "bg-red-500/10 border-red-500/30"
-                    : "bg-amber-500/10 border-amber-500/30"
-                }`}
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-white font-medium text-sm">
-                      {item.username}
-                    </span>
-                    {item.platform === "instagram" && (
-                      <Instagram className="h-4 w-4 text-pink-500" />
-                    )}
-                    {item.platform === "tiktok" && (
-                      <TikTokIcon className="h-4 w-4 text-white" />
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-xs ${
-                        item.urgency === "high"
-                          ? "bg-red-500/20 text-red-400"
-                          : "bg-amber-500/20 text-amber-400"
-                      }`}
-                    >
-                      {item.urgency}
-                    </span>
-                    <span className="text-xs text-gray-500">{item.timestamp}</span>
-                  </div>
-                </div>
-                <p className="text-sm text-gray-300">{item.content}</p>
-                <div className="flex items-center justify-between mt-2">
-                  <span className="text-xs text-red-400">
-                    Sentiment: {(item.sentiment * 100).toFixed(0)}
-                  </span>
-                  <button className="text-xs text-[#28A963] hover:text-emerald-300 flex items-center gap-1">
-                    Respond <ExternalLink className="h-3 w-3" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </GlassCard>
-      </div>
+      <GlassCard className="p-6 mb-8">
+        <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2"><span className="text-pink-400">💬</span>COMENTARIOS RECIENTES</h3>
+        <div className="space-y-3">
+          {sentimentData.recentComments.map((comment) => (
+            <div key={comment.id} className={`p-4 rounded-xl border ${comment.sentiment === 'positive' ? 'border-emerald-500/30 bg-emerald-500/10' : comment.sentiment === 'negative' ? 'border-red-500/30 bg-red-500/10' : 'border-indigo-500/30 bg-indigo-500/10'}`}>
+              <div className="flex items-center gap-2 mb-2">{comment.platform && <span>{PLATFORM_EMOJI[comment.platform]}</span>}<span className="text-foreground font-medium">@{comment.author}</span><span className={`text-xs px-2 py-0.5 rounded ${comment.sentiment === 'positive' ? 'bg-emerald-500/20 text-emerald-500' : comment.sentiment === 'negative' ? 'bg-red-500/20 text-red-500' : 'bg-indigo-500/20 text-indigo-400'}`}>{comment.sentiment === 'positive' ? 'Positivo' : comment.sentiment === 'negative' ? 'Negativo' : 'Neutral'}</span></div>
+              <p className="text-muted-foreground text-sm">{comment.text}</p>
+            </div>
+          ))}
+        </div>
+      </GlassCard>
+
+      <section className="pt-6 border-t border-border">
+        <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-4"><span><strong className="text-foreground">{sentimentData.summary.totalCommentsAnalyzed.toLocaleString()}</strong> comentarios</span><span>Tendencia: <strong className="text-emerald-500">{sentimentData.summary.sentimentTrend === 'improving' ? '↑ Mejorando' : '→ Estable'}</strong></span><span>Periodo: <strong className="text-foreground">{sentimentData.periodDays} dias</strong></span></div>
+          <span>Actualizado: {new Date().toLocaleTimeString("es-CO")}</span>
+        </div>
+      </section>
     </div>
-  )
+  );
+}
+
+export default function AudienceSentimentPage() {
+  return (<Suspense fallback={<div className="flex items-center justify-center min-h-screen bg-background"><div className="text-center"><div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" /><p className="text-muted-foreground">Cargando...</p></div></div>}><AudienceSentimentContent /></Suspense>);
 }

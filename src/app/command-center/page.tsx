@@ -1,29 +1,6 @@
-"use client"
+"use client";
 
-import { GlassCard } from "@/components/ui/glass-card"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
-import { formatNumber, formatCurrency } from "@/lib/utils"
-import {
-  TrendingUp,
-  TrendingDown,
-  Users,
-  Heart,
-  Share2,
-  DollarSign,
-  AlertTriangle,
-  Zap,
-  Shield,
-  ArrowUpRight,
-  ArrowDownRight,
-  Activity,
-  MessageCircle,
-  Instagram,
-  Youtube,
-  Clock,
-  Eye,
-  Target,
-} from "lucide-react"
+import { Suspense, useState, useMemo } from "react";
 import {
   LineChart,
   Line,
@@ -32,547 +9,762 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  AreaChart,
-  Area,
-  BarChart,
-  Bar,
-} from "recharts"
+} from "recharts";
+import { useTheme } from "@/contexts/ThemeContext";
 
-// Demo Data - Grupo Horizonte (Colombian Real Estate Developer)
-const DEMO_DATA = {
-  macroKPIs: {
-    portfolioReach: {
-      value: 850500,
-      change: 12.5,
-      label: "Portfolio Reach",
-    },
-    engagementRate: {
-      value: 3.82,
-      change: 0.4,
-      label: "Engagement Rate",
-    },
-    marketShare: {
-      value: 14.5,
-      change: 2.1,
-      label: "Market Share",
-    },
-    avgResponseTime: {
-      value: 2.4,
-      change: -0.8,
-      label: "Avg Response (hrs)",
-    },
-  },
-  healthCards: [
-    {
-      title: "Market Integrity",
-      score: 94,
-      maxScore: 100,
-      status: "excellent",
-      description: "Brand perception is strong and consistent",
-      icon: Shield,
-    },
-    {
-      title: "Viral Velocity",
-      score: 65,
-      maxScore: 100,
-      status: "moderate",
-      description: "Content spread at moderate pace",
-      icon: Zap,
-    },
-    {
-      title: "Revenue Risk",
-      score: 18400,
-      maxScore: null,
-      status: "warning",
-      description: "28 Unanswered Leads",
-      icon: DollarSign,
-      isCurrency: true,
-    },
-  ],
-  liveIntelligence: [
-    {
-      id: 1,
-      type: "spike",
-      title: "Engagement Spike Detected",
-      description: "Torre Esmeralda post gaining viral traction (+340% engagement)",
-      timestamp: "2 min ago",
-      severity: "success",
-      platform: "instagram",
-    },
-    {
-      id: 2,
-      type: "alert",
-      title: "Negative Sentiment Alert",
-      description: "Customer complaint about delivery delays in Proyecto Marina",
-      timestamp: "15 min ago",
-      severity: "warning",
-      platform: "instagram",
-    },
-    {
-      id: 3,
-      type: "competitor",
-      title: "Competitor Campaign Detected",
-      description: "Grupo Argos launched new luxury apartment campaign",
-      timestamp: "1 hour ago",
-      severity: "info",
-      platform: "youtube",
-    },
-    {
-      id: 4,
-      type: "lead",
-      title: "Hot Lead Identified",
-      description: "@maria_inversor asked about pricing for Vista del Mar units",
-      timestamp: "3 hours ago",
-      severity: "success",
-      platform: "instagram",
-    },
-  ],
-  platformGrowth: [
-    { month: "Aug", instagram: 620000, youtube: 180000, tiktok: 95000 },
-    { month: "Sep", instagram: 685000, youtube: 195000, tiktok: 120000 },
-    { month: "Oct", instagram: 720000, youtube: 215000, tiktok: 155000 },
-    { month: "Nov", instagram: 780000, youtube: 240000, tiktok: 195000 },
-    { month: "Dec", instagram: 815000, youtube: 260000, tiktok: 245000 },
-    { month: "Jan", instagram: 850500, youtube: 285000, tiktok: 310000 },
-  ],
-  engagementTrends: [
-    { day: "Mon", rate: 3.2, comments: 245, shares: 89 },
-    { day: "Tue", rate: 3.5, comments: 312, shares: 124 },
-    { day: "Wed", rate: 3.8, comments: 428, shares: 167 },
-    { day: "Thu", rate: 4.1, comments: 389, shares: 145 },
-    { day: "Fri", rate: 3.9, comments: 356, shares: 132 },
-    { day: "Sat", rate: 4.2, comments: 478, shares: 198 },
-    { day: "Sun", rate: 3.6, comments: 289, shares: 95 },
-  ],
-  competitorComparison: [
-    { name: "Grupo Horizonte", reach: 850500, engagement: 3.82, share: 14.5 },
-    { name: "Grupo Argos", reach: 1200000, engagement: 2.9, share: 18.2 },
-    { name: "Constructora Colpatria", reach: 650000, engagement: 3.1, share: 11.8 },
-    { name: "Amarilo", reach: 520000, engagement: 4.2, share: 9.5 },
-    { name: "Prodesa", reach: 480000, engagement: 3.5, share: 8.7 },
-  ],
+// ============================================
+// DEMO DATA FOR GRUPO HORIZONTE
+// ============================================
+const DEMO_STATS = {
+  accountsTracked: 12,
+  recentPostsCount: 47,
+  totalViews: 850500,
+  totalFollowers: 125000,
+  totalLikes: 45200,
+  totalComments: 8900,
+  avgEngagementRate: 3.82,
+};
+
+const DEMO_COMPETITORS = [
+  { account: { platform: "instagram", username: "constructora_colpatria" }, followers: 185000, followerGrowth: 12500, followerGrowthRate: "7.2", engagementRate: "4.5" },
+  { account: { platform: "instagram", username: "amarilo_oficial" }, followers: 142000, followerGrowth: 8900, followerGrowthRate: "6.7", engagementRate: "5.2" },
+  { account: { platform: "tiktok", username: "grupo_horizonte" }, followers: 95000, followerGrowth: 15200, followerGrowthRate: "19.0", engagementRate: "8.1" },
+  { account: { platform: "youtube", username: "GrupoHorizonteTV" }, followers: 45000, followerGrowth: 3200, followerGrowthRate: "7.6", engagementRate: "6.2" },
+  { account: { platform: "instagram", username: "cusezar_colombia" }, followers: 78000, followerGrowth: 4100, followerGrowthRate: "5.5", engagementRate: "3.8" },
+];
+
+// Platform colors for the growth chart
+const PLATFORM_COLORS = {
+  instagram: "#E1306C",
+  tiktok: "#00F2EA",
+  youtube: "#FF0000",
+};
+
+// Platform icons (emoji fallback)
+const PLATFORM_EMOJI: Record<string, string> = {
+  instagram: "📸",
+  tiktok: "🎵",
+  youtube: "📺",
+};
+
+// ============================================
+// UTILITY FUNCTIONS
+// ============================================
+
+function formatLargeNumber(num: number): string {
+  if (num >= 1_000_000) {
+    return (num / 1_000_000).toFixed(1) + "M";
+  }
+  if (num >= 1_000) {
+    return (num / 1_000).toFixed(1) + "K";
+  }
+  return num.toFixed(0);
 }
 
-// TikTok Icon Component
-const TikTokIcon = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
-  </svg>
-)
+function formatCurrency(num: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(num);
+}
+
+// ============================================
+// GLASSMORPHISM CARD COMPONENTS
+// ============================================
+
+interface GlassCardProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
+function GlassCard({ children, className = "" }: GlassCardProps) {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
+  return (
+    <div
+      className={`
+        relative overflow-hidden rounded-2xl
+        border border-border
+        shadow-xl
+        bg-card
+        ${className}
+      `}
+      style={{
+        backdropFilter: "blur(12px)",
+      }}
+    >
+      <div
+        className="absolute inset-0 opacity-30 pointer-events-none"
+        style={{
+          background: isDark
+            ? "radial-gradient(ellipse at top left, rgba(99, 102, 241, 0.15) 0%, transparent 50%)"
+            : "radial-gradient(ellipse at top left, rgba(40, 169, 99, 0.1) 0%, transparent 50%)",
+        }}
+      />
+      <div className="relative z-10">{children}</div>
+    </div>
+  );
+}
+
+// ============================================
+// SECTION A: MACRO KPI HEADER
+// ============================================
+
+interface MacroKPICardProps {
+  title: string;
+  value: string | number;
+  change?: number;
+  changeLabel?: string;
+  icon: React.ReactNode;
+  sparklineData?: number[];
+}
+
+function MacroKPICard({
+  title,
+  value,
+  change,
+  changeLabel,
+  icon,
+  sparklineData,
+}: MacroKPICardProps) {
+  const isPositive = change && change > 0;
+  const isNegative = change && change < 0;
+
+  return (
+    <GlassCard className="p-6">
+      <div className="flex items-start justify-between mb-4">
+        <span className="text-muted-foreground text-sm font-medium uppercase tracking-wider">
+          {title}
+        </span>
+        <div className="p-2 rounded-lg bg-muted">{icon}</div>
+      </div>
+
+      <div className="flex items-end justify-between">
+        <div>
+          <div className="text-3xl font-bold text-foreground">
+            {typeof value === "number" ? formatLargeNumber(value) : value}
+          </div>
+          {change !== undefined && (
+            <div className="flex items-center mt-2 gap-1">
+              <span
+                className={`text-sm font-medium ${
+                  isPositive
+                    ? "text-emerald-500"
+                    : isNegative
+                    ? "text-red-500"
+                    : "text-muted-foreground"
+                }`}
+              >
+                {isPositive ? "↑ +" : isNegative ? "↓ " : ""}
+                {Math.abs(change).toFixed(1)}%
+              </span>
+              {changeLabel && (
+                <span className="text-muted-foreground text-sm ml-1">
+                  {changeLabel}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {sparklineData && sparklineData.length > 0 && (
+          <div className="w-20 h-10">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={sparklineData.map((v, i) => ({ v, i }))}>
+                <Line
+                  type="monotone"
+                  dataKey="v"
+                  stroke={isPositive ? "#34d399" : isNegative ? "#f87171" : "#94a3b8"}
+                  strokeWidth={2}
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
+    </GlassCard>
+  );
+}
+
+// ============================================
+// SECTION B: PILLAR HEALTH DIAGNOSTICS
+// ============================================
+
+interface HealthCardProps {
+  title: string;
+  score: number | string;
+  maxScore?: number;
+  subtitle: string;
+  icon: React.ReactNode;
+  status: "optimal" | "warning" | "critical";
+  accentColor: string;
+}
+
+function HealthCard({
+  title,
+  score,
+  maxScore = 100,
+  subtitle,
+  icon,
+  status,
+  accentColor,
+}: HealthCardProps) {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
+  const statusColors = {
+    optimal: isDark ? "from-emerald-500/20 to-emerald-600/5" : "from-emerald-100 to-emerald-50",
+    warning: isDark ? "from-amber-500/20 to-amber-600/5" : "from-amber-100 to-amber-50",
+    critical: isDark ? "from-red-500/20 to-red-600/5" : "from-red-100 to-red-50",
+  };
+
+  const numericScore = typeof score === "string" ? parseFloat(score) : score;
+  const percentage = maxScore ? (numericScore / maxScore) * 100 : 0;
+
+  return (
+    <div
+      className={`
+        relative overflow-hidden rounded-2xl p-6
+        bg-gradient-to-br ${statusColors[status]}
+        border border-border
+      `}
+      style={{ backdropFilter: "blur(12px)" }}
+    >
+      <div
+        className="absolute -top-10 -right-10 w-32 h-32 rounded-full opacity-20 blur-2xl"
+        style={{ backgroundColor: accentColor }}
+      />
+
+      <div className="relative z-10">
+        <div className="flex items-center gap-3 mb-4">
+          <div
+            className="p-2 rounded-lg"
+            style={{ backgroundColor: accentColor + "20" }}
+          >
+            {icon}
+          </div>
+          <span className="text-muted-foreground text-sm font-semibold uppercase tracking-wider">
+            {title}
+          </span>
+        </div>
+
+        <div className="flex items-end justify-between mb-3">
+          <span className="text-4xl font-bold text-foreground">
+            {typeof score === "number" ? score.toFixed(0) : score}
+            {maxScore && typeof score === "number" && (
+              <span className="text-lg text-muted-foreground">/{maxScore}</span>
+            )}
+          </span>
+        </div>
+
+        {typeof score === "number" && maxScore && (
+          <div className="w-full h-2 bg-muted rounded-full overflow-hidden mb-3">
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${Math.min(percentage, 100)}%`,
+                backgroundColor: accentColor,
+              }}
+            />
+          </div>
+        )}
+
+        <p className="text-muted-foreground text-sm">{subtitle}</p>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// SECTION C: ALERT FEED
+// ============================================
+
+interface AlertItem {
+  id: string;
+  type: "viral" | "risk" | "opportunity";
+  platform: "instagram" | "tiktok" | "youtube";
+  title: string;
+  description: string;
+  metric?: string;
+}
+
+function AlertFeed({ alerts }: { alerts: AlertItem[] }) {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
+  const typeStyles = {
+    viral: {
+      bg: isDark ? "bg-cyan-500/10" : "bg-cyan-50",
+      border: isDark ? "border-cyan-500/30" : "border-cyan-200",
+      icon: "⚡",
+      label: "Viral Alert",
+      labelColor: "text-cyan-600 dark:text-cyan-400",
+    },
+    risk: {
+      bg: isDark ? "bg-red-500/10" : "bg-red-50",
+      border: isDark ? "border-red-500/30" : "border-red-200",
+      icon: "⚠️",
+      label: "Risk Alert",
+      labelColor: "text-red-600 dark:text-red-400",
+    },
+    opportunity: {
+      bg: isDark ? "bg-emerald-500/10" : "bg-emerald-50",
+      border: isDark ? "border-emerald-500/30" : "border-emerald-200",
+      icon: "✨",
+      label: "Opportunity",
+      labelColor: "text-emerald-600 dark:text-emerald-400",
+    },
+  };
+
+  return (
+    <GlassCard className="p-6 h-full">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+          <span className="text-[#28A963]">📊</span>
+          LIVE COMPETITIVE INTELLIGENCE
+        </h3>
+        <span className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
+          <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+          Live
+        </span>
+      </div>
+
+      <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2">
+        {alerts.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <span className="text-3xl mb-2 block">📭</span>
+            <p>No recent alerts</p>
+          </div>
+        ) : (
+          alerts.map((alert) => {
+            const style = typeStyles[alert.type];
+            return (
+              <div
+                key={alert.id}
+                className={`
+                  p-4 rounded-xl border ${style.bg} ${style.border}
+                  transition-all duration-200 hover:scale-[1.02] cursor-pointer
+                `}
+              >
+                <div className="flex items-start gap-3">
+                  <span className="text-lg">{style.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-lg">
+                        {PLATFORM_EMOJI[alert.platform]}
+                      </span>
+                      <span className={`text-xs font-medium ${style.labelColor}`}>
+                        {style.label}
+                      </span>
+                    </div>
+                    <p className="text-foreground font-medium text-sm mb-1">
+                      {alert.title}
+                    </p>
+                    <p className="text-muted-foreground text-xs">{alert.description}</p>
+                    {alert.metric && (
+                      <span className="inline-block mt-2 text-xs font-mono bg-muted px-2 py-1 rounded">
+                        {alert.metric}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </GlassCard>
+  );
+}
+
+// ============================================
+// SECTION D: GROWTH TRACKER CHART
+// ============================================
+
+interface GrowthDataPoint {
+  date: string;
+  instagram?: number;
+  tiktok?: number;
+  youtube?: number;
+}
+
+function GrowthTracker({ data }: { data: GrowthDataPoint[] }) {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
+  const [activePlatforms, setActivePlatforms] = useState<Set<string>>(
+    new Set(["instagram", "tiktok", "youtube"])
+  );
+
+  const togglePlatform = (platform: string) => {
+    const newSet = new Set(activePlatforms);
+    if (newSet.has(platform)) {
+      newSet.delete(platform);
+    } else {
+      newSet.add(platform);
+    }
+    setActivePlatforms(newSet);
+  };
+
+  const platforms = [
+    { key: "instagram", label: "Instagram", color: PLATFORM_COLORS.instagram },
+    { key: "tiktok", label: "TikTok", color: PLATFORM_COLORS.tiktok },
+    { key: "youtube", label: "YouTube", color: PLATFORM_COLORS.youtube },
+  ];
+
+  return (
+    <GlassCard className="p-6 h-full">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+          <span className="text-[#28A963]">📈</span>
+          PLATFORM GROWTH TRENDS
+        </h3>
+        <div className="flex gap-2">
+          {platforms.map((p) => (
+            <button
+              key={p.key}
+              onClick={() => togglePlatform(p.key)}
+              className={`
+                px-3 py-1.5 rounded-lg text-xs font-medium transition-all
+                ${
+                  activePlatforms.has(p.key)
+                    ? "bg-muted text-foreground"
+                    : "bg-muted/50 text-muted-foreground"
+                }
+              `}
+              style={{
+                borderLeft: activePlatforms.has(p.key)
+                  ? `3px solid ${p.color}`
+                  : "3px solid transparent",
+              }}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="h-[280px]">
+        {data.length === 0 ? (
+          <div className="flex items-center justify-center h-full text-muted-foreground">
+            <div className="text-center">
+              <span className="text-4xl mb-2 block">📊</span>
+              <p>No growth data available</p>
+            </div>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#334155" : "#e2e8f0"} />
+              <XAxis
+                dataKey="date"
+                stroke={isDark ? "#64748b" : "#94a3b8"}
+                fontSize={11}
+                tickFormatter={(value) => {
+                  const date = new Date(value);
+                  return date.toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  });
+                }}
+              />
+              <YAxis
+                stroke={isDark ? "#64748b" : "#94a3b8"}
+                fontSize={11}
+                tickFormatter={(value) => formatLargeNumber(value)}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: isDark ? "rgba(15, 23, 42, 0.95)" : "rgba(255, 255, 255, 0.95)",
+                  border: isDark ? "1px solid rgba(71, 85, 105, 0.5)" : "1px solid rgba(226, 232, 240, 1)",
+                  borderRadius: "12px",
+                  color: isDark ? "#e2e8f0" : "#1e293b",
+                }}
+                labelStyle={{ color: isDark ? "#e2e8f0" : "#1e293b" }}
+                formatter={(value: number, name: string) => [
+                  formatLargeNumber(value),
+                  name.charAt(0).toUpperCase() + name.slice(1),
+                ]}
+              />
+              {activePlatforms.has("instagram") && (
+                <Line
+                  type="monotone"
+                  dataKey="instagram"
+                  stroke={PLATFORM_COLORS.instagram}
+                  strokeWidth={3}
+                  dot={false}
+                />
+              )}
+              {activePlatforms.has("tiktok") && (
+                <Line
+                  type="monotone"
+                  dataKey="tiktok"
+                  stroke={PLATFORM_COLORS.tiktok}
+                  strokeWidth={3}
+                  dot={false}
+                />
+              )}
+              {activePlatforms.has("youtube") && (
+                <Line
+                  type="monotone"
+                  dataKey="youtube"
+                  stroke={PLATFORM_COLORS.youtube}
+                  strokeWidth={3}
+                  dot={false}
+                />
+              )}
+            </LineChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+    </GlassCard>
+  );
+}
+
+// ============================================
+// MAIN COMMAND CENTER COMPONENT
+// ============================================
+
+function CommandCenterContent() {
+  const { theme } = useTheme();
+
+  // Use demo data instead of Convex queries
+  const stats = DEMO_STATS;
+  const competitors = DEMO_COMPETITORS;
+
+  // Calculate derived metrics
+  const portfolioReach = useMemo(() => {
+    return stats.totalViews + (stats.totalFollowers || 0);
+  }, [stats]);
+
+  const engagementRate = useMemo(() => {
+    return stats.avgEngagementRate || 0;
+  }, [stats]);
+
+  const marketShare = useMemo(() => {
+    if (!competitors || competitors.length === 0) return 0;
+    const totalFollowers = competitors.reduce(
+      (sum, c) => sum + (c.followers || 0),
+      0
+    );
+    const yourFollowers = competitors[0]?.followers || 0;
+    return totalFollowers > 0 ? (yourFollowers / totalFollowers) * 100 : 0;
+  }, [competitors]);
+
+  // Health scores
+  const marketIntegrity = 94;
+  const viralVelocity = useMemo(() => {
+    const viewsPerPost = stats.recentPostsCount > 0
+      ? stats.totalViews / stats.recentPostsCount
+      : 0;
+    if (viewsPerPost > 10000) return "High Acceleration";
+    if (viewsPerPost > 1000) return "Moderate";
+    return "Building";
+  }, [stats]);
+  const revenueRisk = 18400;
+
+  // Generate alerts from competitor data
+  const alerts = useMemo<AlertItem[]>(() => {
+    const generatedAlerts: AlertItem[] = [
+      {
+        id: "viral-1",
+        type: "viral",
+        platform: "tiktok",
+        title: "Torre Esmeralda post gaining traction",
+        description: "+340% engagement in 2 hours on property tour reel",
+        metric: "+12.5K views",
+      },
+      {
+        id: "opp-1",
+        type: "opportunity",
+        platform: "instagram",
+        title: "@maria_inversor asking about Vista del Mar",
+        description: "High-intent comment on 3BR unit pricing - respond within 1hr",
+        metric: "Est. Value: $245,000",
+      },
+      {
+        id: "risk-1",
+        type: "risk",
+        platform: "instagram",
+        title: "Negative comment on Proyecto Marina",
+        description: "Customer complaint about delivery delays - requires response",
+        metric: "+50 likes on comment",
+      },
+      {
+        id: "viral-2",
+        type: "viral",
+        platform: "youtube",
+        title: "Amarilo's new campaign detected",
+        description: "Competitor launched luxury apartment video series",
+        metric: "+45K views in 24hrs",
+      },
+      {
+        id: "opp-2",
+        type: "opportunity",
+        platform: "tiktok",
+        title: "Trending hashtag #InversionColombia",
+        description: "High engagement opportunity - create content within 6hrs",
+        metric: "2.1M hashtag views",
+      },
+    ];
+    return generatedAlerts;
+  }, []);
+
+  // Growth trend data
+  const growthData = useMemo<GrowthDataPoint[]>(() => {
+    const dates: GrowthDataPoint[] = [];
+    const today = new Date();
+
+    for (let i = 30; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split("T")[0];
+      const factor = 1 - (i * 0.008);
+      const noise = () => (Math.random() - 0.5) * 5000;
+
+      dates.push({
+        date: dateStr,
+        instagram: Math.round(185000 * factor + noise()),
+        tiktok: Math.round(95000 * factor + noise()),
+        youtube: Math.round(45000 * factor + noise()),
+      });
+    }
+
+    return dates;
+  }, []);
+
+  // Sparkline data
+  const reachSparkline = useMemo(() => {
+    return growthData.slice(-7).map((d) => (d.instagram || 0) + (d.tiktok || 0) + (d.youtube || 0));
+  }, [growthData]);
+
+  return (
+    <div className="min-h-screen bg-background text-foreground p-4 md:p-6 lg:p-8">
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+          <span className="text-emerald-600 dark:text-emerald-400 text-sm font-medium">
+            Demo Mode - Grupo Horizonte
+          </span>
+        </div>
+        <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-[#28A963] to-emerald-600 bg-clip-text text-transparent">
+          Command Center
+        </h1>
+        <p className="text-muted-foreground mt-1">
+          Real-time brand health, competitive threats, and growth trends
+        </p>
+      </div>
+
+      {/* Section A: Macro KPI Header */}
+      <section className="mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+          <MacroKPICard
+            title="Portfolio Reach"
+            value={portfolioReach}
+            change={12.5}
+            changeLabel="vs last month"
+            icon={<span className="text-[#28A963] text-xl">👁️</span>}
+            sparklineData={reachSparkline}
+          />
+          <MacroKPICard
+            title="Engagement Rate"
+            value={`${engagementRate.toFixed(2)}%`}
+            change={0.4}
+            changeLabel="vs last month"
+            icon={<span className="text-amber-500 text-xl">📊</span>}
+          />
+          <MacroKPICard
+            title="Market Share"
+            value={`${marketShare.toFixed(1)}%`}
+            change={2.1}
+            changeLabel="vs competitors"
+            icon={<span className="text-emerald-500 text-xl">📈</span>}
+          />
+        </div>
+      </section>
+
+      {/* Section B: Pillar Health Diagnostics */}
+      <section className="mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+          <HealthCard
+            title="Market Integrity"
+            score={marketIntegrity}
+            maxScore={100}
+            subtitle="Brand perception strong and consistent"
+            icon={<span className="text-blue-500 text-xl">🛡️</span>}
+            status="optimal"
+            accentColor="#3b82f6"
+          />
+          <HealthCard
+            title="Viral Velocity"
+            score={65}
+            maxScore={100}
+            subtitle="Content spread at moderate pace"
+            icon={<span className="text-emerald-500 text-xl">⚡</span>}
+            status="warning"
+            accentColor="#10b981"
+          />
+          <HealthCard
+            title="Revenue Risk"
+            score={formatCurrency(revenueRisk)}
+            subtitle="28 Unanswered Leads"
+            icon={<span className="text-red-500 text-xl">💰</span>}
+            status="critical"
+            accentColor="#ef4444"
+          />
+        </div>
+      </section>
+
+      {/* Section C & D: Split View */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+        <AlertFeed alerts={alerts} />
+        <GrowthTracker data={growthData} />
+      </section>
+
+      {/* Footer Stats */}
+      <section className="mt-8 pt-6 border-t border-border">
+        <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-4 md:gap-6">
+            <span>
+              <strong className="text-foreground">{stats.accountsTracked}</strong>{" "}
+              accounts tracked
+            </span>
+            <span>
+              <strong className="text-foreground">{stats.recentPostsCount}</strong>{" "}
+              posts this week
+            </span>
+            <span>
+              <strong className="text-foreground">
+                {formatLargeNumber(stats.totalLikes + stats.totalComments)}
+              </strong>{" "}
+              engagements
+            </span>
+          </div>
+          <span>Last updated: {new Date().toLocaleTimeString()}</span>
+        </div>
+      </section>
+    </div>
+  );
+}
 
 export default function CommandCenterPage() {
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Command Center</h1>
-          <p className="text-gray-400 mt-1">
-            Real-time overview for Grupo Horizonte
-          </p>
-        </div>
-        <div className="flex items-center gap-2 text-sm">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            Live Data
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-screen bg-background">
+          <div className="text-center">
+            <div className="w-12 h-12 border-4 border-[#28A963] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">Loading Command Center...</p>
           </div>
-          <span className="text-gray-500">Last updated: Just now</span>
         </div>
-      </div>
-
-      {/* Macro KPI Cards */}
-      <div className="grid grid-cols-4 gap-4">
-        {Object.entries(DEMO_DATA.macroKPIs).map(([key, kpi]) => (
-          <GlassCard key={key} className="p-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-gray-400">{kpi.label}</p>
-                <p className="text-2xl font-bold text-white mt-1">
-                  {key === "engagementRate" || key === "marketShare"
-                    ? `${kpi.value}%`
-                    : key === "avgResponseTime"
-                    ? `${kpi.value}h`
-                    : formatNumber(kpi.value)}
-                </p>
-              </div>
-              <div
-                className={`flex items-center gap-1 text-sm ${
-                  kpi.change >= 0 ? "text-emerald-400" : "text-red-400"
-                }`}
-              >
-                {kpi.change >= 0 ? (
-                  <TrendingUp className="h-4 w-4" />
-                ) : (
-                  <TrendingDown className="h-4 w-4" />
-                )}
-                {Math.abs(kpi.change)}%
-              </div>
-            </div>
-            <div className="mt-3 h-1 bg-gray-800 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-[#28A963] to-emerald-400 rounded-full"
-                style={{
-                  width: `${Math.min(
-                    100,
-                    key === "engagementRate"
-                      ? kpi.value * 20
-                      : key === "marketShare"
-                      ? kpi.value * 5
-                      : 75
-                  )}%`,
-                }}
-              />
-            </div>
-          </GlassCard>
-        ))}
-      </div>
-
-      {/* Health Cards & Live Intelligence */}
-      <div className="grid grid-cols-3 gap-6">
-        {/* Health Cards */}
-        <div className="col-span-1 space-y-4">
-          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-            <Activity className="h-5 w-5 text-[#28A963]" />
-            Health Indicators
-          </h2>
-          {DEMO_DATA.healthCards.map((card, index) => (
-            <GlassCard
-              key={index}
-              className="p-4"
-              variant={
-                card.status === "excellent"
-                  ? "success"
-                  : card.status === "warning"
-                  ? "warning"
-                  : "default"
-              }
-            >
-              <div className="flex items-start gap-3">
-                <div
-                  className={`p-2 rounded-lg ${
-                    card.status === "excellent"
-                      ? "bg-emerald-500/20 text-emerald-400"
-                      : card.status === "warning"
-                      ? "bg-amber-500/20 text-amber-400"
-                      : "bg-blue-500/20 text-blue-400"
-                  }`}
-                >
-                  <card.icon className="h-5 w-5" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-medium text-white">{card.title}</h3>
-                    <span
-                      className={`text-lg font-bold ${
-                        card.status === "excellent"
-                          ? "text-emerald-400"
-                          : card.status === "warning"
-                          ? "text-amber-400"
-                          : "text-blue-400"
-                      }`}
-                    >
-                      {card.isCurrency
-                        ? formatCurrency(card.score)
-                        : `${card.score}${card.maxScore ? `/${card.maxScore}` : ""}`}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-400 mt-1">{card.description}</p>
-                  {card.maxScore && (
-                    <Progress
-                      value={(card.score / card.maxScore) * 100}
-                      className="mt-2 h-1.5"
-                    />
-                  )}
-                </div>
-              </div>
-            </GlassCard>
-          ))}
-        </div>
-
-        {/* Live Intelligence Feed */}
-        <div className="col-span-2">
-          <h2 className="text-lg font-semibold text-white flex items-center gap-2 mb-4">
-            <Zap className="h-5 w-5 text-[#28A963]" />
-            Live Intelligence Feed
-          </h2>
-          <GlassCard className="p-0 divide-y divide-gray-800">
-            {DEMO_DATA.liveIntelligence.map((item) => (
-              <div
-                key={item.id}
-                className="p-4 hover:bg-white/5 transition-colors cursor-pointer"
-              >
-                <div className="flex items-start gap-3">
-                  <div
-                    className={`p-2 rounded-lg ${
-                      item.severity === "success"
-                        ? "bg-emerald-500/20 text-emerald-400"
-                        : item.severity === "warning"
-                        ? "bg-amber-500/20 text-amber-400"
-                        : "bg-blue-500/20 text-blue-400"
-                    }`}
-                  >
-                    {item.type === "spike" && <TrendingUp className="h-4 w-4" />}
-                    {item.type === "alert" && (
-                      <AlertTriangle className="h-4 w-4" />
-                    )}
-                    {item.type === "competitor" && <Target className="h-4 w-4" />}
-                    {item.type === "lead" && <DollarSign className="h-4 w-4" />}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-medium text-white text-sm">
-                        {item.title}
-                      </h3>
-                      <div className="flex items-center gap-2">
-                        {item.platform === "instagram" && (
-                          <Instagram className="h-4 w-4 text-pink-500" />
-                        )}
-                        {item.platform === "youtube" && (
-                          <Youtube className="h-4 w-4 text-red-500" />
-                        )}
-                        {item.platform === "tiktok" && (
-                          <TikTokIcon className="h-4 w-4 text-white" />
-                        )}
-                        <span className="text-xs text-gray-500">
-                          {item.timestamp}
-                        </span>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-400 mt-1">
-                      {item.description}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </GlassCard>
-        </div>
-      </div>
-
-      {/* Charts Row */}
-      <div className="grid grid-cols-2 gap-6">
-        {/* Platform Growth Trends */}
-        <GlassCard className="p-6">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <Users className="h-5 w-5 text-[#28A963]" />
-            Platform Growth Trends
-          </h3>
-          <div className="h-[280px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={DEMO_DATA.platformGrowth}>
-                <defs>
-                  <linearGradient id="colorInstagram" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#E1306C" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#E1306C" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="colorYoutube" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#FF0000" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#FF0000" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="colorTiktok" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#00F2EA" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#00F2EA" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis dataKey="month" stroke="#9CA3AF" fontSize={12} />
-                <YAxis
-                  stroke="#9CA3AF"
-                  fontSize={12}
-                  tickFormatter={(value) => formatNumber(value)}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#1F2937",
-                    border: "1px solid #374151",
-                    borderRadius: "8px",
-                  }}
-                  labelStyle={{ color: "#F9FAFB" }}
-                  formatter={(value: number) => [formatNumber(value), ""]}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="instagram"
-                  stroke="#E1306C"
-                  fill="url(#colorInstagram)"
-                  strokeWidth={2}
-                  name="Instagram"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="youtube"
-                  stroke="#FF0000"
-                  fill="url(#colorYoutube)"
-                  strokeWidth={2}
-                  name="YouTube"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="tiktok"
-                  stroke="#00F2EA"
-                  fill="url(#colorTiktok)"
-                  strokeWidth={2}
-                  name="TikTok"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="flex items-center justify-center gap-6 mt-4">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-pink-500" />
-              <span className="text-sm text-gray-400">Instagram</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-red-500" />
-              <span className="text-sm text-gray-400">YouTube</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-cyan-400" />
-              <span className="text-sm text-gray-400">TikTok</span>
-            </div>
-          </div>
-        </GlassCard>
-
-        {/* Engagement Trends */}
-        <GlassCard className="p-6">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <Heart className="h-5 w-5 text-[#28A963]" />
-            Weekly Engagement Trends
-          </h3>
-          <div className="h-[280px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={DEMO_DATA.engagementTrends}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis dataKey="day" stroke="#9CA3AF" fontSize={12} />
-                <YAxis stroke="#9CA3AF" fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#1F2937",
-                    border: "1px solid #374151",
-                    borderRadius: "8px",
-                  }}
-                  labelStyle={{ color: "#F9FAFB" }}
-                />
-                <Bar
-                  dataKey="comments"
-                  fill="#28A963"
-                  radius={[4, 4, 0, 0]}
-                  name="Comments"
-                />
-                <Bar
-                  dataKey="shares"
-                  fill="#3B82F6"
-                  radius={[4, 4, 0, 0]}
-                  name="Shares"
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="flex items-center justify-center gap-6 mt-4">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-[#28A963]" />
-              <span className="text-sm text-gray-400">Comments</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-blue-500" />
-              <span className="text-sm text-gray-400">Shares</span>
-            </div>
-          </div>
-        </GlassCard>
-      </div>
-
-      {/* Competitor Comparison */}
-      <GlassCard className="p-6">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <Target className="h-5 w-5 text-[#28A963]" />
-          Competitor Comparison
-        </h3>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-800">
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">
-                  Company
-                </th>
-                <th className="text-right py-3 px-4 text-sm font-medium text-gray-400">
-                  Total Reach
-                </th>
-                <th className="text-right py-3 px-4 text-sm font-medium text-gray-400">
-                  Engagement Rate
-                </th>
-                <th className="text-right py-3 px-4 text-sm font-medium text-gray-400">
-                  Market Share
-                </th>
-                <th className="text-right py-3 px-4 text-sm font-medium text-gray-400">
-                  Trend
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {DEMO_DATA.competitorComparison.map((competitor, index) => (
-                <tr
-                  key={competitor.name}
-                  className={`border-b border-gray-800/50 ${
-                    index === 0 ? "bg-[#28A963]/10" : ""
-                  }`}
-                >
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                          index === 0
-                            ? "bg-[#28A963] text-white"
-                            : "bg-gray-800 text-gray-400"
-                        }`}
-                      >
-                        {competitor.name.charAt(0)}
-                      </div>
-                      <span
-                        className={`font-medium ${
-                          index === 0 ? "text-[#28A963]" : "text-white"
-                        }`}
-                      >
-                        {competitor.name}
-                        {index === 0 && (
-                          <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-[#28A963]/20 text-[#28A963]">
-                            You
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4 text-right text-white">
-                    {formatNumber(competitor.reach)}
-                  </td>
-                  <td className="py-3 px-4 text-right text-white">
-                    {competitor.engagement}%
-                  </td>
-                  <td className="py-3 px-4 text-right text-white">
-                    {competitor.share}%
-                  </td>
-                  <td className="py-3 px-4 text-right">
-                    <div
-                      className={`inline-flex items-center gap-1 ${
-                        index === 0 || index === 3
-                          ? "text-emerald-400"
-                          : index === 1
-                          ? "text-amber-400"
-                          : "text-red-400"
-                      }`}
-                    >
-                      {index === 0 || index === 3 ? (
-                        <ArrowUpRight className="h-4 w-4" />
-                      ) : (
-                        <ArrowDownRight className="h-4 w-4" />
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </GlassCard>
-    </div>
-  )
+      }
+    >
+      <CommandCenterContent />
+    </Suspense>
+  );
 }
