@@ -111,7 +111,7 @@ export default function MarketsPage() {
               Seed Default Markets
             </Button>
           )}
-          <Button onClick={handleAddClick} variant={showAddCard ? "outline" : "default"}>
+          <Button onClick={handleAddClick} className={showAddCard ? "" : "bg-[#28A963] hover:bg-[#28A963]/90"}>
             {showAddCard ? (
               <>
                 <X className="mr-2 h-4 w-4" /> Cancel
@@ -127,19 +127,19 @@ export default function MarketsPage() {
 
       {/* Stats Row */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="bg-blue-50">
+        <Card className="bg-[#28A963]/10 border-[#28A963]/20">
           <CardContent className="pt-4">
             <div className="text-sm text-muted-foreground">Total Markets</div>
-            <div className="text-2xl font-bold">{markets?.length || 0}</div>
+            <div className="text-2xl font-bold text-[#28A963]">{markets?.length || 0}</div>
           </CardContent>
         </Card>
-        <Card className="bg-green-50">
+        <Card className="bg-[#28A963]/5 border-[#28A963]/10">
           <CardContent className="pt-4">
             <div className="text-sm text-muted-foreground">Active Markets</div>
             <div className="text-2xl font-bold">{markets?.filter(m => m.isActive).length || 0}</div>
           </CardContent>
         </Card>
-        <Card className="bg-purple-50">
+        <Card className="bg-muted/50">
           <CardContent className="pt-4">
             <div className="text-sm text-muted-foreground">Total Accounts</div>
             <div className="text-2xl font-bold">{accounts?.length || 0}</div>
@@ -226,15 +226,15 @@ function MarketCard({
   };
 
   return (
-    <Card className={`transition-all ${isExpanded ? "ring-2 ring-primary shadow-lg" : "hover:shadow-md"}`}>
+    <Card className={`transition-all ${isExpanded ? "ring-2 ring-[#28A963] shadow-lg" : "hover:shadow-md"}`}>
       {/* Collapsed View */}
       <div
         className="flex items-center justify-between p-4 cursor-pointer"
         onClick={onToggle}
       >
         <div className="flex items-center gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-blue-200">
-            <MapPin className="h-6 w-6 text-blue-600" />
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#28A963]/10">
+            <MapPin className="h-6 w-6 text-[#28A963]" />
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -242,8 +242,8 @@ function MarketCard({
               <span
                 className={`rounded-full px-2 py-0.5 text-xs ${
                   market.isActive
-                    ? "bg-green-100 text-green-700"
-                    : "bg-gray-100 text-gray-700"
+                    ? "bg-[#28A963]/20 text-[#28A963]"
+                    : "bg-muted text-muted-foreground"
                 }`}
               >
                 {market.isActive ? "Active" : "Inactive"}
@@ -276,22 +276,22 @@ function MarketCard({
 
       {/* Expanded Edit Form */}
       {isExpanded && (
-        <div className="border-t bg-slate-50 p-6">
+        <div className="border-t bg-muted/30 p-6">
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label className="text-sm font-medium text-slate-700">Market Name</label>
+              <label className="text-sm font-medium">Market Name</label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
+                className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-[#28A963] focus:border-[#28A963]"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-slate-700">Country</label>
+              <label className="text-sm font-medium">Country</label>
               <Select value={country} onValueChange={setCountry}>
-                <SelectTrigger className="mt-1 bg-white">
+                <SelectTrigger className="mt-1 bg-background">
                   <SelectValue placeholder="Select country" />
                 </SelectTrigger>
                 <SelectContent>
@@ -303,36 +303,36 @@ function MarketCard({
             </div>
 
             <div>
-              <label className="text-sm font-medium text-slate-700">State / Province</label>
+              <label className="text-sm font-medium">State / Province</label>
               <input
                 type="text"
                 value={state}
                 onChange={(e) => setState(e.target.value)}
                 placeholder="e.g., California, Ontario"
-                className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
+                className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-[#28A963] focus:border-[#28A963]"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-slate-700">City</label>
+              <label className="text-sm font-medium">City</label>
               <input
                 type="text"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
-                className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
+                className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-[#28A963] focus:border-[#28A963]"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-slate-700">Timezone</label>
+              <label className="text-sm font-medium">Timezone</label>
               <Select value={timezone} onValueChange={setTimezone}>
-                <SelectTrigger className="mt-1 bg-white">
+                <SelectTrigger className="mt-1 bg-background">
                   <SelectValue placeholder="Select timezone" />
                 </SelectTrigger>
                 <SelectContent>
                   {TIMEZONES.map((group) => (
                     <div key={group.group}>
-                      <div className="px-2 py-1.5 text-xs font-semibold text-slate-500 bg-slate-50">
+                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted">
                         {group.group}
                       </div>
                       {group.zones.map((tz) => (
@@ -347,9 +347,9 @@ function MarketCard({
             </div>
 
             <div>
-              <label className="text-sm font-medium text-slate-700">Status</label>
+              <label className="text-sm font-medium">Status</label>
               <Select value={isActive ? "active" : "inactive"} onValueChange={(v) => setIsActive(v === "active")}>
-                <SelectTrigger className="mt-1 bg-white">
+                <SelectTrigger className="mt-1 bg-background">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -361,10 +361,10 @@ function MarketCard({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex justify-between mt-6 pt-4 border-t border-slate-200">
+          <div className="flex justify-between mt-6 pt-4 border-t border-border">
             <Button
               variant="ghost"
-              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              className="text-red-600 hover:text-red-700 hover:bg-red-500/10"
               onClick={handleDelete}
             >
               <Trash2 className="h-4 w-4 mr-2" />
@@ -374,7 +374,7 @@ function MarketCard({
               <Button variant="outline" onClick={onToggle}>
                 Cancel
               </Button>
-              <Button onClick={handleSave} disabled={isSaving}>
+              <Button onClick={handleSave} disabled={isSaving} className="bg-[#28A963] hover:bg-[#28A963]/90">
                 {isSaving ? "Saving..." : "Save Changes"}
               </Button>
             </div>
@@ -414,10 +414,10 @@ function AddMarketCard({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Card className="ring-2 ring-green-500 shadow-lg">
-      <div className="flex items-center justify-between p-4 bg-green-50 border-b">
+    <Card className="ring-2 ring-[#28A963] shadow-lg">
+      <div className="flex items-center justify-between p-4 bg-[#28A963]/10 border-b border-[#28A963]/20">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-500 text-white">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#28A963] text-white">
             <Plus className="h-6 w-6" />
           </div>
           <div>
@@ -427,23 +427,23 @@ function AddMarketCard({ onClose }: { onClose: () => void }) {
         </div>
       </div>
 
-      <div className="p-6 bg-slate-50">
+      <div className="p-6 bg-muted/30">
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <label className="text-sm font-medium text-slate-700">Market Name *</label>
+            <label className="text-sm font-medium">Market Name *</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Dallas"
-              className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
+              className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-[#28A963] focus:border-[#28A963]"
             />
           </div>
 
           <div>
-            <label className="text-sm font-medium text-slate-700">Country *</label>
+            <label className="text-sm font-medium">Country *</label>
             <Select value={country} onValueChange={setCountry}>
-              <SelectTrigger className="mt-1 bg-white">
+              <SelectTrigger className="mt-1 bg-background">
                 <SelectValue placeholder="Select country" />
               </SelectTrigger>
               <SelectContent>
@@ -455,37 +455,37 @@ function AddMarketCard({ onClose }: { onClose: () => void }) {
           </div>
 
           <div>
-            <label className="text-sm font-medium text-slate-700">State / Province</label>
+            <label className="text-sm font-medium">State / Province</label>
             <input
               type="text"
               value={state}
               onChange={(e) => setState(e.target.value)}
               placeholder="e.g., Texas"
-              className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
+              className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-[#28A963] focus:border-[#28A963]"
             />
           </div>
 
           <div>
-            <label className="text-sm font-medium text-slate-700">City *</label>
+            <label className="text-sm font-medium">City *</label>
             <input
               type="text"
               value={city}
               onChange={(e) => setCity(e.target.value)}
               placeholder="e.g., Dallas"
-              className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
+              className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-[#28A963] focus:border-[#28A963]"
             />
           </div>
 
           <div className="md:col-span-2">
-            <label className="text-sm font-medium text-slate-700">Timezone *</label>
+            <label className="text-sm font-medium">Timezone *</label>
             <Select value={timezone} onValueChange={setTimezone}>
-              <SelectTrigger className="mt-1 bg-white">
+              <SelectTrigger className="mt-1 bg-background">
                 <SelectValue placeholder="Select timezone" />
               </SelectTrigger>
               <SelectContent>
                 {TIMEZONES.map((group) => (
                   <div key={group.group}>
-                    <div className="px-2 py-1.5 text-xs font-semibold text-slate-500 bg-slate-50">
+                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted">
                       {group.group}
                     </div>
                     {group.zones.map((tz) => (
@@ -501,14 +501,14 @@ function AddMarketCard({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-slate-200">
+        <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-border">
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
           <Button 
             onClick={handleSubmit} 
             disabled={isSaving || !name || !country || !city || !timezone}
-            className="bg-green-600 hover:bg-green-700"
+            className="bg-[#28A963] hover:bg-[#28A963]/90"
           >
             {isSaving ? "Adding..." : "Add Market"}
           </Button>
