@@ -14,6 +14,8 @@ import {
   User,
   ChevronLeft,
   ChevronRight,
+  Palette,
+  Shield,
 } from "lucide-react"
 import { useState } from "react"
 
@@ -62,7 +64,21 @@ const navigation = [
   },
 ]
 
-export function Sidebar() {
+// Orwell Admin navigation - only visible to platform administrators
+const orwellAdminNavigation = [
+  {
+    name: "Platform Branding",
+    href: "/orwell-admin/branding",
+    icon: Palette,
+    description: "Manage dashboard branding",
+  },
+]
+
+interface SidebarProps {
+  isOrwellAdmin?: boolean
+}
+
+export function Sidebar({ isOrwellAdmin = true }: SidebarProps) {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
 
@@ -116,7 +132,7 @@ export function Sidebar() {
         </div>
       )}
 
-      {/* Navigation */}
+      {/* Main Navigation */}
       <nav className="p-2 space-y-1">
         {navigation.map((item) => {
           const isActive = pathname === item.href
@@ -144,6 +160,47 @@ export function Sidebar() {
           )
         })}
       </nav>
+
+      {/* Orwell Admin Section - Only visible to Orwell Admins */}
+      {isOrwellAdmin && (
+        <>
+          {!collapsed && (
+            <div className="px-4 pt-4 pb-2">
+              <div className="flex items-center gap-2 text-xs font-semibold text-amber-500 uppercase tracking-wider">
+                <Shield className="h-3 w-3" />
+                Orwell Admin
+              </div>
+            </div>
+          )}
+          <nav className="px-2 space-y-1">
+            {orwellAdminNavigation.map((item) => {
+              const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all",
+                    isActive
+                      ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                      : "text-gray-400 hover:bg-gray-800 hover:text-white"
+                  )}
+                >
+                  <item.icon className="h-5 w-5 flex-shrink-0" />
+                  {!collapsed && (
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">{item.name}</div>
+                      <div className="text-xs opacity-60 truncate">
+                        {item.description}
+                      </div>
+                    </div>
+                  )}
+                </Link>
+              )
+            })}
+          </nav>
+        </>
+      )}
 
       {/* Demo Badge */}
       {!collapsed && (
