@@ -34,7 +34,9 @@ export default defineSchema({
         v.literal("twitter")
       ),
     }))),
-    // Global Competitors
+    // Global Competitors - IDs of selected competitors from the competitors table
+    selectedCompetitorIds: v.optional(v.array(v.id("competitors"))),
+    // Legacy: Global Competitors (deprecated - use selectedCompetitorIds instead)
     globalCompetitors: v.optional(v.array(v.object({
       name: v.string(),
       platforms: v.array(v.union(
