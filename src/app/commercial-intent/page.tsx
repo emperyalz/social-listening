@@ -3,7 +3,7 @@
 import { Suspense, useState, useMemo } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { useTheme } from "@/context/ThemeContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import {
   BarChart,
   Bar,
