@@ -72,12 +72,15 @@ export function Sidebar() {
   const { t } = useLanguage();
   const navigation = getNavigation(t);
 
+  // Select logo based on theme
+  const logoSrc = theme === "dark" ? "/ascoltare-logo-white.svg" : "/ascoltare-logo-dark.svg";
+
   return (
     <div className="flex h-screen w-64 flex-col border-r bg-card">
       <div className="flex h-16 items-center border-b px-4">
         <Link href="/dashboard" className="flex items-center gap-2">
           <Image
-            src="/ascoltare-logo.svg"
+            src={logoSrc}
             alt="Ascoltare"
             width={180}
             height={40}
