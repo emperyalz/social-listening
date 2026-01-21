@@ -170,7 +170,7 @@ function JobsContent() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Scraping Jobs</h1>
+          <h1 className="text-3xl font-bold text-foreground">Scraping Jobs</h1>
           <p className="text-muted-foreground">
             Manage and monitor data collection jobs
           </p>
@@ -215,9 +215,9 @@ function JobsContent() {
           };
 
           return (
-            <Card key={platform}>
+            <Card key={platform} className="bg-card">
               <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-foreground">
                   {logoUrl ? (
                     <img
                       src={logoUrl}
@@ -265,9 +265,9 @@ function JobsContent() {
       <ScheduleSettings />
 
       {/* Filters */}
-      <Card>
+      <Card className="bg-card">
         <CardHeader>
-          <CardTitle className="text-lg">Filters</CardTitle>
+          <CardTitle className="text-lg text-foreground">Filters</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap items-center gap-3">
@@ -298,12 +298,12 @@ function JobsContent() {
       </Card>
 
       {/* Jobs History */}
-      <Card>
+      <Card className="bg-card">
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
+          <CardTitle className="flex items-center justify-between text-foreground">
             <span>Recent Jobs</span>
             {runningCount > 0 && (
-              <span className="text-sm font-normal text-blue-600">
+              <span className="text-sm font-normal text-blue-600 dark:text-blue-400">
                 {runningCount} job{runningCount > 1 ? "s" : ""} running
               </span>
             )}
@@ -314,7 +314,7 @@ function JobsContent() {
             {jobs?.map((job) => (
               <div
                 key={job._id}
-                className="flex items-center justify-between rounded-lg border p-4"
+                className="flex items-center justify-between rounded-lg border border-border bg-card p-4"
               >
                 <div className="flex items-center gap-4">
                   {getStatusIcon(job.status)}
@@ -331,7 +331,7 @@ function JobsContent() {
                           <span className="text-lg">{getEmoji(job.platform as PlatformId)}</span>
                         );
                       })()}
-                      <span className="font-medium capitalize">
+                      <span className="font-medium capitalize text-foreground">
                         {(() => {
                           const platformData = allPlatforms?.find(p => p.platformId === job.platform);
                           return platformData?.displayName || job.platform;
@@ -348,12 +348,12 @@ function JobsContent() {
                 </div>
                 <div className="flex items-center gap-4">
                   {job.itemsScraped !== undefined && (
-                    <span className="text-sm">
+                    <span className="text-sm text-foreground">
                       {job.itemsScraped} items scraped
                     </span>
                   )}
                   {job.error && (
-                    <span className="text-sm text-red-500 max-w-[200px] truncate" title={job.error}>
+                    <span className="text-sm text-red-500 dark:text-red-400 max-w-[200px] truncate" title={job.error}>
                       {job.error}
                     </span>
                   )}
@@ -365,7 +365,7 @@ function JobsContent() {
                       size="sm"
                       onClick={() => handleCancelJob(job._id)}
                       disabled={cancellingJob === job._id}
-                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
                     >
                       {cancellingJob === job._id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -378,12 +378,12 @@ function JobsContent() {
                   <span
                     className={`rounded-full px-3 py-1 text-xs font-medium ${
                       job.status === "completed"
-                        ? "bg-green-100 text-green-700"
+                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                         : job.status === "failed"
-                          ? "bg-red-100 text-red-700"
+                          ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
                           : job.status === "running"
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-yellow-100 text-yellow-700"
+                            ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                            : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
                     }`}
                   >
                     {job.status}
@@ -401,9 +401,9 @@ function JobsContent() {
       </Card>
 
       {/* Info Card */}
-      <Card>
+      <Card className="bg-card">
         <CardHeader>
-          <CardTitle>About Automated Scraping</CardTitle>
+          <CardTitle className="text-foreground">About Automated Scraping</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">
           <p className="mb-2">
@@ -416,10 +416,10 @@ function JobsContent() {
             <li>Daily snapshots for trend analysis</li>
           </ul>
           <p className="mt-4">
-            Use the <strong>Schedule Settings</strong> above to configure your automation preferences.
+            Use the <strong className="text-foreground">Schedule Settings</strong> above to configure your automation preferences.
             Manual scrapes can be triggered using the platform buttons at the top.
           </p>
-          <p className="mt-2 text-yellow-600">
+          <p className="mt-2 text-yellow-600 dark:text-yellow-500">
             <strong>Note:</strong> Jobs running longer than 30 minutes are automatically timed out when you click &quot;Check Running Jobs&quot;.
           </p>
         </CardContent>
@@ -430,7 +430,7 @@ function JobsContent() {
 
 export default function JobsPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>}>
       <JobsContent />
     </Suspense>
   );
