@@ -2,14 +2,13 @@
 
 import { useState, useCallback } from "react"
 import { useQuery, useMutation } from "convex/react"
-import { api } from "@convex/_generated/api"
+import { api } from "../../../../convex/_generated/api"
 import { Sidebar } from "@/components/layout/sidebar"
 import Image from "next/image"
 import {
   Palette,
   Upload,
   Save,
-  Trash2,
   Eye,
   CheckCircle,
   AlertCircle,
@@ -21,9 +20,7 @@ export default function OrwellBrandingPage() {
   const isAdmin = true // TODO: Replace with actual auth check
 
   const activeBranding = useQuery(api.branding.getActiveBranding)
-  const allBrandings = useQuery(api.branding.getAllBranding)
   const upsertBranding = useMutation(api.branding.upsertBranding)
-  const deleteBranding = useMutation(api.branding.deleteBranding)
   const generateUploadUrl = useMutation(api.branding.generateUploadUrl)
 
   const [isEditing, setIsEditing] = useState(false)
