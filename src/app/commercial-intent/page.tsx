@@ -3,6 +3,7 @@
 import { Suspense, useState, useMemo } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import { useTheme } from "@/context/ThemeContext";
 import {
   BarChart,
   Bar,
@@ -35,9 +36,9 @@ const PLATFORM_EMOJI: Record<string, string> = {
 };
 
 const TIER_COLORS = {
-  interest: "#6366f1",    // Indigo
-  inquiry: "#f59e0b",     // Amber
-  highIntent: "#10b981",  // Emerald (Money green!)
+  interest: "#6366f1",
+  inquiry: "#f59e0b",
+  highIntent: "#10b981",
 };
 
 const TIER_LABELS = {
@@ -80,26 +81,34 @@ interface GlassCardProps {
   children: React.ReactNode;
   className?: string;
   gradient?: string;
+  accentColor?: string;
 }
 
-function GlassCard({ children, className = "", gradient }: GlassCardProps) {
+function GlassCard({ children, className = "", gradient, accentColor }: GlassCardProps) {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
+  const defaultGradient = isDark
+    ? "radial-gradient(ellipse at top left, rgba(16, 185, 129, 0.1) 0%, transparent 50%)"
+    : "radial-gradient(ellipse at top left, rgba(16, 185, 129, 0.08) 0%, transparent 50%)";
+
   return (
     <div
       className={`
         relative overflow-hidden rounded-2xl
-        border border-slate-700/50
-        shadow-xl shadow-black/20
+        border border-border
+        shadow-xl
+        bg-card
         ${className}
       `}
       style={{
-        background: gradient || "linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.6) 100%)",
         backdropFilter: "blur(12px)",
       }}
     >
       <div
         className="absolute inset-0 opacity-30 pointer-events-none"
         style={{
-          background: "radial-gradient(ellipse at top left, rgba(16, 185, 129, 0.1) 0%, transparent 50%)",
+          background: gradient || defaultGradient,
         }}
       />
       <div className="relative z-10">{children}</div>
@@ -119,34 +128,40 @@ interface OpportunityValueProps {
 }
 
 function OpportunityValueCard({ value, highIntentLeads, aov, conversionPotential }: OpportunityValueProps) {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
   return (
     <GlassCard
       className="p-8"
-      gradient="linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(15, 23, 42, 0.9) 50%)"
+      gradient={isDark
+        ? "radial-gradient(ellipse at top left, rgba(16, 185, 129, 0.15) 0%, transparent 50%)"
+        : "radial-gradient(ellipse at top left, rgba(16, 185, 129, 0.1) 0%, transparent 50%)"
+      }
     >
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-2 mb-2">
             <span className="text-3xl">💰</span>
-            <span className="text-emerald-400 text-sm font-semibold uppercase tracking-wider">
+            <span className="text-emerald-500 text-sm font-semibold uppercase tracking-wider">
               Estimated Opportunity Value
             </span>
           </div>
-          <div className="text-5xl font-bold text-white mb-4">
+          <div className="text-5xl font-bold text-foreground mb-4">
             {formatCurrency(value)}
           </div>
           <div className="grid grid-cols-3 gap-6 text-sm">
             <div>
-              <span className="text-slate-400 block">Hot Leads</span>
-              <span className="text-white font-semibold text-lg">{highIntentLeads}</span>
+              <span className="text-muted-foreground block">Hot Leads</span>
+              <span className="text-foreground font-semibold text-lg">{highIntentLeads}</span>
             </div>
             <div>
-              <span className="text-slate-400 block">Avg Order Value</span>
-              <span className="text-white font-semibold text-lg">{formatCurrency(aov)}</span>
+              <span className="text-muted-foreground block">Avg Order Value</span>
+              <span className="text-foreground font-semibold text-lg">{formatCurrency(aov)}</span>
             </div>
             <div>
-              <span className="text-slate-400 block">Conversion Rate</span>
-              <span className="text-emerald-400 font-semibold text-lg">{conversionPotential}%</span>
+              <span className="text-muted-foreground block">Conversion Rate</span>
+              <span className="text-emerald-500 font-semibold text-lg">{conversionPotential}%</span>
             </div>
           </div>
         </div>
@@ -180,33 +195,33 @@ function SalesFunnel({ data }: { data: FunnelData }) {
 
   return (
     <GlassCard className="p-6 h-full">
-      <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
-        <span className="text-emerald-400">📊</span>
+      <h3 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2">
+        <span className="text-emerald-500">📊</span>
         SOCIAL SALES FUNNEL
       </h3>
-      
+
       <div className="space-y-4">
         {funnelStages.map((stage, index) => {
           const stageData = data[stage.key as keyof Omit<FunnelData, 'total'>];
           const widthPercent = data.total > 0 ? (stageData.count / data.total) * 100 : 0;
-          const displayWidth = Math.max(widthPercent, 10); // Minimum 10% width for visibility
-          
+          const displayWidth = Math.max(widthPercent, 10);
+
           return (
             <div key={stage.key} className="relative">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <span className="text-xl">{stage.icon}</span>
                   <div>
-                    <span className="text-white font-medium">{stage.label}</span>
-                    <span className="text-slate-500 text-xs block">{stage.description}</span>
+                    <span className="text-foreground font-medium">{stage.label}</span>
+                    <span className="text-muted-foreground text-xs block">{stage.description}</span>
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className="text-white font-bold text-lg">{formatNumber(stageData.count)}</span>
-                  <span className="text-slate-400 text-sm ml-2">({stageData.percentage.toFixed(1)}%)</span>
+                  <span className="text-foreground font-bold text-lg">{formatNumber(stageData.count)}</span>
+                  <span className="text-muted-foreground text-sm ml-2">({stageData.percentage.toFixed(1)}%)</span>
                 </div>
               </div>
-              <div className="h-10 bg-slate-800/50 rounded-xl overflow-hidden relative">
+              <div className="h-10 bg-muted/50 rounded-xl overflow-hidden relative">
                 <div
                   className="h-full rounded-xl transition-all duration-500 flex items-center justify-end pr-4"
                   style={{
@@ -224,11 +239,11 @@ function SalesFunnel({ data }: { data: FunnelData }) {
           );
         })}
       </div>
-      
-      <div className="mt-6 pt-4 border-t border-slate-700/50">
+
+      <div className="mt-6 pt-4 border-t border-border">
         <div className="flex items-center justify-between text-sm">
-          <span className="text-slate-400">Total Comments Analyzed</span>
-          <span className="text-white font-semibold">{formatNumber(data.total)}</span>
+          <span className="text-muted-foreground">Total Comments Analyzed</span>
+          <span className="text-foreground font-semibold">{formatNumber(data.total)}</span>
         </div>
       </div>
     </GlassCard>
@@ -257,18 +272,18 @@ function HotLeadsFeed({ leads }: { leads: HotLead[] }) {
   return (
     <GlassCard className="p-6 h-full">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+        <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
           <span className="text-red-400">🔥</span>
           HOT LEADS FEED
         </h3>
-        <span className="text-xs bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full">
+        <span className="text-xs bg-emerald-500/20 text-emerald-500 px-3 py-1 rounded-full">
           Tier 3 Only
         </span>
       </div>
-      
+
       <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
         {leads.length === 0 ? (
-          <div className="text-center py-12 text-slate-500">
+          <div className="text-center py-12 text-muted-foreground">
             <span className="text-4xl mb-3 block">🎯</span>
             <p className="font-medium">No high-intent signals yet</p>
             <p className="text-sm mt-1">Comments with purchase intent will appear here</p>
@@ -277,7 +292,7 @@ function HotLeadsFeed({ leads }: { leads: HotLead[] }) {
           leads.map((lead) => (
             <div
               key={lead.id}
-              className="p-4 rounded-xl bg-slate-800/30 border border-emerald-500/20 hover:border-emerald-500/40 transition-all cursor-pointer"
+              className="p-4 rounded-xl bg-muted/30 border border-emerald-500/20 hover:border-emerald-500/40 transition-all cursor-pointer"
             >
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
@@ -288,21 +303,21 @@ function HotLeadsFeed({ leads }: { leads: HotLead[] }) {
                     {lead.platform && (
                       <span className="text-sm">{PLATFORM_EMOJI[lead.platform]}</span>
                     )}
-                    <span className="text-white font-medium">@{lead.authorUsername}</span>
-                    <span className="text-slate-500 text-xs">{timeAgo(lead.postedAt)}</span>
+                    <span className="text-foreground font-medium">@{lead.authorUsername}</span>
+                    <span className="text-muted-foreground text-xs">{timeAgo(lead.postedAt)}</span>
                   </div>
-                  <p className="text-slate-300 text-sm mb-2 line-clamp-2">{lead.text}</p>
+                  <p className="text-muted-foreground text-sm mb-2 line-clamp-2">{lead.text}</p>
                   <div className="flex flex-wrap gap-1 mb-2">
                     {lead.matchedKeywords.slice(0, 3).map((kw, i) => (
                       <span
                         key={i}
-                        className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded"
+                        className="text-xs bg-emerald-500/20 text-emerald-500 px-2 py-0.5 rounded"
                       >
                         {kw}
                       </span>
                     ))}
                   </div>
-                  <div className="flex items-center gap-4 text-xs text-slate-500">
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
                     <span>❤️ {lead.likesCount}</span>
                     {lead.accountUsername && (
                       <span>on @{lead.accountUsername}</span>
@@ -312,7 +327,7 @@ function HotLeadsFeed({ leads }: { leads: HotLead[] }) {
                         href={lead.postUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-emerald-400 hover:text-emerald-300"
+                        className="text-emerald-500 hover:text-emerald-400"
                         onClick={(e) => e.stopPropagation()}
                       >
                         View Post →
@@ -335,27 +350,27 @@ function HotLeadsFeed({ leads }: { leads: HotLead[] }) {
 
 function TrendingKeywords({ keywords }: { keywords: { keyword: string; count: number }[] }) {
   const maxCount = keywords[0]?.count || 1;
-  
+
   return (
     <GlassCard className="p-6">
-      <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+      <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
         <span className="text-amber-400">🔍</span>
         TRENDING INTENT SIGNALS
       </h3>
-      
+
       <div className="space-y-3">
         {keywords.length === 0 ? (
-          <p className="text-slate-500 text-center py-4">No trending keywords yet</p>
+          <p className="text-muted-foreground text-center py-4">No trending keywords yet</p>
         ) : (
           keywords.map((item, index) => (
             <div key={item.keyword} className="flex items-center gap-3">
-              <span className="text-slate-500 text-sm w-6">{index + 1}.</span>
+              <span className="text-muted-foreground text-sm w-6">{index + 1}.</span>
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-white font-medium">"{item.keyword}"</span>
-                  <span className="text-slate-400 text-sm">{item.count}x</span>
+                  <span className="text-foreground font-medium">"{item.keyword}"</span>
+                  <span className="text-muted-foreground text-sm">{item.count}x</span>
                 </div>
-                <div className="h-2 bg-slate-800/50 rounded-full overflow-hidden">
+                <div className="h-2 bg-muted/50 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-gradient-to-r from-amber-500 to-emerald-500 rounded-full"
                     style={{ width: `${(item.count / maxCount) * 100}%` }}
@@ -375,42 +390,45 @@ function TrendingKeywords({ keywords }: { keywords: { keyword: string; count: nu
 // ============================================
 
 function PlatformBreakdown({ data }: { data: Record<string, { interest: number; inquiry: number; highIntent: number }> }) {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   const platforms = Object.entries(data);
-  
+
   if (platforms.length === 0) {
     return (
       <GlassCard className="p-6">
-        <h3 className="text-lg font-semibold text-white mb-4">Platform Breakdown</h3>
-        <p className="text-slate-500 text-center py-4">No platform data available</p>
+        <h3 className="text-lg font-semibold text-foreground mb-4">Platform Breakdown</h3>
+        <p className="text-muted-foreground text-center py-4">No platform data available</p>
       </GlassCard>
     );
   }
-  
+
   const chartData = platforms.map(([platform, counts]) => ({
     platform: platform.charAt(0).toUpperCase() + platform.slice(1),
     interest: counts.interest,
     inquiry: counts.inquiry,
     highIntent: counts.highIntent,
   }));
-  
+
   return (
     <GlassCard className="p-6">
-      <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+      <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
         <span className="text-indigo-400">📱</span>
         PLATFORM INTENT BREAKDOWN
       </h3>
-      
+
       <div className="h-[200px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartData} layout="vertical">
-            <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-            <XAxis type="number" stroke="#64748b" fontSize={11} />
-            <YAxis type="category" dataKey="platform" stroke="#64748b" fontSize={11} width={80} />
+            <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#334155" : "#e2e8f0"} />
+            <XAxis type="number" stroke={isDark ? "#64748b" : "#94a3b8"} fontSize={11} />
+            <YAxis type="category" dataKey="platform" stroke={isDark ? "#64748b" : "#94a3b8"} fontSize={11} width={80} />
             <Tooltip
               contentStyle={{
-                backgroundColor: "rgba(15, 23, 42, 0.95)",
-                border: "1px solid rgba(71, 85, 105, 0.5)",
+                backgroundColor: isDark ? "rgba(15, 23, 42, 0.95)" : "rgba(255, 255, 255, 0.95)",
+                border: isDark ? "1px solid rgba(71, 85, 105, 0.5)" : "1px solid rgba(226, 232, 240, 0.8)",
                 borderRadius: "12px",
+                color: isDark ? "#fff" : "#1e293b",
               }}
             />
             <Bar dataKey="interest" name="Interest" stackId="a" fill={TIER_COLORS.interest} />
@@ -419,7 +437,7 @@ function PlatformBreakdown({ data }: { data: Record<string, { interest: number; 
           </BarChart>
         </ResponsiveContainer>
       </div>
-      
+
       <div className="flex justify-center gap-6 mt-4">
         {Object.entries(TIER_LABELS).map(([key, label]) => (
           <div key={key} className="flex items-center gap-2">
@@ -427,7 +445,7 @@ function PlatformBreakdown({ data }: { data: Record<string, { interest: number; 
               className="w-3 h-3 rounded"
               style={{ backgroundColor: TIER_COLORS[key as keyof typeof TIER_COLORS] }}
             />
-            <span className="text-slate-400 text-xs">{label}</span>
+            <span className="text-muted-foreground text-xs">{label}</span>
           </div>
         ))}
       </div>
@@ -440,37 +458,41 @@ function PlatformBreakdown({ data }: { data: Record<string, { interest: number; 
 // ============================================
 
 function IntentTrendsChart({ data }: { data: { date: string; interest: number; inquiry: number; highIntent: number }[] }) {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
   return (
     <GlassCard className="p-6">
-      <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+      <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
         <span className="text-cyan-400">📈</span>
         INTENT SIGNALS OVER TIME
       </h3>
-      
+
       <div className="h-[250px]">
         {data.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-slate-500">
+          <div className="flex items-center justify-center h-full text-muted-foreground">
             <p>No trend data available</p>
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+              <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#334155" : "#e2e8f0"} />
               <XAxis
                 dataKey="date"
-                stroke="#64748b"
+                stroke={isDark ? "#64748b" : "#94a3b8"}
                 fontSize={11}
                 tickFormatter={(value) => {
                   const date = new Date(value);
                   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
                 }}
               />
-              <YAxis stroke="#64748b" fontSize={11} />
+              <YAxis stroke={isDark ? "#64748b" : "#94a3b8"} fontSize={11} />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "rgba(15, 23, 42, 0.95)",
-                  border: "1px solid rgba(71, 85, 105, 0.5)",
+                  backgroundColor: isDark ? "rgba(15, 23, 42, 0.95)" : "rgba(255, 255, 255, 0.95)",
+                  border: isDark ? "1px solid rgba(71, 85, 105, 0.5)" : "1px solid rgba(226, 232, 240, 0.8)",
                   borderRadius: "12px",
+                  color: isDark ? "#fff" : "#1e293b",
                 }}
                 labelFormatter={(value) => new Date(value).toLocaleDateString()}
               />
@@ -512,52 +534,51 @@ function IntentTrendsChart({ data }: { data: { date: string; interest: number; i
 // ============================================
 
 function CommercialIntentContent() {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   const [aov, setAov] = useState(150);
   const [days, setDays] = useState(30);
-  
-  // Fetch data from Convex
+
   const intentAnalysis = useQuery(api.commercialIntent.getCommercialIntentAnalysis, {
     days,
     averageOrderValue: aov,
   });
-  
+
   const intentTrends = useQuery(api.commercialIntent.getIntentTrends, { days });
-  
+
   if (!intentAnalysis) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-950">
+      <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-slate-400">Loading Commercial Intelligence...</p>
+          <p className="text-muted-foreground">Loading Commercial Intelligence...</p>
         </div>
       </div>
     );
   }
-  
+
   return (
-    <div className="min-h-screen bg-slate-950 text-white p-4 md:p-6 lg:p-8">
-      {/* Header */}
+    <div className="min-h-screen bg-background text-foreground p-4 md:p-6 lg:p-8">
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
-          <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-          <span className="text-emerald-400 text-sm font-medium">Sales Pipeline Active</span>
+          <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+          <span className="text-emerald-500 text-sm font-medium">Sales Pipeline Active</span>
         </div>
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
+            <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-emerald-500 to-cyan-500 bg-clip-text text-transparent">
               Commercial Intent Intelligence
             </h1>
-            <p className="text-slate-400 mt-1">The "Money" Module - Turn engagement into revenue</p>
+            <p className="text-muted-foreground mt-1">The "Money" Module - Turn engagement into revenue</p>
           </div>
-          
-          {/* Controls */}
+
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <label className="text-slate-400 text-sm">AOV:</label>
+              <label className="text-muted-foreground text-sm">AOV:</label>
               <select
                 value={aov}
                 onChange={(e) => setAov(Number(e.target.value))}
-                className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white"
+                className="bg-muted border border-border rounded-lg px-3 py-1.5 text-sm text-foreground"
               >
                 <option value={50}>$50</option>
                 <option value={100}>$100</option>
@@ -568,11 +589,11 @@ function CommercialIntentContent() {
               </select>
             </div>
             <div className="flex items-center gap-2">
-              <label className="text-slate-400 text-sm">Period:</label>
+              <label className="text-muted-foreground text-sm">Period:</label>
               <select
                 value={days}
                 onChange={(e) => setDays(Number(e.target.value))}
-                className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white"
+                className="bg-muted border border-border rounded-lg px-3 py-1.5 text-sm text-foreground"
               >
                 <option value={7}>7 days</option>
                 <option value={14}>14 days</option>
@@ -584,8 +605,7 @@ function CommercialIntentContent() {
           </div>
         </div>
       </div>
-      
-      {/* Opportunity Value Hero */}
+
       <section className="mb-8">
         <OpportunityValueCard
           value={intentAnalysis.summary.estimatedOpportunityValue}
@@ -594,40 +614,36 @@ function CommercialIntentContent() {
           conversionPotential={intentAnalysis.summary.conversionPotential}
         />
       </section>
-      
-      {/* Main Grid */}
+
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <SalesFunnel data={intentAnalysis.funnel} />
         <HotLeadsFeed leads={intentAnalysis.hotLeads as HotLead[]} />
       </section>
-      
-      {/* Secondary Grid */}
+
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <TrendingKeywords keywords={intentAnalysis.trendingKeywords} />
         <div className="lg:col-span-2">
           <IntentTrendsChart data={intentTrends || []} />
         </div>
       </section>
-      
-      {/* Platform Breakdown */}
+
       <section className="mb-8">
         <PlatformBreakdown data={intentAnalysis.platformBreakdown} />
       </section>
-      
-      {/* Footer */}
-      <section className="pt-6 border-t border-slate-800">
-        <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-slate-500">
+
+      <section className="pt-6 border-t border-border">
+        <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex flex-wrap items-center gap-4 md:gap-6">
             <span>
-              <strong className="text-slate-300">{formatNumber(intentAnalysis.summary.totalCommentsAnalyzed)}</strong>{" "}
+              <strong className="text-foreground">{formatNumber(intentAnalysis.summary.totalCommentsAnalyzed)}</strong>{" "}
               comments analyzed
             </span>
             <span>
-              <strong className="text-emerald-400">{intentAnalysis.summary.highIntentLeads}</strong>{" "}
+              <strong className="text-emerald-500">{intentAnalysis.summary.highIntentLeads}</strong>{" "}
               wallet-in-hand leads
             </span>
             <span>
-              Period: <strong className="text-slate-300">{intentAnalysis.periodDays} days</strong>
+              Period: <strong className="text-foreground">{intentAnalysis.periodDays} days</strong>
             </span>
           </div>
           <span>Last updated: {new Date().toLocaleTimeString()}</span>
@@ -641,10 +657,10 @@ export default function CommercialIntentPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex items-center justify-center min-h-screen bg-slate-950">
+        <div className="flex items-center justify-center min-h-screen bg-background">
           <div className="text-center">
             <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-slate-400">Loading Commercial Intelligence...</p>
+            <p className="text-muted-foreground">Loading Commercial Intelligence...</p>
           </div>
         </div>
       }
