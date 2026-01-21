@@ -2,6 +2,52 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+  // Organization Profile - stores company settings and brand assets
+  organizationProfile: defineTable({
+    // Corporate Identity
+    companyName: v.string(),
+    legalName: v.optional(v.string()),
+    taxId: v.optional(v.string()),
+    hqLocation: v.optional(v.string()),
+    websiteUrl: v.optional(v.string()),
+    // Branding Assets (stored in Convex file storage)
+    avatarStorageId: v.optional(v.id("_storage")),
+    bannerStorageId: v.optional(v.id("_storage")),
+    // Brand Intelligence Documents
+    brandDocuments: v.optional(v.array(v.object({
+      name: v.string(),
+      storageId: v.id("_storage"),
+      status: v.union(v.literal("pending"), v.literal("verified"), v.literal("error")),
+      uploadedAt: v.number(),
+    }))),
+    // Social Connections
+    socialConnections: v.optional(v.array(v.object({
+      platform: v.string(),
+      handle: v.string(),
+      connected: v.boolean(),
+      icon: v.union(
+        v.literal("instagram"),
+        v.literal("youtube"),
+        v.literal("tiktok"),
+        v.literal("linkedin"),
+        v.literal("facebook"),
+        v.literal("twitter")
+      ),
+    }))),
+    // Global Competitors
+    globalCompetitors: v.optional(v.array(v.object({
+      name: v.string(),
+      platforms: v.array(v.union(
+        v.literal("instagram"),
+        v.literal("youtube"),
+        v.literal("tiktok")
+      )),
+    }))),
+    // Metadata
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }),
+
   // Platform branding/logos configuration
   platforms: defineTable({
     platformId: v.union(
