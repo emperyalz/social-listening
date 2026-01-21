@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { Id } from "./_generated/dataModel";
 
 // Get the active platform branding configuration
 export const getActiveBranding = query({
@@ -13,7 +14,7 @@ export const getActiveBranding = query({
     if (!branding) {
       // Return default Orwell branding if none configured
       return {
-        _id: null as unknown as typeof branding?._id,
+        _id: null as Id<"platformBranding"> | null,
         platformName: "Orwell",
         tagline: undefined as string | undefined,
         primaryColor: "#28A963",
@@ -23,10 +24,10 @@ export const getActiveBranding = query({
         logoDarkUrl: "/orwell-logo-white.svg",
         logoIconUrl: null as string | null,
         faviconUrl: null as string | null,
-        logoLightStorageId: undefined,
-        logoDarkStorageId: undefined,
-        logoIconStorageId: undefined,
-        faviconStorageId: undefined,
+        logoLightStorageId: undefined as Id<"_storage"> | undefined,
+        logoDarkStorageId: undefined as Id<"_storage"> | undefined,
+        logoIconStorageId: undefined as Id<"_storage"> | undefined,
+        faviconStorageId: undefined as Id<"_storage"> | undefined,
         isActive: true,
         isDefault: true,
         createdAt: 0,
