@@ -43,12 +43,12 @@ const MONITORED_PLATFORMS = [
 
 // Platform icons and colors
 const PLATFORMS = {
-  instagram: { icon: Instagram, color: "text-pink-500", bg: "bg-pink-50", label: "Instagram" },
-  tiktok: { icon: Music2, color: "text-slate-900", bg: "bg-slate-100", label: "TikTok" },
-  youtube: { icon: Play, color: "text-red-500", bg: "bg-red-50", label: "YouTube" },
-  facebook: { icon: Facebook, color: "text-blue-600", bg: "bg-blue-50", label: "Facebook" },
-  linkedin: { icon: Linkedin, color: "text-blue-700", bg: "bg-blue-50", label: "LinkedIn" },
-  twitter: { icon: Twitter, color: "text-sky-500", bg: "bg-sky-50", label: "X / Twitter" },
+  instagram: { icon: Instagram, color: "text-pink-500", bg: "bg-pink-50 dark:bg-pink-950/30", label: "Instagram" },
+  tiktok: { icon: Music2, color: "text-slate-900 dark:text-slate-100", bg: "bg-slate-100 dark:bg-slate-800", label: "TikTok" },
+  youtube: { icon: Play, color: "text-red-500", bg: "bg-red-50 dark:bg-red-950/30", label: "YouTube" },
+  facebook: { icon: Facebook, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/30", label: "Facebook" },
+  linkedin: { icon: Linkedin, color: "text-blue-700", bg: "bg-blue-50 dark:bg-blue-950/30", label: "LinkedIn" },
+  twitter: { icon: Twitter, color: "text-sky-500", bg: "bg-sky-50 dark:bg-sky-950/30", label: "X / Twitter" },
 };
 
 // ============ UTILITY FUNCTIONS ============
@@ -224,7 +224,7 @@ function MultiSelect({ options, selected, onChange, placeholder, icon }: MultiSe
     <div ref={ref} className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between w-[200px] h-10 px-3 py-2 text-sm bg-white border rounded-md hover:bg-slate-50"
+        className="flex items-center justify-between w-[200px] h-10 px-3 py-2 text-sm bg-card border border-border rounded-md hover:bg-muted text-foreground"
       >
         <span className="flex items-center gap-2 truncate">
           {icon}
@@ -234,7 +234,7 @@ function MultiSelect({ options, selected, onChange, placeholder, icon }: MultiSe
           {selected.length > 0 && (
             <span title="Clear this filter">
               <X 
-                className="h-4 w-4 text-slate-400 hover:text-red-500 cursor-pointer" 
+                className="h-4 w-4 text-muted-foreground hover:text-red-500 cursor-pointer" 
                 onClick={clearThis}
               />
             </span>
@@ -244,11 +244,11 @@ function MultiSelect({ options, selected, onChange, placeholder, icon }: MultiSe
       </button>
       
       {isOpen && (
-        <div className="absolute z-50 mt-1 w-[200px] bg-white border rounded-md shadow-lg max-h-60 overflow-auto">
+        <div className="absolute z-50 mt-1 w-[200px] bg-card border border-border rounded-md shadow-lg max-h-60 overflow-auto">
           {selected.length > 0 && (
             <div
               onClick={clearThis}
-              className="flex items-center gap-2 px-3 py-2 hover:bg-red-50 cursor-pointer border-b text-red-600 text-sm"
+              className="flex items-center gap-2 px-3 py-2 hover:bg-red-50 dark:hover:bg-red-950/30 cursor-pointer border-b border-border text-red-600 dark:text-red-400 text-sm"
             >
               <X className="h-4 w-4" />
               Clear selection ({selected.length})
@@ -258,16 +258,16 @@ function MultiSelect({ options, selected, onChange, placeholder, icon }: MultiSe
             <div
               key={option.value}
               onClick={() => toggleOption(option.value)}
-              className="flex items-center gap-2 px-3 py-2 hover:bg-slate-100 cursor-pointer"
+              className="flex items-center gap-2 px-3 py-2 hover:bg-muted cursor-pointer"
             >
               <div className={`w-4 h-4 border rounded flex items-center justify-center ${
-                selected.includes(option.value) ? "bg-primary border-primary" : "border-slate-300"
+                selected.includes(option.value) ? "bg-primary border-primary" : "border-border"
               }`}>
                 {selected.includes(option.value) && (
-                  <Check className="h-3 w-3 text-white" />
+                  <Check className="h-3 w-3 text-primary-foreground" />
                 )}
               </div>
-              <span className="text-sm">{option.label}</span>
+              <span className="text-sm text-foreground">{option.label}</span>
             </div>
           ))}
         </div>
@@ -309,7 +309,7 @@ function PhoneInputs({ phones, onChange }: { phones: PhoneEntry[]; onChange: (ph
       {phones.map((phone, index) => (
         <div key={index} className="flex items-center gap-2">
           <Select value={phone.label} onValueChange={(v) => updatePhone(index, "label", v)}>
-            <SelectTrigger className="w-[110px] bg-white text-sm">
+            <SelectTrigger className="w-[110px] bg-card text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -324,7 +324,7 @@ function PhoneInputs({ phones, onChange }: { phones: PhoneEntry[]; onChange: (ph
             onChange={(e) => updatePhone(index, "number", e.target.value)}
             onBlur={(e) => handlePhoneBlur(index, e.target.value)}
             placeholder="+507 6123-4567"
-            className="flex-1 rounded-lg border bg-white px-3 py-2 text-sm"
+            className="flex-1 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground"
           />
           <label className="flex items-center gap-1 text-xs cursor-pointer whitespace-nowrap">
             <input
@@ -338,7 +338,7 @@ function PhoneInputs({ phones, onChange }: { phones: PhoneEntry[]; onChange: (ph
           <button
             type="button"
             onClick={() => removePhone(index)}
-            className="h-8 w-8 flex items-center justify-center text-red-500 hover:text-red-700 hover:bg-red-50 rounded"
+            className="h-8 w-8 flex items-center justify-center text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 rounded"
           >
             <X className="h-4 w-4" />
           </button>
@@ -400,11 +400,11 @@ function SocialHandleInput({
     <div>
       <div className="flex items-center gap-2 flex-wrap mb-1">
         <Icon className={`h-4 w-4 ${config.color}`} />
-        <span className="text-sm font-medium text-slate-700">{config.label}</span>
+        <span className="text-sm font-medium text-foreground">{config.label}</span>
         {isMonitored ? (
-          <span className="text-xs bg-green-100 text-green-700 px-1.5 rounded">Monitored</span>
+          <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-1.5 rounded">Monitored</span>
         ) : (
-          <span className="text-xs bg-slate-100 text-slate-500 px-1.5 rounded">Reference</span>
+          <span className="text-xs bg-muted text-muted-foreground px-1.5 rounded">Reference</span>
         )}
         {/* PAUSE TOGGLE BUTTON */}
         {isMonitored && cleanedHandle && !competitorPaused && showPauseControl && (
@@ -413,8 +413,8 @@ function SocialHandleInput({
             onClick={handlePauseClick}
             className={`ml-auto text-xs px-2 py-1 rounded flex items-center gap-1 cursor-pointer transition-colors ${
               isPaused 
-                ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border border-yellow-300" 
-                : "bg-green-100 text-green-700 hover:bg-green-200 border border-green-300"
+                ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-200 dark:hover:bg-yellow-900/50 border border-yellow-300 dark:border-yellow-700" 
+                : "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50 border border-green-300 dark:border-green-700"
             }`}
           >
             {isPaused ? (
@@ -426,7 +426,7 @@ function SocialHandleInput({
         )}
         {/* Show disabled paused indicator when competitor is paused */}
         {isMonitored && cleanedHandle && competitorPaused && (
-          <span className="ml-auto text-xs px-2 py-1 rounded flex items-center gap-1 bg-yellow-100 text-yellow-700 border border-yellow-300 opacity-60">
+          <span className="ml-auto text-xs px-2 py-1 rounded flex items-center gap-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border border-yellow-300 dark:border-yellow-700 opacity-60">
             <Pause className="h-3 w-3" /> Paused
           </span>
         )}
@@ -437,7 +437,7 @@ function SocialHandleInput({
         onChange={(e) => onChange(e.target.value)}
         onBlur={handleBlur}
         placeholder={isMonitored ? "username or paste URL" : "username or URL"}
-        className={`w-full rounded-lg border bg-white px-3 py-2 text-sm ${effectivelyPaused ? "opacity-50" : ""}`}
+        className={`w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground ${effectivelyPaused ? "opacity-50" : ""}`}
       />
       {cleanedHandle && (
         <a
@@ -531,7 +531,7 @@ export default function CompetitorsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Competitors</h1>
+          <h1 className="text-3xl font-bold text-foreground">Competitors</h1>
           <p className="text-muted-foreground">Manage competitor profiles and their social accounts</p>
         </div>
         <div className="flex gap-2">
@@ -548,28 +548,28 @@ export default function CompetitorsPage() {
 
       {/* Stats Row */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="bg-slate-50">
+        <Card className="bg-muted/50">
           <CardContent className="pt-4">
             <div className="text-sm text-muted-foreground">Total Competitors</div>
-            <div className="text-2xl font-bold">{stats?.total || 0}</div>
+            <div className="text-2xl font-bold text-foreground">{stats?.total || 0}</div>
           </CardContent>
         </Card>
-        <Card className="bg-green-50">
+        <Card className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800">
           <CardContent className="pt-4">
             <div className="text-sm text-muted-foreground">Tracked Accounts</div>
-            <div className="text-2xl font-bold">{stats?.linkedAccounts || 0}</div>
+            <div className="text-2xl font-bold text-foreground">{stats?.linkedAccounts || 0}</div>
           </CardContent>
         </Card>
-        <Card className="bg-blue-50">
+        <Card className="bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
           <CardContent className="pt-4">
             <div className="text-sm text-muted-foreground">Brokerages</div>
-            <div className="text-2xl font-bold">{stats?.byType?.brokerage || 0}</div>
+            <div className="text-2xl font-bold text-foreground">{stats?.byType?.brokerage || 0}</div>
           </CardContent>
         </Card>
-        <Card className="bg-purple-50">
+        <Card className="bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800">
           <CardContent className="pt-4">
             <div className="text-sm text-muted-foreground">Individual Brokers</div>
-            <div className="text-2xl font-bold">{stats?.byType?.individual_broker || 0}</div>
+            <div className="text-2xl font-bold text-foreground">{stats?.byType?.individual_broker || 0}</div>
           </CardContent>
         </Card>
       </div>
@@ -581,14 +581,14 @@ export default function CompetitorsPage() {
           selected={selectedTypes}
           onChange={setSelectedTypes}
           placeholder="All Types"
-          icon={<Building2 className="h-4 w-4 text-slate-400" />}
+          icon={<Building2 className="h-4 w-4 text-muted-foreground" />}
         />
         <MultiSelect
           options={marketOptions}
           selected={selectedMarkets}
           onChange={setSelectedMarkets}
           placeholder="All Markets"
-          icon={<MapPin className="h-4 w-4 text-slate-400" />}
+          icon={<MapPin className="h-4 w-4 text-muted-foreground" />}
         />
         <SharedMultiSelect
           options={platformOptionsWithLogos}
@@ -606,7 +606,7 @@ export default function CompetitorsPage() {
               setSelectedMarkets([]);
               setSelectedPlatforms([]);
             }}
-            className="text-slate-500 hover:text-red-500"
+            className="text-muted-foreground hover:text-red-500"
           >
             <X className="h-4 w-4 mr-1" />
             Clear All Filters
@@ -630,7 +630,7 @@ export default function CompetitorsPage() {
           />
         ))}
         {filteredCompetitors?.length === 0 && !showAddCard && (
-          <Card>
+          <Card className="bg-card">
             <CardContent className="py-12 text-center text-muted-foreground">
               {competitors?.length === 0 
                 ? 'No competitors found. Click "Add Competitor" to start tracking.'
@@ -824,25 +824,25 @@ function CompetitorCard({
     : monitoredCount;
 
   return (
-    <Card className={`transition-all ${isExpanded ? "ring-2 ring-primary shadow-lg" : "hover:shadow-md"} ${!competitor.isActive ? "opacity-60" : ""}`}>
+    <Card className={`transition-all bg-card ${isExpanded ? "ring-2 ring-primary shadow-lg" : "hover:shadow-md"} ${!competitor.isActive ? "opacity-60" : ""}`}>
       {/* Collapsed View */}
       <div className="flex items-center justify-between p-4 cursor-pointer" onClick={onToggle}>
         <div className="flex items-center gap-4">
           {/* Priority: displayAvatarUrl > logoUrl > fallback icon */}
           {competitor.displayAvatarUrl ? (
-            <img src={competitor.displayAvatarUrl} alt={competitor.name} className="h-14 w-14 rounded-full object-cover border-2 border-slate-200" />
+            <img src={competitor.displayAvatarUrl} alt={competitor.name} className="h-14 w-14 rounded-full object-cover border-2 border-border" />
           ) : competitor.logoUrl ? (
-            <img src={competitor.logoUrl} alt={competitor.name} className="h-14 w-14 rounded-lg object-cover border" />
+            <img src={competitor.logoUrl} alt={competitor.name} className="h-14 w-14 rounded-lg object-cover border border-border" />
           ) : (
-            <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-gradient-to-br from-slate-100 to-slate-200">
-              {competitor.type === "individual_broker" ? <User className="h-6 w-6 text-slate-500" /> : <Building2 className="h-6 w-6 text-slate-500" />}
+            <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-gradient-to-br from-muted to-muted/50">
+              {competitor.type === "individual_broker" ? <User className="h-6 w-6 text-muted-foreground" /> : <Building2 className="h-6 w-6 text-muted-foreground" />}
             </div>
           )}
           
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-lg">{competitor.name}</span>
-              <span className={`rounded-full px-2 py-0.5 text-xs ${competitor.isActive ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
+              <span className="font-semibold text-lg text-foreground">{competitor.name}</span>
+              <span className={`rounded-full px-2 py-0.5 text-xs ${competitor.isActive ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400" : "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400"}`}>
                 {competitor.isActive ? "Active" : "Paused"}
               </span>
             </div>
@@ -855,7 +855,7 @@ function CompetitorCard({
               {pausedCount > 0 && (
                 <>
                   <span>•</span>
-                  <span className="text-yellow-600">
+                  <span className="text-yellow-600 dark:text-yellow-500">
                     {competitor.isActive ? `${pausedCount} paused` : "All paused"}
                   </span>
                 </>
@@ -877,7 +877,7 @@ function CompetitorCard({
                   >
                     {renderPlatformLogo(account.platform, "h-3.5 w-3.5")}
                     {account.avatarUrl && <img src={account.avatarUrl} className="h-4 w-4 rounded-full" alt="" />}
-                    <span className="text-xs">@{cleanedUsername}</span>
+                    <span className="text-xs text-foreground">@{cleanedUsername}</span>
                     {isPaused && <Pause className="h-3 w-3 text-yellow-500" />}
                   </div>
                 );
@@ -888,7 +888,7 @@ function CompetitorCard({
         
         <div className="flex items-center gap-2">
           {competitor.website && (
-            <a href={competitor.website} target="_blank" rel="noopener noreferrer" className="p-2 hover:bg-slate-100 rounded-full" onClick={(e) => e.stopPropagation()}>
+            <a href={competitor.website} target="_blank" rel="noopener noreferrer" className="p-2 hover:bg-muted rounded-full" onClick={(e) => e.stopPropagation()}>
               <Globe className="h-4 w-4 text-muted-foreground" />
             </a>
           )}
@@ -898,11 +898,11 @@ function CompetitorCard({
 
       {/* Expanded Edit Form */}
       {isExpanded && (
-        <div className="border-t bg-slate-50 p-6">
+        <div className="border-t border-border bg-muted/50 p-6">
           {/* Status Toggle - SAVES IMMEDIATELY */}
-          <div className="mb-6 flex items-center justify-between p-3 bg-white rounded-lg border">
+          <div className="mb-6 flex items-center justify-between p-3 bg-card rounded-lg border border-border">
             <div>
-              <span className="font-medium">Competitor Monitoring</span>
+              <span className="font-medium text-foreground">Competitor Monitoring</span>
               <p className="text-xs text-muted-foreground">
                 {competitor.isActive 
                   ? "Monitoring active. Click to pause all platform monitoring." 
@@ -915,8 +915,8 @@ function CompetitorCard({
               onClick={handleToggleCompetitorStatus}
               className={`px-4 py-2 rounded-lg flex items-center gap-2 cursor-pointer transition-colors disabled:opacity-50 ${
                 competitor.isActive 
-                  ? "bg-green-100 text-green-700 hover:bg-green-200 border border-green-300" 
-                  : "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border border-yellow-300"
+                  ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50 border border-green-300 dark:border-green-700" 
+                  : "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-200 dark:hover:bg-yellow-900/50 border border-yellow-300 dark:border-yellow-700"
               }`}
             >
               {isTogglingStatus ? (
@@ -931,27 +931,27 @@ function CompetitorCard({
 
           {/* Basic Info Section */}
           <div className="mb-6">
-            <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
               <Building2 className="h-4 w-4" /> Basic Information
             </h3>
             <div className="grid gap-4 md:grid-cols-3">
               <div>
-                <label className="text-sm font-medium text-slate-700">Name</label>
-                <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm" />
+                <label className="text-sm font-medium text-foreground">Name</label>
+                <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground" />
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700">Type</label>
+                <label className="text-sm font-medium text-foreground">Type</label>
                 <Select value={type} onValueChange={(v) => setType(v as CompetitorType)}>
-                  <SelectTrigger className="mt-1 bg-white"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="mt-1 bg-card"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {COMPETITOR_TYPES.map((t) => (<SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700">Market</label>
+                <label className="text-sm font-medium text-foreground">Market</label>
                 <Select value={marketId} onValueChange={(v) => setMarketId(v as Id<"markets">)}>
-                  <SelectTrigger className="mt-1 bg-white"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="mt-1 bg-card"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {markets.map((m) => (<SelectItem key={m._id} value={m._id}>{m.name}</SelectItem>))}
                   </SelectContent>
@@ -963,7 +963,7 @@ function CompetitorCard({
           {/* Display Avatar Section */}
           {competitor.accounts && competitor.accounts.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
                 <User className="h-4 w-4" /> Display Avatar
               </h3>
               <p className="text-xs text-muted-foreground mb-3">
@@ -978,16 +978,16 @@ function CompetitorCard({
                       return selectedAcc?.avatarUrl ? (
                         <img src={selectedAcc.avatarUrl} alt="Selected avatar" className="h-16 w-16 rounded-full object-cover border-2 border-primary" />
                       ) : (
-                        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-200 text-slate-500 text-xs">
+                        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted text-muted-foreground text-xs">
                           No image
                         </div>
                       );
                     })()
                   ) : competitor.displayAvatarUrl ? (
-                    <img src={competitor.displayAvatarUrl} alt="Auto avatar" className="h-16 w-16 rounded-full object-cover border-2 border-slate-300" />
+                    <img src={competitor.displayAvatarUrl} alt="Auto avatar" className="h-16 w-16 rounded-full object-cover border-2 border-border" />
                   ) : (
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-200">
-                      {competitor.type === "individual_broker" ? <User className="h-6 w-6 text-slate-500" /> : <Building2 className="h-6 w-6 text-slate-500" />}
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                      {competitor.type === "individual_broker" ? <User className="h-6 w-6 text-muted-foreground" /> : <Building2 className="h-6 w-6 text-muted-foreground" />}
                     </div>
                   )}
                 </div>
@@ -998,13 +998,13 @@ function CompetitorCard({
                     value={displayAvatarAccountId || "_auto"}
                     onValueChange={(v) => setDisplayAvatarAccountId(v === "_auto" ? null : v)}
                   >
-                    <SelectTrigger className="bg-white">
+                    <SelectTrigger className="bg-card">
                       <SelectValue placeholder="Auto-select avatar" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="_auto">
                         <span className="flex items-center gap-2">
-                          <span className="text-slate-400">Auto</span>
+                          <span className="text-muted-foreground">Auto</span>
                           <span className="text-xs text-muted-foreground">(first available)</span>
                         </span>
                       </SelectItem>
@@ -1023,7 +1023,7 @@ function CompetitorCard({
                     </SelectContent>
                   </Select>
                   {competitor.accounts?.filter((acc: any) => acc.avatarUrl).length === 0 && (
-                    <p className="text-xs text-yellow-600 mt-1">
+                    <p className="text-xs text-yellow-600 dark:text-yellow-500 mt-1">
                       No account avatars available yet. Avatars are fetched during scraping.
                     </p>
                   )}
@@ -1034,20 +1034,20 @@ function CompetitorCard({
 
           {/* Contact Info Section */}
           <div className="mb-6">
-            <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
               <Mail className="h-4 w-4" /> Contact Information
             </h3>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <label className="text-sm font-medium text-slate-700">Website</label>
-                <input type="url" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://example.com" className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm" />
+                <label className="text-sm font-medium text-foreground">Website</label>
+                <input type="url" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://example.com" className="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground" />
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700">Email</label>
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="contact@example.com" className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm" />
+                <label className="text-sm font-medium text-foreground">Email</label>
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="contact@example.com" className="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground" />
               </div>
               <div className="md:col-span-2">
-                <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                <label className="text-sm font-medium text-foreground flex items-center gap-2">
                   <Phone className="h-4 w-4" /> Phone Numbers
                 </label>
                 <div className="mt-1"><PhoneInputs phones={phones} onChange={setPhones} /></div>
@@ -1057,32 +1057,32 @@ function CompetitorCard({
 
           {/* Location Section */}
           <div className="mb-6">
-            <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
               <MapPin className="h-4 w-4" /> Location
             </h3>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <label className="text-sm font-medium text-slate-700">Address</label>
-                <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="123 Main Street" className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm" />
+                <label className="text-sm font-medium text-foreground">Address</label>
+                <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="123 Main Street" className="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground" />
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700">Address Line 2</label>
-                <input type="text" value={address2} onChange={(e) => setAddress2(e.target.value)} placeholder="Suite 100, Floor 5" className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm" />
+                <label className="text-sm font-medium text-foreground">Address Line 2</label>
+                <input type="text" value={address2} onChange={(e) => setAddress2(e.target.value)} placeholder="Suite 100, Floor 5" className="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground" />
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700">City</label>
-                <input type="text" value={city} onChange={(e) => setCity(e.target.value)} className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm" />
+                <label className="text-sm font-medium text-foreground">City</label>
+                <input type="text" value={city} onChange={(e) => setCity(e.target.value)} className="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground" />
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700">State/Province</label>
-                <input type="text" value={state} onChange={(e) => setState(e.target.value)} className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm" />
+                <label className="text-sm font-medium text-foreground">State/Province</label>
+                <input type="text" value={state} onChange={(e) => setState(e.target.value)} className="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground" />
               </div>
             </div>
           </div>
 
           {/* Social Handles Section */}
           <div className="mb-6">
-            <h3 className="text-sm font-semibold text-slate-700 mb-3">Social Media Handles</h3>
+            <h3 className="text-sm font-semibold text-foreground mb-3">Social Media Handles</h3>
             <p className="text-xs text-muted-foreground mb-3">
               {competitor.isActive 
                 ? "Click Active/Paused to control individual platform monitoring."
@@ -1130,13 +1130,13 @@ function CompetitorCard({
 
           {/* Notes Section */}
           <div className="mb-6">
-            <label className="text-sm font-medium text-slate-700">Notes</label>
-            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Additional notes about this competitor..." rows={2} className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm" />
+            <label className="text-sm font-medium text-foreground">Notes</label>
+            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Additional notes about this competitor..." rows={2} className="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground" />
           </div>
 
           {/* Action Buttons */}
-          <div className="flex justify-between pt-4 border-t border-slate-200">
-            <Button variant="ghost" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={handleDelete}>
+          <div className="flex justify-between pt-4 border-t border-border">
+            <Button variant="ghost" className="text-red-600 dark:text-red-400 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30" onClick={handleDelete}>
               <Trash2 className="h-4 w-4 mr-2" /> Delete Competitor
             </Button>
             <div className="flex gap-2">
@@ -1196,40 +1196,40 @@ function AddCompetitorCard({ markets, onClose }: { markets: any[]; onClose: () =
   };
 
   return (
-    <Card className="ring-2 ring-green-500 shadow-lg">
-      <div className="flex items-center justify-between p-4 bg-green-50 border-b">
+    <Card className="ring-2 ring-green-500 shadow-lg bg-card">
+      <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-950/30 border-b border-border">
         <div className="flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-green-500 text-white">
             <Plus className="h-6 w-6" />
           </div>
           <div>
-            <div className="font-semibold text-lg">Add New Competitor</div>
+            <div className="font-semibold text-lg text-foreground">Add New Competitor</div>
             <div className="text-sm text-muted-foreground">Enter business details and social handles</div>
           </div>
         </div>
       </div>
 
-      <div className="p-6 bg-slate-50">
+      <div className="p-6 bg-muted/50">
         <div className="mb-6">
-          <h3 className="text-sm font-semibold text-slate-700 mb-3">Basic Information</h3>
+          <h3 className="text-sm font-semibold text-foreground mb-3">Basic Information</h3>
           <div className="grid gap-4 md:grid-cols-3">
             <div>
-              <label className="text-sm font-medium text-slate-700">Name *</label>
-              <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Company or person name" className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm" />
+              <label className="text-sm font-medium text-foreground">Name *</label>
+              <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Company or person name" className="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground" />
             </div>
             <div>
-              <label className="text-sm font-medium text-slate-700">Type *</label>
+              <label className="text-sm font-medium text-foreground">Type *</label>
               <Select value={type} onValueChange={(v) => setType(v as CompetitorType)}>
-                <SelectTrigger className="mt-1 bg-white"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 bg-card"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {COMPETITOR_TYPES.map((t) => (<SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <label className="text-sm font-medium text-slate-700">Market *</label>
+              <label className="text-sm font-medium text-foreground">Market *</label>
               <Select value={marketId} onValueChange={setMarketId}>
-                <SelectTrigger className="mt-1 bg-white"><SelectValue placeholder="Select market" /></SelectTrigger>
+                <SelectTrigger className="mt-1 bg-card"><SelectValue placeholder="Select market" /></SelectTrigger>
                 <SelectContent>
                   {markets.map((m) => (<SelectItem key={m._id} value={m._id}>{m.name}</SelectItem>))}
                 </SelectContent>
@@ -1239,25 +1239,25 @@ function AddCompetitorCard({ markets, onClose }: { markets: any[]; onClose: () =
         </div>
 
         <div className="mb-6">
-          <h3 className="text-sm font-semibold text-slate-700 mb-3">Contact (Optional)</h3>
+          <h3 className="text-sm font-semibold text-foreground mb-3">Contact (Optional)</h3>
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label className="text-sm font-medium text-slate-700">Website</label>
-              <input type="url" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://example.com" className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm" />
+              <label className="text-sm font-medium text-foreground">Website</label>
+              <input type="url" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://example.com" className="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground" />
             </div>
             <div>
-              <label className="text-sm font-medium text-slate-700">Email</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="contact@example.com" className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm" />
+              <label className="text-sm font-medium text-foreground">Email</label>
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="contact@example.com" className="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground" />
             </div>
             <div className="md:col-span-2">
-              <label className="text-sm font-medium text-slate-700 flex items-center gap-2"><Phone className="h-4 w-4" /> Phone Numbers</label>
+              <label className="text-sm font-medium text-foreground flex items-center gap-2"><Phone className="h-4 w-4" /> Phone Numbers</label>
               <div className="mt-1"><PhoneInputs phones={phones} onChange={setPhones} /></div>
             </div>
           </div>
         </div>
 
         <div className="mb-6">
-          <h3 className="text-sm font-semibold text-slate-700 mb-3">Social Media Handles</h3>
+          <h3 className="text-sm font-semibold text-foreground mb-3">Social Media Handles</h3>
           <p className="text-xs text-muted-foreground mb-3">Paste URLs or usernames. Instagram, TikTok, and YouTube will be monitored.</p>
           <div className="grid gap-4 md:grid-cols-3">
             <SocialHandleInput platform="instagram" value={instagram} onChange={setInstagram} isMonitored={true} />
@@ -1269,7 +1269,7 @@ function AddCompetitorCard({ markets, onClose }: { markets: any[]; onClose: () =
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 pt-4 border-t border-slate-200">
+        <div className="flex justify-end gap-2 pt-4 border-t border-border">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button onClick={handleSubmit} disabled={isSaving || !name || !marketId} className="bg-green-600 hover:bg-green-700">
             {isSaving ? "Creating..." : "Add Competitor"}
