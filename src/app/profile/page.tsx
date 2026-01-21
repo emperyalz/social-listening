@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +16,29 @@ import {
   X,
   Save,
   Image as ImageIcon,
+  MapPin,
+  Pencil,
+  Youtube,
 } from "lucide-react";
+
+// TikTok Icon Component
+const TikTokIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
+  </svg>
+);
+
+interface SocialConnection {
+  platform: string;
+  handle: string;
+  connected: boolean;
+  icon: "instagram" | "youtube" | "tiktok" | "linkedin";
+}
+
+interface Competitor {
+  name: string;
+  platforms: ("instagram" | "youtube" | "tiktok")[];
+}
 
 export default function ProfilePage() {
   const [companyName, setCompanyName] = useState("DM Real Estate Panama");
@@ -25,34 +47,110 @@ export default function ProfilePage() {
   const [hqLocation, setHqLocation] = useState("Panama City, Panama");
   const [websiteUrl, setWebsiteUrl] = useState("https://dmrealestatepanama.com");
   
+  // Avatar and Banner uploads
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
+  const brandDocsInputRef = useRef<HTMLInputElement>(null);
+
   const [uploadedFiles, setUploadedFiles] = useState([
     { name: "2024_Brand_Guidelines.pdf", status: "verified" },
     { name: "Tone_of_Voice_Guide.docx", status: "verified" },
   ]);
 
-  const [socialConnections, setSocialConnections] = useState([
-    { platform: "Instagram", handle: "@dmrealestatepanama", connected: true },
-    { platform: "LinkedIn", handle: "DM Real Estate Panama", connected: true },
-    { platform: "TikTok", handle: "@dmrealestatepanama", connected: false },
+  const [socialConnections, setSocialConnections] = useState<SocialConnection[]>([
+    { platform: "Instagram", handle: "@dmrealestatepanama", connected: true, icon: "instagram" },
+    { platform: "YouTube", handle: "DM Real Estate Panama", connected: false, icon: "youtube" },
+    { platform: "TikTok", handle: "@dmrealestatepanama", connected: false, icon: "tiktok" },
   ]);
 
-  const [competitors, setCompetitors] = useState([
-    "Grupo Provivienda",
-    "Empresas Bern",
-    "Price Smart Homes",
+  const [competitors, setCompetitors] = useState<Competitor[]>([
+    { name: "Grupo Provivienda", platforms: ["instagram", "tiktok"] },
+    { name: "Empresas Bern", platforms: ["instagram", "youtube"] },
+    { name: "Price Smart Homes", platforms: ["instagram", "youtube", "tiktok"] },
   ]);
 
   const [newCompetitor, setNewCompetitor] = useState("");
+  const [editingCompetitor, setEditingCompetitor] = useState<number | null>(null);
 
   const handleAddCompetitor = () => {
     if (newCompetitor.trim() && competitors.length < 5) {
-      setCompetitors([...competitors, newCompetitor.trim()]);
+      setCompetitors([...competitors, { name: newCompetitor.trim(), platforms: ["instagram"] }]);
       setNewCompetitor("");
     }
   };
 
   const handleRemoveCompetitor = (index: number) => {
     setCompetitors(competitors.filter((_, i) => i !== index));
+  };
+
+  const toggleConnection = (index: number) => {
+    setSocialConnections(socialConnections.map((conn, i) => 
+      i === index ? { ...conn, connected: !conn.connected } : conn
+    ));
+  };
+
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setBannerPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleBrandDocsUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Simulate upload - add to list with verified status
+      setUploadedFiles([...uploadedFiles, { name: file.name, status: "verified" }]);
+    }
+  };
+
+  const handleDragDropClick = () => {
+    brandDocsInputRef.current?.click();
+  };
+
+  const toggleCompetitorPlatform = (compIndex: number, platform: "instagram" | "youtube" | "tiktok") => {
+    setCompetitors(competitors.map((comp, i) => {
+      if (i === compIndex) {
+        const hasPlat = comp.platforms.includes(platform);
+        return {
+          ...comp,
+          platforms: hasPlat 
+            ? comp.platforms.filter(p => p !== platform)
+            : [...comp.platforms, platform]
+        };
+      }
+      return comp;
+    }));
+  };
+
+  const getPlatformIcon = (platform: string, className: string = "h-4 w-4") => {
+    switch (platform) {
+      case "instagram":
+        return <Instagram className={`${className} text-pink-500`} />;
+      case "youtube":
+        return <Youtube className={`${className} text-red-500`} />;
+      case "tiktok":
+        return <TikTokIcon className={`${className} text-foreground`} />;
+      default:
+        return null;
+    }
   };
 
   return (
@@ -115,12 +213,20 @@ export default function ProfilePage() {
             </div>
             <div>
               <label className="text-sm font-medium">HQ Location</label>
-              <input
-                type="text"
-                value={hqLocation}
-                onChange={(e) => setHqLocation(e.target.value)}
-                className="mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#28A963]/50"
-              />
+              <div className="mt-1.5 relative">
+                <input
+                  type="text"
+                  value={hqLocation}
+                  onChange={(e) => setHqLocation(e.target.value)}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#28A963]/50"
+                />
+                <button 
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded transition-colors"
+                  title="Set on Map"
+                >
+                  <MapPin className="h-4 w-4 text-[#28A963]" />
+                </button>
+              </div>
             </div>
           </div>
           <div>
@@ -136,21 +242,81 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Logo Upload */}
+          {/* Branding Images - Split into Avatar and Banner */}
           <div>
-            <label className="text-sm font-medium">Company Logo</label>
-            <div className="mt-1.5 flex items-center gap-4">
-              <div className="flex h-20 w-20 items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/25 bg-muted/50">
-                <ImageIcon className="h-8 w-8 text-muted-foreground/50" />
+            <label className="text-sm font-medium mb-3 block">Branding Images</label>
+            <div className="grid grid-cols-2 gap-4">
+              {/* Profile Avatar (Square) */}
+              <div className="rounded-lg border border-dashed border-muted-foreground/25 p-4">
+                <p className="text-sm font-medium mb-2">Profile Avatar</p>
+                <p className="text-xs text-muted-foreground mb-3">Square format, used for thumbnails</p>
+                <div className="flex items-center gap-4">
+                  <div 
+                    onClick={() => avatarInputRef.current?.click()}
+                    className="flex h-20 w-20 items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/25 bg-muted/50 cursor-pointer hover:border-[#28A963]/50 transition-colors overflow-hidden"
+                  >
+                    {avatarPreview ? (
+                      <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      <ImageIcon className="h-8 w-8 text-muted-foreground/50" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => avatarInputRef.current?.click()}
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload
+                    </Button>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      512x512px recommended
+                    </p>
+                  </div>
+                </div>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarUpload}
+                />
               </div>
-              <div className="flex-1">
-                <Button variant="outline" size="sm">
+
+              {/* Profile Banner (Rectangle) */}
+              <div className="rounded-lg border border-dashed border-muted-foreground/25 p-4">
+                <p className="text-sm font-medium mb-2">Profile Banner</p>
+                <p className="text-xs text-muted-foreground mb-3">Wide format, used for headers</p>
+                <div 
+                  onClick={() => bannerInputRef.current?.click()}
+                  className="flex h-20 w-full items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/25 bg-muted/50 cursor-pointer hover:border-[#28A963]/50 transition-colors overflow-hidden"
+                >
+                  {bannerPreview ? (
+                    <img src={bannerPreview} alt="Banner" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="text-center">
+                      <ImageIcon className="h-6 w-6 text-muted-foreground/50 mx-auto" />
+                      <p className="text-xs text-muted-foreground mt-1">1200x300px</p>
+                    </div>
+                  )}
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="mt-3"
+                  onClick={() => bannerInputRef.current?.click()}
+                >
                   <Upload className="h-4 w-4 mr-2" />
-                  Upload Logo
+                  Upload Banner
                 </Button>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  PNG, JPG or SVG. Max 2MB. Recommended: 512x512px
-                </p>
+                <input
+                  ref={bannerInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleBannerUpload}
+                />
               </div>
             </div>
           </div>
@@ -171,8 +337,11 @@ export default function ProfilePage() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Upload Zone */}
-          <div className="rounded-lg border-2 border-dashed border-muted-foreground/25 bg-muted/30 p-8 text-center hover:border-[#28A963]/50 transition-colors cursor-pointer">
+          {/* Upload Zone - Now Clickable */}
+          <div 
+            onClick={handleDragDropClick}
+            className="rounded-lg border-2 border-dashed border-muted-foreground/25 bg-muted/30 p-8 text-center hover:border-[#28A963]/50 hover:bg-muted/50 transition-colors cursor-pointer"
+          >
             <Upload className="mx-auto h-10 w-10 text-muted-foreground/50 mb-3" />
             <p className="font-medium">Upload Brand Assets</p>
             <p className="text-sm text-muted-foreground mt-1">
@@ -182,6 +351,13 @@ export default function ProfilePage() {
               Supported: PDF, DOCX • Max 10MB per file
             </p>
           </div>
+          <input
+            ref={brandDocsInputRef}
+            type="file"
+            accept=".pdf,.docx,.doc"
+            className="hidden"
+            onChange={handleBrandDocsUpload}
+          />
 
           {/* Uploaded Files */}
           <div className="space-y-2">
@@ -202,7 +378,12 @@ export default function ProfilePage() {
                       Verified
                     </span>
                   )}
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                    onClick={() => setUploadedFiles(uploadedFiles.filter((_, i) => i !== index))}
+                  >
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
@@ -236,16 +417,17 @@ export default function ProfilePage() {
               className="flex items-center justify-between rounded-md border bg-background px-4 py-3"
             >
               <div className="flex items-center gap-3">
-                {connection.platform === "Instagram" && (
+                {connection.icon === "instagram" && (
                   <Instagram className="h-5 w-5 text-pink-500" />
                 )}
-                {connection.platform === "LinkedIn" && (
-                  <Linkedin className="h-5 w-5 text-blue-600" />
+                {connection.icon === "youtube" && (
+                  <Youtube className="h-5 w-5 text-red-500" />
                 )}
-                {connection.platform === "TikTok" && (
-                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
-                  </svg>
+                {connection.icon === "tiktok" && (
+                  <TikTokIcon className="h-5 w-5" />
+                )}
+                {connection.icon === "linkedin" && (
+                  <Linkedin className="h-5 w-5 text-blue-600" />
                 )}
                 <div>
                   <p className="font-medium text-sm">{connection.platform}</p>
@@ -253,17 +435,32 @@ export default function ProfilePage() {
                 </div>
               </div>
               {connection.connected ? (
-                <span className="flex items-center gap-1.5 rounded-full bg-[#28A963]/10 px-3 py-1 text-xs font-medium text-[#28A963]">
+                <button
+                  onClick={() => toggleConnection(index)}
+                  className="flex items-center gap-1.5 rounded-full bg-[#28A963]/10 px-3 py-1 text-xs font-medium text-[#28A963] hover:bg-[#28A963]/20 transition-colors cursor-pointer"
+                >
                   <Check className="h-3 w-3" />
                   Connected
-                </span>
+                </button>
               ) : (
-                <Button size="sm" variant="outline">
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => toggleConnection(index)}
+                >
                   Connect
                 </Button>
               )}
             </div>
           ))}
+
+          {/* Add Platform Button */}
+          <button
+            className="w-full flex items-center justify-center gap-2 rounded-md border-2 border-dashed border-muted-foreground/25 bg-transparent px-4 py-3 text-sm text-muted-foreground hover:border-[#28A963]/50 hover:text-[#28A963] transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Add Platform
+          </button>
         </CardContent>
       </Card>
 
@@ -285,24 +482,81 @@ export default function ProfilePage() {
             {competitors.map((competitor, index) => (
               <div
                 key={index}
-                className="flex items-center justify-between rounded-md border bg-background px-4 py-2.5"
+                className="flex items-center justify-between rounded-md border bg-background px-4 py-3"
               >
                 <div className="flex items-center gap-3">
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs font-medium">
                     {index + 1}
                   </span>
-                  <span className="text-sm font-medium">{competitor}</span>
+                  <span className="text-sm font-medium">{competitor.name}</span>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleRemoveCompetitor(index)}
-                  className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-3">
+                  {/* Platform icons being monitored */}
+                  <div className="flex items-center gap-1.5">
+                    {competitor.platforms.map((platform) => (
+                      <span key={platform} className="opacity-80">
+                        {getPlatformIcon(platform, "h-4 w-4")}
+                      </span>
+                    ))}
+                  </div>
+                  {/* Edit Button */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEditingCompetitor(editingCompetitor === index ? null : index)}
+                    className="h-8 w-8 p-0 text-muted-foreground hover:text-[#28A963]"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  {/* Remove Button */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleRemoveCompetitor(index)}
+                    className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             ))}
+            
+            {/* Expanded Edit Panel */}
+            {editingCompetitor !== null && (
+              <div className="rounded-md border bg-muted/30 p-4 space-y-3">
+                <p className="text-sm font-medium">Edit: {competitors[editingCompetitor]?.name}</p>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-2">Platforms to Monitor:</p>
+                  <div className="flex gap-2">
+                    {(["instagram", "youtube", "tiktok"] as const).map((platform) => {
+                      const isActive = competitors[editingCompetitor]?.platforms.includes(platform);
+                      return (
+                        <button
+                          key={platform}
+                          onClick={() => toggleCompetitorPlatform(editingCompetitor, platform)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-sm transition-colors ${
+                            isActive 
+                              ? "bg-[#28A963]/10 border-[#28A963]/30 text-[#28A963]" 
+                              : "bg-background border-input text-muted-foreground hover:border-[#28A963]/30"
+                          }`}
+                        >
+                          {getPlatformIcon(platform, "h-4 w-4")}
+                          <span className="capitalize">{platform}</span>
+                          {isActive && <Check className="h-3 w-3" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => setEditingCompetitor(null)}
+                >
+                  Done
+                </Button>
+              </div>
+            )}
           </div>
 
           {competitors.length < 5 && (
