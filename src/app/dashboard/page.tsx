@@ -12,6 +12,8 @@ import {
   MessageCircle,
   Eye,
   FileText,
+  Globe,
+  Activity,
 } from "lucide-react";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { useFilterParams } from "@/hooks/useFilterParams";
@@ -66,6 +68,9 @@ function DashboardContent() {
       : undefined,
     days: daysValue,
   });
+
+  // Get main account metrics (Portfolio Reach and Engagement Rate)
+  const mainAccountMetrics = useQuery(api.insights.getMainAccountMetrics);
 
   // Build options for MultiSelect
   const marketOptions = markets?.map((m) => ({

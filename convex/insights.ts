@@ -513,3 +513,133 @@ export const getPostEngagementTrend = query({
     }));
   },
 });
+
+// Get main account metrics for Portfolio Reach and Engagement Rate
+// Portfolio Reach: Total Sum of (IG_followersCount + TT_followersCount + YT_subscriberCount) for main accounts
+// Engagement Rate: ((Σ likesCount + Σ commentsCount + Σ sharesCount) ÷ Σ Total_Views) × 100
+// where Total_Views = videoViewCount (Instagram) + playCount (TikTok) + viewCount (YouTube)
+export const getMainAccountMetrics = query({
+  args: {},
+  handler: async (ctx) => {
+    // Get all main accounts (isMainAccount = true)
+    const mainAccounts = await ctx.db
+      .query("accounts")
+      .withIndex("by_main_account", (q) => q.eq("isMainAccount", true))
+      .filter((q) => q.eq(q.field("isActive"), true))
+      .collect();
+
+    if (mainAccounts.length === 0) {
+      return {
+        portfolioReach: 0,
+        engagementRate: 0,
+        breakdown: {
+          instagram: { followers: 0, likes: 0, comments: 0, shares: 0, views: 0 },
+          tiktok: { followers: 0, likes: 0, comments: 0, shares: 0, views: 0 },
+          youtube: { subscribers: 0, likes: 0, comments: 0, shares: 0, views: 0 },
+        },
+        hasData: false,
+      };
+    }
+
+    // Initialize breakdown by platform
+    const breakdown = {
+      instagram: { followers: 0, likes: 0, comments: 0, shares: 0, views: 0 },
+      tiktok: { followers: 0, likes: 0, comments: 0, shares: 0, views: 0 },
+      youtube: { subscribers: 0, likes: 0, comments: 0, shares: 0, views: 0 },
+    };
+
+    // Calculate Portfolio Reach (sum of followers/subscribers across platforms)
+    for (const account of mainAccounts) {
+      const snapshot = await ctx.db
+        .query("accountSnapshots")
+        .withIndex("by_account", (q) => q.eq("accountId", account._id))
+        .order("desc")
+        .first();
+
+      if (snapshot) {
+        if (account.platform === "instagram") {
+          breakdown.instagram.followers += snapshot.followersCount || 0;
+        } else if (account.platform === "tiktok") {
+          breakdown.tiktok.followers += snapshot.followersCount || 0;
+        } else if (account.platform === "youtube") {
+          // YouTube uses subscribersCount
+          breakdown.youtube.subscribers += snapshot.subscribersCount || snapshot.followersCount || 0;
+        }
+      }
+    }
+
+    const portfolioReach =
+      breakdown.instagram.followers +
+      breakdown.tiktok.followers +
+      breakdown.youtube.subscribers;
+
+    // Calculate Engagement Rate
+    // Get all posts from main accounts
+    const mainAccountIds = new Set(mainAccounts.map((a) => a._id));
+
+    // Get posts from all main accounts (no time limit for total engagement)
+    const allPosts = await ctx.db.query("posts").collect();
+    const mainAccountPosts = allPosts.filter((p) => mainAccountIds.has(p.accountId));
+
+    let totalLikes = 0;
+    let totalComments = 0;
+    let totalShares = 0;
+    let totalViews = 0;
+
+    for (const post of mainAccountPosts) {
+      const snapshot = await ctx.db
+        .query("postSnapshots")
+        .withIndex("by_post", (q) => q.eq("postId", post._id))
+        .order("desc")
+        .first();
+
+      if (snapshot) {
+        const likes = snapshot.likesCount || 0;
+        const comments = snapshot.commentsCount || 0;
+        const shares = snapshot.sharesCount || 0;
+        const views = snapshot.viewsCount || 0;
+
+        totalLikes += likes;
+        totalComments += comments;
+        totalShares += shares;
+        totalViews += views;
+
+        // Update breakdown by platform
+        if (post.platform === "instagram") {
+          breakdown.instagram.likes += likes;
+          breakdown.instagram.comments += comments;
+          breakdown.instagram.shares += shares;
+          breakdown.instagram.views += views;
+        } else if (post.platform === "tiktok") {
+          breakdown.tiktok.likes += likes;
+          breakdown.tiktok.comments += comments;
+          breakdown.tiktok.shares += shares;
+          breakdown.tiktok.views += views;
+        } else if (post.platform === "youtube") {
+          breakdown.youtube.likes += likes;
+          breakdown.youtube.comments += comments;
+          breakdown.youtube.shares += shares;
+          breakdown.youtube.views += views;
+        }
+      }
+    }
+
+    // Engagement Rate = ((Σ likesCount + Σ commentsCount + Σ sharesCount) ÷ Σ Total_Views) × 100
+    const engagementRate =
+      totalViews > 0
+        ? ((totalLikes + totalComments + totalShares) / totalViews) * 100
+        : 0;
+
+    return {
+      portfolioReach,
+      engagementRate,
+      breakdown,
+      hasData: mainAccounts.length > 0,
+      accountCount: mainAccounts.length,
+      totalLikes,
+      totalComments,
+      totalShares,
+      totalViews,
+    };
+  },
+});

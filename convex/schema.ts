@@ -149,13 +149,15 @@ export default defineSchema({
     ),
     isActive: v.boolean(), // Individual account can be paused
     isPaused: v.optional(v.boolean()), // Explicit pause flag (separate from isActive)
+    isMainAccount: v.optional(v.boolean()), // Main client account (e.g., Provivienda) - used for Portfolio Reach/Engagement Rate
     createdAt: v.number(),
     lastScrapedAt: v.optional(v.number()),
   })
     .index("by_platform", ["platform"])
     .index("by_market", ["marketId"])
     .index("by_competitor", ["competitorId"])
-    .index("by_platform_username", ["platform", "username"]),
+    .index("by_platform_username", ["platform", "username"])
+    .index("by_main_account", ["isMainAccount"]),
 
   // Follower/Following snapshots (tracked daily)
   accountSnapshots: defineTable({

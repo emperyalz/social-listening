@@ -284,3 +284,46 @@ export const get = query({
   },
 });
 
+// Set an account as a main account (for Portfolio Reach / Engagement Rate tracking)
+export const setMainAccount = mutation({
+  args: {
+    id: v.id("accounts"),
+    isMainAccount: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id, { isMainAccount: args.isMainAccount });
+    return await ctx.db.get(args.id);
+  },
+});
+
+// Get all main accounts (Provivienda's accounts)
+export const getMainAccounts = query({
+  args: {},
+  handler: async (ctx) => {
+    const accounts = await ctx.db
+      .query("accounts")
+      .withIndex("by_main_account", (q) => q.eq("isMainAccount", true))
+      .collect();
+
+    // Filter only active accounts
+    return accounts.filter((a) => a.isActive);
+  },
+});
+
+// Bulk set main accounts
+export const bulkSetMainAccounts = mutation({
+  args: {
+    accountIds: v.array(v.id("accounts")),
+    isMainAccount: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const results = [];
+    for (const id of args.accountIds) {
+      await ctx.db.patch(id, { isMainAccount: args.isMainAccount });
+      const account = await ctx.db.get(id);
+      results.push({ id, username: account?.username, isMainAccount: args.isMainAccount });
+    }
+    return results;
+  },
+});
+
