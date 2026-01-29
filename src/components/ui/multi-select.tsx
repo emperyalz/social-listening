@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Check, ChevronDown, X } from "lucide-react";
-import { Button } from "./button";
 
 interface MultiSelectOption {
   value: string;
@@ -83,43 +82,40 @@ export function MultiSelect({
 
   return (
     <div className="relative" ref={dropdownRef}>
-      {/* Trigger Button */}
+      {/* Trigger Button - Green styled */}
       <div className="flex gap-1">
-        <Button
-          variant="outline"
+        <button
           onClick={() => setIsOpen(!isOpen)}
-          className="justify-between bg-background text-foreground border-border min-w-[180px] hover:bg-muted"
+          className="flex items-center justify-between gap-2 px-4 py-2 min-w-[180px] rounded-lg bg-[#28A963] text-white font-medium text-sm hover:bg-[#229955] transition-colors"
         >
           <span className="truncate">{getDisplayContent()}</span>
-          <ChevronDown className="ml-2 h-4 w-4 shrink-0" />
-        </Button>
+          <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        </button>
         {selected.length > 0 && (
-          <Button
-            variant="ghost"
-            size="icon"
+          <button
             onClick={clearIndividual}
-            className="text-muted-foreground hover:text-foreground h-10 w-10"
+            className="flex items-center justify-center h-10 w-10 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
             <X className="h-4 w-4" />
-          </Button>
+          </button>
         )}
       </div>
 
-      {/* Dropdown */}
+      {/* Dropdown - Dark themed */}
       {isOpen && (
-        <div className="absolute z-50 mt-2 w-full min-w-[240px] rounded-md border border-border bg-popover shadow-lg">
+        <div className="absolute z-50 mt-2 w-full min-w-[240px] rounded-lg border border-gray-700 bg-gray-900 shadow-xl">
           <div className="max-h-60 overflow-y-auto p-2">
             {/* Clear Selection Option */}
             {selected.length > 0 && (
               <>
                 <button
                   onClick={clearSelection}
-                  className="w-full flex items-center gap-2 rounded-sm px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted"
+                  className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
                 >
                   <X className="h-4 w-4" />
                   Clear selection ({selected.length})
                 </button>
-                <div className="my-2 border-t border-border" />
+                <div className="my-2 border-t border-gray-700" />
               </>
             )}
 
@@ -130,13 +126,13 @@ export function MultiSelect({
                 <button
                   key={option.value}
                   onClick={() => toggleOption(option.value)}
-                  className="w-full flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-foreground hover:bg-muted"
+                  className="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-white hover:bg-gray-800 transition-colors"
                 >
                   <div
                     className={`flex h-4 w-4 items-center justify-center rounded border shrink-0 ${
                       isSelected
                         ? "border-[#28A963] bg-[#28A963] text-white"
-                        : "border-border bg-background"
+                        : "border-gray-500 bg-transparent"
                     }`}
                   >
                     {isSelected && <Check className="h-3 w-3" />}
