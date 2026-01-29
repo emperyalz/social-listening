@@ -139,10 +139,16 @@ export function Sidebar() {
         </button>
       </div>
       
+      {/* Powered by QueXopa branding */}
       <div className="border-t p-4">
-        <div className="rounded-lg bg-muted p-4">
-          <p className="text-xs text-muted-foreground">{t("sidebar.realEstateIntelligence")}</p>
-          <p className="text-sm font-medium">{t("sidebar.panamaCityMarket")}</p>
+        <div className="flex items-center justify-center">
+          <Image
+            src={theme === "dark" ? "/powered-by-qx-dark.svg" : "/powered-by-qx-white.svg"}
+            alt="Powered by QueXopa"
+            width={140}
+            height={32}
+            className="h-8 w-auto opacity-70 hover:opacity-100 transition-opacity"
+          />
         </div>
       </div>
     </div>
