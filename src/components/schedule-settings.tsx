@@ -160,15 +160,15 @@ export function ScheduleSettings() {
   return (
     <Card>
       <CardHeader
-        className="cursor-pointer hover:bg-gray-50 transition-colors"
+        className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             {isExpanded ? (
-              <ChevronDown className="h-5 w-5 text-gray-500" />
+              <ChevronDown className="h-5 w-5 text-gray-500 dark:text-gray-400" />
             ) : (
-              <ChevronRight className="h-5 w-5 text-gray-500" />
+              <ChevronRight className="h-5 w-5 text-gray-500 dark:text-gray-400" />
             )}
             <div>
               <CardTitle className="flex items-center gap-2">
@@ -187,8 +187,8 @@ export function ScheduleSettings() {
             }}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
               settings.isEnabled
-                ? "bg-green-100 text-green-700 hover:bg-green-200"
-                : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                ? "bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/50 dark:text-green-400 dark:hover:bg-green-900/70"
+                : "bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
             }`}
           >
             {settings.isEnabled ? (
@@ -209,25 +209,25 @@ export function ScheduleSettings() {
       <CardContent className="space-y-6">
         {/* Status Info */}
         <div className="grid gap-4 md:grid-cols-2">
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-blue-50">
-            <Clock className="h-5 w-5 text-blue-600" />
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/30">
+            <Clock className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             <div>
-              <p className="text-xs text-blue-600 font-medium">Next Scheduled Run</p>
-              <p className="text-sm font-semibold text-blue-900">{formatNextRun()}</p>
+              <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Next Scheduled Run</p>
+              <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">{formatNextRun()}</p>
             </div>
           </div>
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
-            <Calendar className="h-5 w-5 text-gray-600" />
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+            <Calendar className="h-5 w-5 text-gray-600 dark:text-gray-400" />
             <div>
-              <p className="text-xs text-gray-600 font-medium">Last Run</p>
-              <p className="text-sm font-semibold text-gray-900">{formatLastRun()}</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400 font-medium">Last Run</p>
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{formatLastRun()}</p>
             </div>
           </div>
         </div>
 
         {/* Frequency Selection */}
         <div className="space-y-3">
-          <label className="text-sm font-medium text-gray-700">Frequency</label>
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Frequency</label>
           <div className="grid gap-2 md:grid-cols-5">
             {FREQUENCY_OPTIONS.map((opt) => (
               <button
@@ -235,17 +235,17 @@ export function ScheduleSettings() {
                 onClick={() => updateSettings({ frequency: opt.value as Frequency })}
                 className={`p-3 rounded-lg border text-left transition-all ${
                   settings.frequency === opt.value
-                    ? "border-blue-500 bg-blue-50 ring-1 ring-blue-500"
-                    : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                    ? "border-blue-500 bg-blue-50 ring-1 ring-blue-500 dark:bg-blue-900/30 dark:border-blue-400"
+                    : "border-gray-200 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-gray-600 dark:hover:bg-gray-800"
                 }`}
               >
                 <p className={`text-sm font-medium ${
-                  settings.frequency === opt.value ? "text-blue-700" : "text-gray-900"
+                  settings.frequency === opt.value ? "text-blue-700 dark:text-blue-300" : "text-gray-900 dark:text-gray-100"
                 }`}>
                   {opt.label}
                 </p>
                 <p className={`text-xs mt-0.5 ${
-                  settings.frequency === opt.value ? "text-blue-600" : "text-gray-500"
+                  settings.frequency === opt.value ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"
                 }`}>
                   {opt.description}
                 </p>
@@ -258,11 +258,11 @@ export function ScheduleSettings() {
         <div className="grid gap-4 md:grid-cols-2">
           {/* Preferred Hour */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Preferred Time (UTC)</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Preferred Time (UTC)</label>
             <select
               value={settings.preferredHour}
               onChange={(e) => updateSettings({ preferredHour: parseInt(e.target.value) })}
-              className="w-full px-3 py-2 border rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {HOUR_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -270,7 +270,7 @@ export function ScheduleSettings() {
                 </option>
               ))}
             </select>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               Your local time: {new Date(new Date().setUTCHours(settings.preferredHour, 0, 0, 0)).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}
             </p>
           </div>
@@ -278,7 +278,7 @@ export function ScheduleSettings() {
           {/* Day Selection (for weekly) */}
           {settings.frequency === "weekly" && (
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Preferred Days</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Preferred Days</label>
               <div className="flex flex-wrap gap-2">
                 {DAY_OPTIONS.map((day) => (
                   <button
@@ -292,7 +292,7 @@ export function ScheduleSettings() {
                     className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
                       settings.preferredDays.includes(day.value)
                         ? "bg-blue-500 text-white"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
                     }`}
                   >
                     {day.label.slice(0, 3)}
