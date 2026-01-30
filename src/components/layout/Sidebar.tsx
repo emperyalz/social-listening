@@ -114,40 +114,39 @@ export function Sidebar() {
                   </Link>
                 );
               })}
+              {/* Theme Toggle - placed right after Settings link */}
+              {section.name === t("nav.configuration") && (
+                <button
+                  onClick={toggleTheme}
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-[#28A963]/10 hover:text-[#28A963]"
+                >
+                  {theme === "light" ? (
+                    <>
+                      <Moon className="h-4 w-4" />
+                      <span>{t("settings.darkMode")}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sun className="h-4 w-4" />
+                      <span>{t("settings.lightMode")}</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
         ))}
       </nav>
-      
-      {/* Theme Toggle */}
-      <div className="border-t px-4 py-3">
-        <button
-          onClick={toggleTheme}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-[#28A963]/10 hover:text-[#28A963]"
-        >
-          {theme === "light" ? (
-            <>
-              <Moon className="h-4 w-4" />
-              <span>{t("settings.darkMode")}</span>
-            </>
-          ) : (
-            <>
-              <Sun className="h-4 w-4" />
-              <span>{t("settings.lightMode")}</span>
-            </>
-          )}
-        </button>
-      </div>
-      
-      {/* Powered by QueXopa branding */}
-      <div className="border-t p-4">
+
+      {/* Powered by QueXopa branding - larger size */}
+      <div className="border-t p-6">
         <div className="flex items-center justify-center">
           <Image
             src={theme === "dark" ? "/powered-by-qx-dark.svg" : "/powered-by-qx-white.svg"}
             alt="Powered by QueXopa"
-            width={140}
-            height={32}
-            className="h-8 w-auto opacity-70 hover:opacity-100 transition-opacity"
+            width={200}
+            height={48}
+            className="h-12 w-auto opacity-70 hover:opacity-100 transition-opacity"
           />
         </div>
       </div>

@@ -82,11 +82,11 @@ export function MultiSelect({
 
   return (
     <div className="relative" ref={dropdownRef}>
-      {/* Trigger Button - Green styled */}
+      {/* Trigger Button - Green in dark mode, primary in light mode */}
       <div className="flex gap-1">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center justify-between gap-2 px-4 py-2 min-w-[180px] rounded-lg bg-[#28A963] text-white font-medium text-sm hover:bg-[#229955] transition-colors"
+          className="flex items-center justify-between gap-2 px-4 py-2 min-w-[180px] rounded-lg bg-primary text-primary-foreground dark:bg-[#28A963] dark:text-white font-medium text-sm hover:bg-primary/90 dark:hover:bg-[#229955] transition-colors"
         >
           <span className="truncate">{getDisplayContent()}</span>
           <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
@@ -101,21 +101,21 @@ export function MultiSelect({
         )}
       </div>
 
-      {/* Dropdown - Dark themed */}
+      {/* Dropdown - White in light mode, dark in dark mode */}
       {isOpen && (
-        <div className="absolute z-50 mt-2 w-full min-w-[240px] rounded-lg border border-gray-700 bg-gray-900 shadow-xl">
+        <div className="absolute z-50 mt-2 w-full min-w-[240px] rounded-lg border border-border bg-white dark:bg-gray-900 dark:border-gray-700 shadow-xl">
           <div className="max-h-60 overflow-y-auto p-2">
             {/* Clear Selection Option */}
             {selected.length > 0 && (
               <>
                 <button
                   onClick={clearSelection}
-                  className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+                  className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:text-foreground dark:hover:text-white hover:bg-slate-100 dark:hover:bg-gray-800 transition-colors"
                 >
                   <X className="h-4 w-4" />
                   Clear selection ({selected.length})
                 </button>
-                <div className="my-2 border-t border-gray-700" />
+                <div className="my-2 border-t border-border dark:border-gray-700" />
               </>
             )}
 
@@ -126,13 +126,13 @@ export function MultiSelect({
                 <button
                   key={option.value}
                   onClick={() => toggleOption(option.value)}
-                  className="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-white hover:bg-gray-800 transition-colors"
+                  className="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-foreground dark:text-white hover:bg-slate-100 dark:hover:bg-gray-800 transition-colors"
                 >
                   <div
                     className={`flex h-4 w-4 items-center justify-center rounded border shrink-0 ${
                       isSelected
                         ? "border-[#28A963] bg-[#28A963] text-white"
-                        : "border-gray-500 bg-transparent"
+                        : "border-gray-300 dark:border-gray-500 bg-transparent"
                     }`}
                   >
                     {isSelected && <Check className="h-3 w-3" />}
