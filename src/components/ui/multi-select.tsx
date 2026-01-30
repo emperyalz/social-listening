@@ -82,11 +82,11 @@ export function MultiSelect({
 
   return (
     <div className="relative" ref={dropdownRef}>
-      {/* Trigger Button - Green in dark mode, primary in light mode */}
+      {/* Trigger Button - Green in both light and dark mode */}
       <div className="flex gap-1">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center justify-between gap-2 px-4 py-2 min-w-[180px] rounded-lg bg-primary text-primary-foreground dark:bg-[#28A963] dark:text-white font-medium text-sm hover:bg-primary/90 dark:hover:bg-[#229955] transition-colors"
+          className="flex items-center justify-between gap-2 px-4 py-2 min-w-[180px] rounded-lg bg-[#28A963] text-white font-medium text-sm hover:bg-[#229955] transition-colors"
         >
           <span className="truncate">{getDisplayContent()}</span>
           <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
