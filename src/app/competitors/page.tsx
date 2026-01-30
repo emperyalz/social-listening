@@ -224,7 +224,7 @@ function MultiSelect({ options, selected, onChange, placeholder, icon }: MultiSe
     <div ref={ref} className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between w-[200px] h-10 px-3 py-2 text-sm bg-white border rounded-md hover:bg-slate-50"
+        className="flex items-center justify-between w-[200px] h-10 px-3 py-2 text-sm bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-md hover:bg-slate-50 dark:hover:bg-gray-700"
       >
         <span className="flex items-center gap-2 truncate">
           {icon}
@@ -233,8 +233,8 @@ function MultiSelect({ options, selected, onChange, placeholder, icon }: MultiSe
         <div className="flex items-center gap-1">
           {selected.length > 0 && (
             <span title="Clear this filter">
-              <X 
-                className="h-4 w-4 text-slate-400 hover:text-red-500 cursor-pointer" 
+              <X
+                className="h-4 w-4 text-slate-400 hover:text-red-500 cursor-pointer"
                 onClick={clearThis}
               />
             </span>
@@ -242,13 +242,13 @@ function MultiSelect({ options, selected, onChange, placeholder, icon }: MultiSe
           <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
         </div>
       </button>
-      
+
       {isOpen && (
-        <div className="absolute z-50 mt-1 w-[200px] bg-white border rounded-md shadow-lg max-h-60 overflow-auto">
+        <div className="absolute z-50 mt-1 w-[200px] bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-md shadow-lg max-h-60 overflow-auto">
           {selected.length > 0 && (
             <div
               onClick={clearThis}
-              className="flex items-center gap-2 px-3 py-2 hover:bg-red-50 cursor-pointer border-b text-red-600 text-sm"
+              className="flex items-center gap-2 px-3 py-2 hover:bg-red-50 dark:hover:bg-red-900/30 cursor-pointer border-b dark:border-gray-700 text-red-600 dark:text-red-400 text-sm"
             >
               <X className="h-4 w-4" />
               Clear selection ({selected.length})
@@ -258,10 +258,10 @@ function MultiSelect({ options, selected, onChange, placeholder, icon }: MultiSe
             <div
               key={option.value}
               onClick={() => toggleOption(option.value)}
-              className="flex items-center gap-2 px-3 py-2 hover:bg-slate-100 cursor-pointer"
+              className="flex items-center gap-2 px-3 py-2 hover:bg-slate-100 dark:hover:bg-gray-800 cursor-pointer"
             >
               <div className={`w-4 h-4 border rounded flex items-center justify-center ${
-                selected.includes(option.value) ? "bg-primary border-primary" : "border-slate-300"
+                selected.includes(option.value) ? "bg-primary border-primary" : "border-slate-300 dark:border-gray-600"
               }`}>
                 {selected.includes(option.value) && (
                   <Check className="h-3 w-3 text-white" />
@@ -324,7 +324,7 @@ function PhoneInputs({ phones, onChange }: { phones: PhoneEntry[]; onChange: (ph
             onChange={(e) => updatePhone(index, "number", e.target.value)}
             onBlur={(e) => handlePhoneBlur(index, e.target.value)}
             placeholder="+507 6123-4567"
-            className="flex-1 rounded-lg border bg-white px-3 py-2 text-sm"
+            className="flex-1 rounded-lg border dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm"
           />
           <label className="flex items-center gap-1 text-xs cursor-pointer whitespace-nowrap">
             <input
@@ -400,7 +400,7 @@ function SocialHandleInput({
     <div>
       <div className="flex items-center gap-2 flex-wrap mb-1">
         <Icon className={`h-4 w-4 ${config.color}`} />
-        <span className="text-sm font-medium text-slate-700">{config.label}</span>
+        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{config.label}</span>
         {isMonitored ? (
           <span className="text-xs bg-green-100 text-green-700 px-1.5 rounded">Monitored</span>
         ) : (
@@ -437,7 +437,7 @@ function SocialHandleInput({
         onChange={(e) => onChange(e.target.value)}
         onBlur={handleBlur}
         placeholder={isMonitored ? "username or paste URL" : "username or URL"}
-        className={`w-full rounded-lg border bg-white px-3 py-2 text-sm ${effectivelyPaused ? "opacity-50" : ""}`}
+        className={`w-full rounded-lg border dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm ${effectivelyPaused ? "opacity-50" : ""}`}
       />
       {cleanedHandle && (
         <a
@@ -548,25 +548,25 @@ export default function CompetitorsPage() {
 
       {/* Stats Row */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="bg-slate-50">
+        <Card className="bg-slate-50 dark:bg-slate-800">
           <CardContent className="pt-4">
             <div className="text-sm text-muted-foreground">Total Competitors</div>
             <div className="text-2xl font-bold">{stats?.total || 0}</div>
           </CardContent>
         </Card>
-        <Card className="bg-green-50">
+        <Card className="bg-green-50 dark:bg-green-900/30">
           <CardContent className="pt-4">
             <div className="text-sm text-muted-foreground">Tracked Accounts</div>
             <div className="text-2xl font-bold">{stats?.linkedAccounts || 0}</div>
           </CardContent>
         </Card>
-        <Card className="bg-blue-50">
+        <Card className="bg-blue-50 dark:bg-blue-900/30">
           <CardContent className="pt-4">
             <div className="text-sm text-muted-foreground">Brokerages</div>
             <div className="text-2xl font-bold">{stats?.byType?.brokerage || 0}</div>
           </CardContent>
         </Card>
-        <Card className="bg-purple-50">
+        <Card className="bg-purple-50 dark:bg-purple-900/30">
           <CardContent className="pt-4">
             <div className="text-sm text-muted-foreground">Individual Brokers</div>
             <div className="text-2xl font-bold">{stats?.byType?.individual_broker || 0}</div>
@@ -872,7 +872,7 @@ function CompetitorCard({
                 return (
                   <div
                     key={account._id}
-                    className={`flex items-center gap-1.5 px-2 py-1 rounded ${platformConfig.bg} ${isPaused ? "opacity-50" : ""}`}
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded ${platformConfig.bg} dark:bg-gray-800 ${isPaused ? "opacity-50" : ""}`}
                     title={`@${cleanedUsername}${isPaused ? " (Paused)" : ""}`}
                   >
                     {renderPlatformLogo(account.platform, "h-3.5 w-3.5")}
@@ -898,9 +898,9 @@ function CompetitorCard({
 
       {/* Expanded Edit Form */}
       {isExpanded && (
-        <div className="border-t bg-slate-50 p-6">
+        <div className="border-t bg-slate-50 dark:bg-gray-900 p-6">
           {/* Status Toggle - SAVES IMMEDIATELY */}
-          <div className="mb-6 flex items-center justify-between p-3 bg-white rounded-lg border">
+          <div className="mb-6 flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700">
             <div>
               <span className="font-medium">Competitor Monitoring</span>
               <p className="text-xs text-muted-foreground">
@@ -931,27 +931,27 @@ function CompetitorCard({
 
           {/* Basic Info Section */}
           <div className="mb-6">
-            <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
               <Building2 className="h-4 w-4" /> Basic Information
             </h3>
             <div className="grid gap-4 md:grid-cols-3">
               <div>
-                <label className="text-sm font-medium text-slate-700">Name</label>
-                <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm" />
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Name</label>
+                <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="mt-1 w-full rounded-lg border dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm" />
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700">Type</label>
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Type</label>
                 <Select value={type} onValueChange={(v) => setType(v as CompetitorType)}>
-                  <SelectTrigger className="mt-1 bg-white"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="mt-1 bg-white dark:bg-gray-800"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {COMPETITOR_TYPES.map((t) => (<SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700">Market</label>
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Market</label>
                 <Select value={marketId} onValueChange={(v) => setMarketId(v as Id<"markets">)}>
-                  <SelectTrigger className="mt-1 bg-white"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="mt-1 bg-white dark:bg-gray-800"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {markets.map((m) => (<SelectItem key={m._id} value={m._id}>{m.name}</SelectItem>))}
                   </SelectContent>
@@ -963,7 +963,7 @@ function CompetitorCard({
           {/* Display Avatar Section */}
           {competitor.accounts && competitor.accounts.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
                 <User className="h-4 w-4" /> Display Avatar
               </h3>
               <p className="text-xs text-muted-foreground mb-3">
@@ -998,7 +998,7 @@ function CompetitorCard({
                     value={displayAvatarAccountId || "_auto"}
                     onValueChange={(v) => setDisplayAvatarAccountId(v === "_auto" ? null : v)}
                   >
-                    <SelectTrigger className="bg-white">
+                    <SelectTrigger className="bg-white dark:bg-gray-800">
                       <SelectValue placeholder="Auto-select avatar" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1034,20 +1034,20 @@ function CompetitorCard({
 
           {/* Contact Info Section */}
           <div className="mb-6">
-            <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
               <Mail className="h-4 w-4" /> Contact Information
             </h3>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <label className="text-sm font-medium text-slate-700">Website</label>
-                <input type="url" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://example.com" className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm" />
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Website</label>
+                <input type="url" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://example.com" className="mt-1 w-full rounded-lg border dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm" />
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700">Email</label>
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="contact@example.com" className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm" />
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Email</label>
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="contact@example.com" className="mt-1 w-full rounded-lg border dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm" />
               </div>
               <div className="md:col-span-2">
-                <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
                   <Phone className="h-4 w-4" /> Phone Numbers
                 </label>
                 <div className="mt-1"><PhoneInputs phones={phones} onChange={setPhones} /></div>
@@ -1057,32 +1057,32 @@ function CompetitorCard({
 
           {/* Location Section */}
           <div className="mb-6">
-            <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
               <MapPin className="h-4 w-4" /> Location
             </h3>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <label className="text-sm font-medium text-slate-700">Address</label>
-                <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="123 Main Street" className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm" />
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Address</label>
+                <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="123 Main Street" className="mt-1 w-full rounded-lg border dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm" />
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700">Address Line 2</label>
-                <input type="text" value={address2} onChange={(e) => setAddress2(e.target.value)} placeholder="Suite 100, Floor 5" className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm" />
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Address Line 2</label>
+                <input type="text" value={address2} onChange={(e) => setAddress2(e.target.value)} placeholder="Suite 100, Floor 5" className="mt-1 w-full rounded-lg border dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm" />
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700">City</label>
-                <input type="text" value={city} onChange={(e) => setCity(e.target.value)} className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm" />
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">City</label>
+                <input type="text" value={city} onChange={(e) => setCity(e.target.value)} className="mt-1 w-full rounded-lg border dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm" />
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700">State/Province</label>
-                <input type="text" value={state} onChange={(e) => setState(e.target.value)} className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm" />
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">State/Province</label>
+                <input type="text" value={state} onChange={(e) => setState(e.target.value)} className="mt-1 w-full rounded-lg border dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm" />
               </div>
             </div>
           </div>
 
           {/* Social Handles Section */}
           <div className="mb-6">
-            <h3 className="text-sm font-semibold text-slate-700 mb-3">📱 Social Media Handles</h3>
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">📱 Social Media Handles</h3>
             <p className="text-xs text-muted-foreground mb-3">
               {competitor.isActive 
                 ? "Click Active/Paused to control individual platform monitoring."
@@ -1130,12 +1130,12 @@ function CompetitorCard({
 
           {/* Notes Section */}
           <div className="mb-6">
-            <label className="text-sm font-medium text-slate-700">Notes</label>
-            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Additional notes about this competitor..." rows={2} className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm" />
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Notes</label>
+            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Additional notes about this competitor..." rows={2} className="mt-1 w-full rounded-lg border dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm" />
           </div>
 
           {/* Action Buttons */}
-          <div className="flex justify-between pt-4 border-t border-slate-200">
+          <div className="flex justify-between pt-4 border-t border-slate-200 dark:border-gray-700">
             <Button variant="ghost" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={handleDelete}>
               <Trash2 className="h-4 w-4 mr-2" /> Delete Competitor
             </Button>
@@ -1197,7 +1197,7 @@ function AddCompetitorCard({ markets, onClose }: { markets: any[]; onClose: () =
 
   return (
     <Card className="ring-2 ring-green-500 shadow-lg">
-      <div className="flex items-center justify-between p-4 bg-green-50 border-b">
+      <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/30 border-b dark:border-gray-700">
         <div className="flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-green-500 text-white">
             <Plus className="h-6 w-6" />
@@ -1209,27 +1209,27 @@ function AddCompetitorCard({ markets, onClose }: { markets: any[]; onClose: () =
         </div>
       </div>
 
-      <div className="p-6 bg-slate-50">
+      <div className="p-6 bg-slate-50 dark:bg-gray-900">
         <div className="mb-6">
-          <h3 className="text-sm font-semibold text-slate-700 mb-3">Basic Information</h3>
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Basic Information</h3>
           <div className="grid gap-4 md:grid-cols-3">
             <div>
-              <label className="text-sm font-medium text-slate-700">Name *</label>
-              <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Company or person name" className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm" />
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Name *</label>
+              <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Company or person name" className="mt-1 w-full rounded-lg border dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm" />
             </div>
             <div>
-              <label className="text-sm font-medium text-slate-700">Type *</label>
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Type *</label>
               <Select value={type} onValueChange={(v) => setType(v as CompetitorType)}>
-                <SelectTrigger className="mt-1 bg-white"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 bg-white dark:bg-gray-800"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {COMPETITOR_TYPES.map((t) => (<SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <label className="text-sm font-medium text-slate-700">Market *</label>
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Market *</label>
               <Select value={marketId} onValueChange={setMarketId}>
-                <SelectTrigger className="mt-1 bg-white"><SelectValue placeholder="Select market" /></SelectTrigger>
+                <SelectTrigger className="mt-1 bg-white dark:bg-gray-800"><SelectValue placeholder="Select market" /></SelectTrigger>
                 <SelectContent>
                   {markets.map((m) => (<SelectItem key={m._id} value={m._id}>{m.name}</SelectItem>))}
                 </SelectContent>
@@ -1239,25 +1239,25 @@ function AddCompetitorCard({ markets, onClose }: { markets: any[]; onClose: () =
         </div>
 
         <div className="mb-6">
-          <h3 className="text-sm font-semibold text-slate-700 mb-3">Contact (Optional)</h3>
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Contact (Optional)</h3>
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label className="text-sm font-medium text-slate-700">Website</label>
-              <input type="url" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://example.com" className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm" />
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Website</label>
+              <input type="url" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://example.com" className="mt-1 w-full rounded-lg border dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm" />
             </div>
             <div>
-              <label className="text-sm font-medium text-slate-700">Email</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="contact@example.com" className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm" />
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Email</label>
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="contact@example.com" className="mt-1 w-full rounded-lg border dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm" />
             </div>
             <div className="md:col-span-2">
-              <label className="text-sm font-medium text-slate-700 flex items-center gap-2"><Phone className="h-4 w-4" /> Phone Numbers</label>
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2"><Phone className="h-4 w-4" /> Phone Numbers</label>
               <div className="mt-1"><PhoneInputs phones={phones} onChange={setPhones} /></div>
             </div>
           </div>
         </div>
 
         <div className="mb-6">
-          <h3 className="text-sm font-semibold text-slate-700 mb-3">📱 Social Media Handles</h3>
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">📱 Social Media Handles</h3>
           <p className="text-xs text-muted-foreground mb-3">Paste URLs or usernames. Instagram, TikTok, and YouTube will be monitored.</p>
           <div className="grid gap-4 md:grid-cols-3">
             <SocialHandleInput platform="instagram" value={instagram} onChange={setInstagram} isMonitored={true} />
@@ -1269,7 +1269,7 @@ function AddCompetitorCard({ markets, onClose }: { markets: any[]; onClose: () =
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 pt-4 border-t border-slate-200">
+        <div className="flex justify-end gap-2 pt-4 border-t border-slate-200 dark:border-gray-700">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button onClick={handleSubmit} disabled={isSaving || !name || !marketId} className="bg-green-600 hover:bg-green-700">
             {isSaving ? "Creating..." : "Add Competitor"}

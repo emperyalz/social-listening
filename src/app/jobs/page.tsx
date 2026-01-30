@@ -237,7 +237,7 @@ function JobsContent() {
                 <Button
                   onClick={() => handleScrape(platform)}
                   disabled={isRunning !== null}
-                  className="w-full text-white"
+                  className="w-full text-white dark:border dark:border-gray-600"
                   style={{
                     backgroundColor: colors.primary,
                     borderColor: colors.primary,
