@@ -86,9 +86,9 @@ function LogoItem({
   };
 
   return (
-    <div className="flex items-center gap-3 p-3 border rounded-lg bg-white hover:shadow-sm transition-shadow">
+    <div className="flex items-center gap-3 p-3 border rounded-lg bg-white dark:bg-gray-800 dark:border-gray-700 hover:shadow-sm transition-shadow">
       {/* Logo preview */}
-      <div className="w-16 h-16 rounded bg-gray-50 border flex items-center justify-center overflow-hidden flex-shrink-0">
+      <div className="w-16 h-16 rounded bg-gray-50 dark:bg-gray-700 border dark:border-gray-600 flex items-center justify-center overflow-hidden flex-shrink-0">
         {logo.url ? (
           <img
             src={logo.url}
@@ -108,7 +108,7 @@ function LogoItem({
               type="text"
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
-              className="flex-1 rounded border px-2 py-1 text-sm"
+              className="flex-1 rounded border px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleSaveName();
@@ -248,9 +248,9 @@ function UploadNewLogo({
   }
 
   return (
-    <div className="border-2 border-dashed border-blue-300 rounded-lg p-4 bg-blue-50/50 space-y-4">
+    <div className="border-2 border-dashed border-blue-300 dark:border-blue-700 rounded-lg p-4 bg-blue-50/50 dark:bg-blue-900/20 space-y-4">
       <div className="flex items-center justify-between">
-        <h4 className="font-medium text-blue-900">Upload New Logo</h4>
+        <h4 className="font-medium text-blue-900 dark:text-blue-300">Upload New Logo</h4>
         <Button size="sm" variant="ghost" onClick={() => {
           setIsOpen(false);
           setFile(null);
@@ -272,11 +272,11 @@ function UploadNewLogo({
         />
         <div
           onClick={() => fileInputRef.current?.click()}
-          className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
+          className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
         >
           {file ? (
             <div className="flex items-center justify-center gap-3">
-              <div className="w-12 h-12 bg-white rounded border flex items-center justify-center">
+              <div className="w-12 h-12 bg-white dark:bg-gray-700 rounded border dark:border-gray-600 flex items-center justify-center">
                 {file.type.startsWith("image/") && (
                   <img
                     src={URL.createObjectURL(file)}
@@ -295,8 +295,8 @@ function UploadNewLogo({
           ) : (
             <>
               <Upload className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-              <p className="text-sm text-gray-600">Click to select a file</p>
-              <p className="text-xs text-gray-400">SVG, PNG, JPG, or WebP</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Click to select a file</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">SVG, PNG, JPG, or WebP</p>
             </>
           )}
         </div>
@@ -304,7 +304,7 @@ function UploadNewLogo({
 
       {/* Name input */}
       <div>
-        <label className="text-sm font-medium text-gray-700 block mb-1">Logo Name</label>
+        <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">Logo Name</label>
         <input
           type="text"
           value={name}
@@ -313,7 +313,7 @@ function UploadNewLogo({
             setError("");
           }}
           placeholder="e.g., Horizontal, Icon, White..."
-          className="w-full rounded-md border px-3 py-2 text-sm"
+          className="w-full rounded-md border dark:border-gray-600 px-3 py-2 text-sm bg-white dark:bg-gray-700 dark:text-white"
         />
         {availableSuggestions.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-2">
@@ -322,7 +322,7 @@ function UploadNewLogo({
                 key={suggestion}
                 type="button"
                 onClick={() => setName(suggestion)}
-                className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded"
+                className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded dark:text-gray-300"
               >
                 {suggestion}
               </button>
@@ -380,14 +380,14 @@ function LogoSelector({
   const selectedLogo = options.find(o => o._id === value);
 
   return (
-    <div className="flex items-center justify-between py-3 border-b last:border-b-0">
+    <div className="flex items-center justify-between py-3 border-b dark:border-gray-700 last:border-b-0">
       <div className="flex-1">
-        <p className="font-medium text-sm">{label}</p>
-        <p className="text-xs text-muted-foreground">{description}</p>
+        <p className="font-medium text-sm dark:text-white">{label}</p>
+        <p className="text-xs text-muted-foreground dark:text-gray-400">{description}</p>
       </div>
       <div className="flex items-center gap-2">
         {/* Preview */}
-        <div className="w-8 h-8 rounded bg-gray-100 border flex items-center justify-center overflow-hidden">
+        <div className="w-8 h-8 rounded bg-gray-100 dark:bg-gray-700 border dark:border-gray-600 flex items-center justify-center overflow-hidden">
           {selectedLogo?.url ? (
             <img src={selectedLogo.url} alt="" className="max-w-full max-h-full object-contain" />
           ) : (
@@ -399,7 +399,7 @@ function LogoSelector({
           value={value || "none"}
           onValueChange={(v) => onChange(v === "none" ? null : v as Id<"platformLogos">)}
         >
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-[180px] dark:bg-gray-800 dark:border-gray-600">
             <SelectValue placeholder="Select logo..." />
           </SelectTrigger>
           <SelectContent>
@@ -549,7 +549,7 @@ function PlatformCard({
   const avatarLogo = platform.selectedLogos?.avatar || platform.logos?.[0];
 
   return (
-    <Card className={`transition-all ${isExpanded ? "ring-2 ring-primary shadow-lg" : "hover:shadow-md"} ${!platform.isActive ? "opacity-60" : ""}`}>
+    <Card className={`transition-all ${isExpanded ? "ring-2 ring-primary shadow-lg" : "hover:shadow-md"} ${!platform.isActive ? "opacity-60" : ""} dark:bg-gray-800 dark:border-gray-700`}>
       {/* Header - Always visible */}
       <div
         className="flex items-center justify-between p-4 cursor-pointer"
@@ -570,12 +570,12 @@ function PlatformCard({
 
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-lg">{platform.displayName}</span>
-              <span className={`rounded-full px-2 py-0.5 text-xs ${platform.isActive ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
+              <span className="font-semibold text-lg dark:text-white">{platform.displayName}</span>
+              <span className={`rounded-full px-2 py-0.5 text-xs ${platform.isActive ? "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400" : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-400"}`}>
                 {platform.isActive ? "Active" : "Inactive"}
               </span>
             </div>
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <div className="flex items-center gap-3 text-sm text-muted-foreground dark:text-gray-400">
               <span>{platform.logos?.length || 0} logo{(platform.logos?.length || 0) !== 1 ? "s" : ""}</span>
               <span>•</span>
               <span className="capitalize">{platform.platformId}</span>
@@ -587,12 +587,12 @@ function PlatformCard({
           {/* Color indicators */}
           <div className="flex gap-1 mr-2">
             <div
-              className="h-4 w-4 rounded-full border"
+              className="h-4 w-4 rounded-full border dark:border-gray-500"
               style={{ backgroundColor: primaryColor }}
               title={`Primary: ${primaryColor}`}
             />
             <div
-              className="h-4 w-4 rounded-full border"
+              className="h-4 w-4 rounded-full border dark:border-gray-500"
               style={{ backgroundColor: secondaryColor }}
               title={`Secondary: ${secondaryColor}`}
             />
@@ -607,11 +607,11 @@ function PlatformCard({
 
       {/* Expanded content */}
       {isExpanded && (
-        <div className="border-t bg-slate-50 p-6 space-y-6">
+        <div className="border-t dark:border-gray-700 bg-slate-50 dark:bg-gray-900 p-6 space-y-6">
           {/* Active toggle */}
-          <div className="flex items-center justify-between p-3 bg-white rounded-lg border">
+          <div className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700">
             <div>
-              <span className="font-medium">Platform Status</span>
+              <span className="font-medium dark:text-white">Platform Status</span>
               <p className="text-xs text-muted-foreground">
                 {platform.isActive ? "Platform is active and visible in the app" : "Platform is hidden from the app"}
               </p>
@@ -634,26 +634,26 @@ function PlatformCard({
 
           {/* Brand Colors Section */}
           <div>
-            <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
               🎨 Brand Colors
             </h3>
-            <div className="bg-white rounded-lg border p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-4">
               <div className="grid grid-cols-2 gap-4">
                 {/* Primary Color */}
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Primary Color</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Primary Color</label>
                   <div className="flex items-center gap-3">
                     <input
                       type="color"
                       value={primaryColor}
                       onChange={(e) => handleColorUpdate('primary', e.target.value)}
-                      className="w-10 h-10 rounded cursor-pointer border-0 p-0"
+                      className="w-10 h-10 rounded cursor-pointer border-0 p-0 dark:border dark:border-gray-600"
                     />
                     <input
                       type="text"
                       value={primaryColor}
                       onChange={(e) => handleColorUpdate('primary', e.target.value)}
-                      className="flex-1 rounded-md border px-3 py-2 text-sm font-mono uppercase"
+                      className="flex-1 rounded-md border dark:border-gray-600 px-3 py-2 text-sm font-mono uppercase bg-white dark:bg-gray-700 dark:text-white"
                       placeholder="#E1306C"
                     />
                   </div>
@@ -661,19 +661,19 @@ function PlatformCard({
                 </div>
                 {/* Secondary Color */}
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Secondary Color</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Secondary Color</label>
                   <div className="flex items-center gap-3">
                     <input
                       type="color"
                       value={secondaryColor}
                       onChange={(e) => handleColorUpdate('secondary', e.target.value)}
-                      className="w-10 h-10 rounded cursor-pointer border-0 p-0"
+                      className="w-10 h-10 rounded cursor-pointer border-0 p-0 dark:border dark:border-gray-600"
                     />
                     <input
                       type="text"
                       value={secondaryColor}
                       onChange={(e) => handleColorUpdate('secondary', e.target.value)}
-                      className="flex-1 rounded-md border px-3 py-2 text-sm font-mono uppercase"
+                      className="flex-1 rounded-md border dark:border-gray-600 px-3 py-2 text-sm font-mono uppercase bg-white dark:bg-gray-700 dark:text-white"
                       placeholder="#833AB4"
                     />
                   </div>
@@ -681,7 +681,7 @@ function PlatformCard({
                 </div>
               </div>
               {/* Color Preview */}
-              <div className="mt-4 pt-4 border-t">
+              <div className="mt-4 pt-4 border-t dark:border-gray-700">
                 <p className="text-xs text-muted-foreground mb-2">Preview</p>
                 <div className="flex items-center gap-4">
                   <div
@@ -705,7 +705,7 @@ function PlatformCard({
 
           {/* Uploaded Logos Section */}
           <div>
-            <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
               <ImageIcon className="h-4 w-4" />
               Uploaded Logos ({platform.logos?.length || 0})
             </h3>
@@ -731,14 +731,14 @@ function PlatformCard({
 
           {/* Logo Selection for Each Context */}
           <div>
-            <h3 className="text-sm font-semibold text-slate-700 mb-3">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
               Where to Show Each Logo
             </h3>
             <p className="text-xs text-muted-foreground mb-4">
               Select which logo to display in each section of the application. If no logo is selected, the default emoji will be used.
             </p>
 
-            <div className="bg-white rounded-lg border p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-4">
               <LogoSelector
                 label="Platform Avatar"
                 description="Main logo shown in the collapsed card header"

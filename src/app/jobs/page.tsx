@@ -237,10 +237,9 @@ function JobsContent() {
                 <Button
                   onClick={() => handleScrape(platform)}
                   disabled={isRunning !== null}
-                  className="w-full text-white dark:border dark:border-gray-600"
+                  className="w-full text-white dark:ring-1 dark:ring-gray-600 dark:border dark:border-gray-500"
                   style={{
                     backgroundColor: colors.primary,
-                    borderColor: colors.primary,
                   }}
                 >
                   {isRunning === platform ? (
