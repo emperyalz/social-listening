@@ -63,9 +63,9 @@ export function ScheduleSettings() {
   const [hasChanges, setHasChanges] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Local state for the "all" platform setting
+  // Local state for the "all" platform setting - default to DISABLED to prevent accidental Apify charges
   const [settings, setSettings] = useState<ScheduleState>({
-    isEnabled: true,
+    isEnabled: false,
     frequency: "daily",
     preferredHour: 6,
     preferredDays: [1], // Monday

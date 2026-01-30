@@ -153,10 +153,10 @@ export const initializeDefaults = mutation({
     const existing = await ctx.db.query("scheduleSettings").collect();
 
     if (existing.length === 0) {
-      // Create default "all platforms" setting
+      // Create default "all platforms" setting - DISABLED by default to prevent accidental Apify charges
       await ctx.db.insert("scheduleSettings", {
         platform: "all",
-        isEnabled: true,
+        isEnabled: false,
         frequency: "daily",
         preferredHour: 6, // 6 AM UTC
         updatedAt: Date.now(),

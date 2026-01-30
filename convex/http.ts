@@ -40,6 +40,20 @@ http.route({
       return new Response("Unauthorized", { status: 401 });
     }
 
+    // Check if scheduling is enabled before running any jobs
+    const scheduleSettings = await ctx.runQuery(api.schedule.getByPlatform, { platform: "all" });
+
+    if (!scheduleSettings || !scheduleSettings.isEnabled) {
+      return new Response(JSON.stringify({
+        ok: true,
+        skipped: true,
+        reason: "Scheduled scraping is disabled in settings"
+      }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     // Trigger scraping for all platforms
     const platforms = ["instagram", "tiktok", "youtube"] as const;
     const results: Array<{ platform: string; jobs?: unknown; error?: string }> = [];
@@ -55,6 +69,9 @@ http.route({
         results.push({ platform, error: errorMessage });
       }
     }
+
+    // Update last run time
+    await ctx.runMutation(api.schedule.updateLastRun, { platform: "all" });
 
     return new Response(JSON.stringify({ ok: true, results }), {
       status: 200,
